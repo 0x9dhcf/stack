@@ -11,7 +11,6 @@
 
 #include <string.h>
 #include <limits.h>
-#include <x86/_types.h>
 
 #define DoNotPropagateMask (\
           ButtonPressMask\
