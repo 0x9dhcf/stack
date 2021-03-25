@@ -1,0 +1,51 @@
+TARGET = stack
+
+MAJOR = 0
+MINOR = 1
+PATCH = 0
+
+# paths
+PREFIX ?= /usr/local
+PKG_CONFIG = pkg-config
+
+DEPS = x11 xrandr xft
+
+INCS = `$(PKG_CONFIG) --cflags $(DEPS)`
+LIBS = `$(PKG_CONFIG) --libs $(DEPS)`
+
+CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
+CFLAGS 		+= `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
+LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}` 
+
+SRC = client.c font.c main.c output.c stack.c
+HDR = atoms.h client.h config.h font.h log.h output.h stack.h
+INC = atoms.inc cursors.inc default.inc
+OBJ = ${SRC:.c=.o}
+
+all: options ${TARGET}
+
+options:
+	@echo build options:
+	@echo "CPPLAGS  = ${CPPFLAGS}"
+	@echo "CFLAGS   = ${CFLAGS}"
+	@echo "LDFLAGS  = ${LDFLAGS}"
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+${OBJ}: ${HDR} ${INC}
+
+${TARGET}: ${OBJ}
+	$(CC) -o $@ ${OBJ} $(LDFLAGS)
+
+clean:
+	rm -f stack ${OBJ}
+
+install: ${TARGET}
+	mkdir -p ${PREFIX}/bin
+	cp -f ${TARGET} ${PREFIX}/bin
+
+uninstall:
+	rm -f ${PREFIX}/bin/${TARGET}
+
+.PHONY: all clean install uninstall
