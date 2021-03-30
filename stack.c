@@ -42,45 +42,45 @@ static void GrabKeys();
 static Window supporting;
 static Bool running = False;
 static Output *outputs = NULL;
-static Output *active = NULL;
-static Client *focused = NULL;
+static Output *oactive = NULL;
+static Client *cactive = NULL;
 static int (*DefaultErrorHandler)(Display *, XErrorEvent *) = NULL;
 
 void
 CycleForward()
 {
-    DLog();
-    Client *c = FindNextFocusableClient(active, focused);
-    if (c)
-        FocusClient(c);
+    Client *c = NextOutputClient(oactive, cactive);
+    if (c) {
+        if (c->focusable) {
+            FocusClient(c);
+        } else {
+            RaiseClient(c);
+            cactive = c;
+        }
+    }
 }
 
 void
 CycleBackward()
 {
-    DLog();
-    Client *c = FindPrevFocusableClient(active, focused);
-    if (c)
-        FocusClient(c);
+    Client *c = PrevOutputClient(oactive, cactive);
+    if (c) {
+        if (c->focusable) {
+            FocusClient(c);
+        } else {
+            RaiseClient(c);
+            cactive = c;
+        }
+    }
 }
 
 Client*
 Lookup(Window w)
 {
     for (Output *o = outputs; o; o = o->next) {
-        for (Client *c = o->clients; c; c = c->next) {
-
-            if (c->window == w || c->frame == w || c->topbar == w)
-                return c;
-
-            for (int i = 0; i < ButtonCount; ++i)
-                if (c->buttons[i] == w)
-                    return c;
-
-            for (int i = 0; i < HandleCount; ++i)
-                if (c->handles[i] == w)
-                    return c;
-        }
+        Client *c = LookupOutputClient(o, w);
+        if (c)
+            return c;
     }
     return NULL;
 }
@@ -108,8 +108,6 @@ ErrorHandler(Display *d, XErrorEvent *e)
 void
 OnEvent(XEvent *e)
 {
-    Client *c = Lookup(e->xany.window);
-
     /* Catch events of interest for the WM */
     switch(e->type) {
         case ConfigureRequest:
@@ -124,19 +122,17 @@ OnEvent(XEvent *e)
         case DestroyNotify:
             OnDestroyNotify(&e->xdestroywindow);
         break;
-        case FocusIn:
-            c ? focused = c : NULL;
-        break;
         case KeyPress:
             OnKeyPress(&e->xkey);
         break;
     }
 
     /* in case we call the quit callback */
-    if (!running)
+    if (!running || e->xany.window == st_root)
         return;
 
     /* Dispatch to clients */
+    Client *c = Lookup(e->xany.window);
     if (c) {
         switch (e->type) {
             case Expose:
@@ -149,7 +145,7 @@ OnEvent(XEvent *e)
                 OnClientPropertyNotify(c, &e->xproperty);
             break;
             case FocusIn:
-                focused = c;
+                cactive = c;
                 OnClientFocusIn(c, &e->xfocus);
             break;
             case FocusOut:
@@ -200,13 +196,14 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
-    if (! Lookup(e->window)) {
+    DLog();
+    if (!Lookup(e->window)) {
         XWindowAttributes xwa;
         XGetWindowAttributes(st_dpy, e->window, &xwa);
         if (!xwa.override_redirect) {
             Client *c = CreateClient(e->window);
             XSync(st_dpy, False);
-            AttachClientToOutput(active, c);
+            AttachClientToOutput(oactive, c);
             XSetInputFocus(st_dpy, e->window, RevertToPointerRoot, CurrentTime);
             XChangeProperty(st_dpy, st_root,
                     st_atm[AtomNetClientList], XA_WINDOW, 32, PropModeAppend,
@@ -232,10 +229,10 @@ OnUnmapNotify(XUnmapEvent *e)
 
         XDeleteProperty(st_dpy, st_root, st_atm[AtomNetClientList]);
         for (Output *o = outputs; o; o = o->next)
-            for (Client *c2 = o->clients; c2; c2 = c2->next)
+            for (Client *c2 = o->chead; c2; c2 = c2->next)
                 XChangeProperty(st_dpy, st_root, st_atm[AtomNetClientList], XA_WINDOW,
                         32, PropModeAppend, (unsigned char *) &c2->window, 1);
-        /* TODO: find the new focused */
+        /* TODO: find the new cactive */
         //XSync(st_dpy, False);
     }
 }
@@ -270,8 +267,8 @@ OnKeyPress(XKeyPressedEvent *e)
                     (*st_cfg.shortcuts[i].callback.vcb)();
                     break;
                 case CallbackClient:
-                    if (focused) 
-                        (*st_cfg.shortcuts[i].callback.ccb)(focused);
+                    if (cactive)
+                        (*st_cfg.shortcuts[i].callback.ccb)(cactive);
                     break;
             }
             break;
@@ -282,7 +279,6 @@ OnKeyPress(XKeyPressedEvent *e)
 void
 Spawn(char **args)
 {
-    DLog();
     if (fork() == 0) {
         if (st_dpy)
               close(ConnectionNumber(st_dpy));
@@ -356,7 +352,7 @@ ScanOutputs()
         outputs = CreateOutput(0, 0, DisplayWidth(st_dpy, st_scn),
                 XDisplayHeight(st_dpy, st_scn));
 
-    active = outputs;
+    oactive = outputs;
 }
 
 void
@@ -369,6 +365,7 @@ DestroyOutputs()
         DestroyOutput(o);
         o = p;
     }
+    DLog();
 }
 
 void
@@ -390,11 +387,11 @@ ManageExistingWindows()
             XGetWindowAttributes(st_dpy, wins[i], &xwa);
             if (!xwa.override_redirect) {
                 Client *c = CreateClient(wins[i]);
-                /* reparenting does not set the e->event to root 
+                /* reparenting does not set the e->event to root
                  * we discar events to prevent the unmap to be catched
                  * and wrongly interpreted */
                 XSync(st_dpy, True);
-                AttachClientToOutput(active, c);
+                AttachClientToOutput(oactive, c);
                 XSetInputFocus(st_dpy, wins[i], RevertToPointerRoot, CurrentTime);
                 XChangeProperty(st_dpy, st_root, st_atm[AtomNetClientList],
                         XA_WINDOW, 32, PropModeAppend,

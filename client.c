@@ -37,7 +37,7 @@
         | ButtonMotionMask          /* …mouse is moved   */                         \
         | ExposureMask              /* …our window needs to be redrawn */           \
         | EnterWindowMask                                                           \
-        | LeaveNotify) 
+        | LeaveNotify)
 
 #define ClientEventMask (\
           PropertyChangeMask\
@@ -185,9 +185,9 @@ CreateClient(Window w)
     c->mina = c->maxa = 0.0;
     c->left = c->right = c->top = c->bottom = 0;
     c->tags = 0;
-    //c->resizing = False;
     c->lx = c->ly = 0;
     c->lt = 0;
+    c->prev = NULL;
     c->next = NULL;
 
     UpdateNetWMName(c);
@@ -198,7 +198,7 @@ CreateClient(Window w)
     UpdateWMProtocols(c);
 
     Configure(c);
-    //DLog("Created Client for : %ld @ (%d, %d) [%d x %d], frame: %ld, fixed: %d, decorated: %d", 
+    //DLog("Created Client for : %ld @ (%d, %d) [%d x %d], frame: %ld, fixed: %d, decorated: %d",
     //        c->window, c->x, c->y, c->w, c->h, c->frame, c->fixed, c->decorated);
 
     XAddToSaveSet(st_dpy, w);
@@ -394,7 +394,7 @@ FullscreenClient(Client *c, Bool b)
         MoveResizeClient(c, c->output->x, c->output->y, c->output->w,
                 c->output->h, False);
         c->fullscreen = b;
-    } 
+    }
 
     if(!b && c->fullscreen) {
         XChangeProperty(st_dpy, c->window, st_atm[AtomNetWMState], XA_ATOM, 32,
@@ -406,9 +406,8 @@ FullscreenClient(Client *c, Bool b)
 }
 
 void
-Raise(Client *c)
+RaiseClient(Client *c)
 {
-
     XRaiseWindow(st_dpy, c->frame);
     for (int i = 0; i < HandleCount; ++i)
         XRaiseWindow(st_dpy, c->handles[i]);
@@ -416,7 +415,7 @@ Raise(Client *c)
 }
 
 void
-Lower(Client *c)
+LowerClient(Client *c)
 {
     XLowerWindow(st_dpy, c->frame);
     for (int i = 0; i < HandleCount; ++i)
@@ -478,10 +477,10 @@ OnClientEnter(Client *c, XCrossingEvent *e)
             int x, y;
             XSetWindowBackground(st_dpy, c->buttons[i], bg);
             XClearWindow(st_dpy, c->buttons[i]);
-            GetTextPosition(st_cfg.button_icons[i], st_ift, 
+            GetTextPosition(st_cfg.button_icons[i], st_ift,
                     AlignCenter, AlignMiddle, st_cfg.button_size,
                     st_cfg.button_size, &x, &y);
-            WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, fg, x, y); 
+            WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, fg, x, y);
         }
     }
 }
@@ -502,10 +501,10 @@ void OnClientLeave(Client *c, XCrossingEvent *e)
             int x, y;
             XSetWindowBackground(st_dpy, c->buttons[i], bg);
             XClearWindow(st_dpy, c->buttons[i]);
-            GetTextPosition(st_cfg.button_icons[i], st_ift, 
+            GetTextPosition(st_cfg.button_icons[i], st_ift,
                     AlignCenter, AlignMiddle, st_cfg.button_size,
                     st_cfg.button_size, &x, &y);
-            WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, fg, x, y); 
+            WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, fg, x, y);
         }
     }
 }
@@ -519,7 +518,7 @@ OnClientConfigureRequest(Client *c, XConfigureRequestEvent *e)
         c->sbw = e->border_width;
 
     if (e->value_mask & (CWX|CWY|CWWidth|CWHeight)
-            && !c->vmaximixed 
+            && !c->vmaximixed
             && !c->hmaximixed) {
         int x, y, w, h;
 
@@ -545,9 +544,9 @@ OnClientConfigureRequest(Client *c, XConfigureRequestEvent *e)
        will generate a ConfigureRequest. */
     if (e->value_mask & CWStackMode) {
         if (e->detail == Above || e->detail == TopIf)
-            Raise(c);
+            RaiseClient(c);
         if (e->detail == Below || e->detail == BottomIf)
-            Lower(c);
+            LowerClient(c);
         notify = True;
     }
 
@@ -591,7 +590,7 @@ OnClientFocusIn(Client *c, XFocusInEvent *e)
 
     c->urgent = False;
     c->focused = True;
-    Raise(c);
+    RaiseClient(c);
     Decorate(c);
     GrabButtons(c);
 
@@ -662,7 +661,7 @@ OnClientButtonRelease(Client *c, XButtonEvent *e)
     //    Configure(c);
     //}
 
-    if (e->window == c->topbar || e->window == c->window) 
+    if (e->window == c->topbar || e->window == c->window)
         XDefineCursor(st_dpy, e->window, st_cur[CursorNormal]);
 }
 
@@ -677,7 +676,7 @@ OnClientMotionNotify(Client *c, XMotionEvent *e)
     c->lt = e->time;
 
     /* we do not apply normal hints during motion but when button is released
-     * to make the resizing visually smoother. Some client apply normals by 
+     * to make the resizing visually smoother. Some client apply normals by
      * themselves anway (e.g gnome-terminal) */
     if (e->window == c->topbar || e->window == c->window)
         MoveClient(c, c->px + vx, c->py + vy);
@@ -901,16 +900,16 @@ Decorate(Client *c)
     XClearWindow(st_dpy, c->frame);
     XSetWindowBackground(st_dpy, c->topbar, bg);
     XClearWindow(st_dpy, c->topbar);
-    GetTextPosition(c->name, st_lft, AlignCenter, AlignMiddle, 
+    GetTextPosition(c->name, st_lft, AlignCenter, AlignMiddle,
             c->w - 2 * st_cfg.border_width, st_cfg.topbar_height, &x, &y);
-    WriteText(c->topbar, c->name, st_lft, fg, x, y); 
+    WriteText(c->topbar, c->name, st_lft, fg, x, y);
     for (int i = 0; i < ButtonCount; ++i) {
         XSetWindowBackground(st_dpy, c->buttons[i], bbg);
         XClearWindow(st_dpy, c->buttons[i]);
-        GetTextPosition(st_cfg.button_icons[i], st_ift, 
+        GetTextPosition(st_cfg.button_icons[i], st_ift,
                 AlignCenter, AlignMiddle, st_cfg.button_size,
                 st_cfg.button_size, &x, &y);
-        WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, bfg, x, y); 
+        WriteText(c->buttons[i], st_cfg.button_icons[i], st_ift, bfg, x, y);
     }
 }
 
@@ -1039,9 +1038,9 @@ UpdateWMState(Client *c)
         if(atoms[i] == st_atm[AtomNetWMStateFullscreen])
             FullscreenClient(c, True);
         if(atoms[i] == st_atm[AtomNetWMStateAbove])
-            Raise(c);
+            RaiseClient(c);
         if(atoms[i] == st_atm[AtomNetWMStateBelow])
-            Lower(c);
+            LowerClient(c);
         if(atoms[i] == st_atm[AtomNetWMStateDemandsAttention]) {
             c->urgent = True;
             Decorate(c);

@@ -84,6 +84,7 @@ typedef struct _Client {
     int lx, ly;         /* last seen pointer                */
     Time lt;            /* last time for pointer motion     */
     Output *output;
+    struct _Client *prev;
     struct _Client *next;
 } Client;
 

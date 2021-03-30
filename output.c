@@ -5,6 +5,18 @@
 
 #include <stdlib.h>
 
+#define fforeach(o, c) for (c = o->chead; c; c = c->next)
+#define bforeach(o, c) for (c = o->ctail; c; c = c->prev)
+#define sfforeach(o, c, d) for (c = o->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
+#define sbforeach(o, c, d) for (c = o->ctail, d = c ? c->prev : 0; c; c = d, d = c ? c->prev : 0)
+
+//static void InsertClient(Client *c, Client *prev, Client *next);
+//static void RemoveClient(Client *c);
+
+static void PushClientFront(Output *o, Client *c);
+static void PushClientBack(Output *o, Client *c);
+static void RemoveClient(Output *o, Client *c);
+
 Output*
 CreateOutput(int x, int y, int w, int h)
 {
@@ -24,7 +36,8 @@ CreateOutput(int x, int y, int w, int h)
     //}
 
     //o->active = 0;
-    o->clients= NULL;
+    o->chead= NULL;
+    o->ctail= NULL;
     o->next = NULL;
     return o;
 }
@@ -32,31 +45,30 @@ CreateOutput(int x, int y, int w, int h)
 void
 DestroyOutput(Output *o)
 {
-    DLog();
-    Client *c = o->clients;
-    while (c) {
-        Client *p = c->next;
+    Client *c, *d;
+    sfforeach(o, c, d) {
+        RemoveClient(o, c);
         DestroyClient(c);
-        c = p;
     }
+    free(o);
+    o = NULL;
 }
 
 void
 AttachClientToOutput(Output *o, Client *c)
 {
     c->output = o;
-    c->next = o->clients;
-    o->clients = c;
+    PushClientFront(o, c);
 
-    /* keep any frame inbound */
+    /* keep the frame inbound */
     int fx, fy;
     fx = c->x - WXOffset(c);
     fy = c->y - WYOffset(c);
 
-    DLog("fx: %d", fx);
-    DLog("fy: %d", fy);
-    DLog("Max(fx, o->x) + WXOffset(c): %d", Max(fx, o->x) + WXOffset(c));
-    DLog("Max(fy, o->y) + WYOffset(c): %d", Max(fy, o->y) + WYOffset(c));
+    //DLog("fx: %d", fx);
+    //DLog("fy: %d", fy);
+    //DLog("Max(fx, o->x) + WXOffset(c): %d", Max(fx, o->x) + WXOffset(c));
+    //DLog("Max(fy, o->y) + WYOffset(c): %d", Max(fy, o->y) + WYOffset(c));
 
     MoveResizeClient(c,
             Max(fx, o->x) + WXOffset(c),
@@ -70,44 +82,69 @@ void
 DetachClientFromOutput(Output *o, Client *c)
 {
     c->output = NULL;
-    Client **p;
-    for(p = &o->clients; *p && *p != c; p = &(*p)->next);
-    *p = c->next;
+    RemoveClient(o, c);
+
+    //Client **p;
+    //for(p = &o->clients; *p && *p != c; p = &(*p)->next);
+    //*p = c->next;
+}
+
+Client *
+LookupOutputClient(Output *o, Window w)
+{
+    Client *c;
+    fforeach(o, c) {
+        if (c->window == w || c->frame == w || c->topbar == w)
+            return c;
+
+        for (int i = 0; i < ButtonCount; ++i)
+            if (c->buttons[i] == w)
+                return c;
+
+        for (int i = 0; i < HandleCount; ++i)
+            if (c->handles[i] == w)
+                return c;
+    };
+
+    return NULL;
 }
 
 Client*
-FindNextFocusableClient(Output *o, Client *c)
+NextOutputClient(Output *o, Client *c)
 {
-    /* find the first successor matching */
-    for (Client *ic = c->next; ic; ic = ic->next)
-        if (ic->focusable)
-            return ic;
+    return c->next ? c->next : o->chead;
+    ///* find the first successor matching */
+    //for (Client *ic = c->next; ic; ic = ic->next)
+    //    if (ic->focusable)
+    //        return ic;
 
-    /* if not found then find the first one from the head */
-    for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
-        if (ic->focusable)
-            return ic;
+    ///* if not found then find the first one from the head */
+    //for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
+    //    if (ic->focusable)
+    //        return ic;
 
     /* not found */
     return NULL;
 }
 
 Client*
-FindPrevFocusableClient(Output *o, Client *c)
+PrevOutputClient(Output *o, Client *c)
 {
-    Client *nf = NULL; 
-    for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
-        if (ic->focusable)
-            nf = ic;
+    return c->prev ? c->prev : o->ctail;
+    //Client *nf = NULL;
+    //for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
+    //    if (ic->focusable)
+    //        nf = ic;
 
-    if (nf)
-        return nf;
+    //if (nf)
+    //    return nf;
 
-    for (Client *ic = c->next; ic; ic = ic->next)
-        if (ic->focusable)
-            nf = ic;
+    //for (Client *ic = c->next; ic; ic = ic->next)
+    //    if (ic->focusable)
+    //        nf = ic;
 
-    return nf;
+    //return nf;
+    return NULL;
 }
 
 
@@ -151,3 +188,59 @@ FindPrevFocusableClient(Output *o, Client *c)
 //
 //    AddClientToOutputDesktop(m, c, d);
 //}
+
+//void
+//InsertClient(Client *c, Client *prev, Client *next) {
+//    next->prev = c;
+//    c->next = next;
+//    c->prev = prev;
+//    prev->next = c;
+//}
+
+void
+RemoveClient(Output *o, Client *c)
+{
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        o->chead = c->next;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        o->ctail = c->prev;
+
+    c->next = NULL;
+    c->prev = NULL;
+}
+
+void
+PushClientFront(Output *o, Client *c)
+{
+    if (o->chead) {
+        c->next = o->chead;
+        o->chead->prev = c;
+    }
+
+    if (! o->ctail)
+        o->ctail = c;
+
+    o->chead = c;
+    c->prev = NULL;
+}
+
+void
+PushClientBack(Output *o, Client *c)
+{
+    if (o->ctail) {
+        c->prev = o->ctail;
+        o->ctail->next = c;
+    }
+
+    if (! o->chead)
+        o->chead = c;
+
+    o->ctail = c;
+    c->next = NULL;
+}
+
