@@ -27,7 +27,7 @@ static const Config default_config = {
     .inactive_button_hovered_foreground     = 0x434c5e,
 
     .button_icons = { "\uf057", "\uf065" },
-    .label_fontname = "Cantarell Regular:style=bold:antialias=true:size=8",
+    .label_fontname = "Cantarell Regular:style=bold:antialias=true:size=9",
     .icon_fontname = "Font Awesome 5 Free Solid:size=10",
     .shortcuts = {
         {Modkey | ShiftMask,    XK_q,       CallbackVoid,       {StopMainLoop}},
