@@ -202,6 +202,12 @@ OnMapRequest(XMapRequestEvent *e)
         XGetWindowAttributes(st_dpy, e->window, &xwa);
         if (!xwa.override_redirect) {
             Client *c = CreateClient(e->window);
+            if (c->focusable) {
+                FocusClient(c);
+            } else {
+                RaiseClient(c);
+                cactive = c;
+            }
             XSync(st_dpy, False);
             AttachClientToOutput(oactive, c);
             XSetInputFocus(st_dpy, e->window, RevertToPointerRoot, CurrentTime);
