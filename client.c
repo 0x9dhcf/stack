@@ -411,7 +411,6 @@ RaiseClient(Client *c)
     XRaiseWindow(st_dpy, c->frame);
     for (int i = 0; i < HandleCount; ++i)
         XRaiseWindow(st_dpy, c->handles[i]);
-    //Notify(c);
 }
 
 void
@@ -442,7 +441,6 @@ RestoreClient(Client *c)
 void
 FocusClient(Client *c)
 {
-    DLog();
     if (! c->focusable)
         return;
 
@@ -583,7 +581,7 @@ OnClientFocusIn(Client *c, XFocusInEvent *e)
 {
     /* ignore focus changes due to keyboard grabs */
     if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-      return;
+        return;
 
     if (e->detail == NotifyPointer)
         return;
@@ -603,7 +601,7 @@ OnClientFocusOut(Client *c, XFocusOutEvent *e)
 {
     // Ignore focus changes due to keyboard grabs.
     if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-      return;
+        return;
 
     if (e->detail == NotifyPointer)
         return;
@@ -631,9 +629,6 @@ OnClientButtonPress(Client *c, XButtonEvent *e)
     if (e->window != c->buttons[ButtonClose])
         XSetInputFocus(st_dpy, c->window, RevertToPointerRoot, CurrentTime);
 
-    if (e->window == c->window)
-        XAllowEvents(st_dpy, ReplayPointer, e->time);
-
     if (e->window == c->buttons[ButtonMaximize]) {
         if (c->hmaximixed || c->vmaximixed)
             RestoreClient(c);
@@ -643,6 +638,10 @@ OnClientButtonPress(Client *c, XButtonEvent *e)
 
     if (e->window == c->buttons[ButtonClose])
         CloseClient(c);
+
+    if (e->window == c->window)
+        XAllowEvents(st_dpy, ReplayPointer, e->time);
+
 }
 
 void
@@ -655,11 +654,6 @@ OnClientButtonRelease(Client *c, XButtonEvent *e)
             break;
         }
     }
-
-    //if (c->pw != c->w || c->ph != c->h) {
-    //    ApplyWmNormalHints(c);
-    //    Configure(c);
-    //}
 
     if (e->window == c->topbar || e->window == c->window)
         XDefineCursor(st_dpy, e->window, st_cur[CursorNormal]);
@@ -726,9 +720,8 @@ OnClientMessage(Client *c, XClientMessageEvent *e)
         }
     }
 
-    //if (e->message_type == st_atm[AtomNetActiveWindow]) {
-    //    SetClientUrgency(c, False);
-    //}
+    if (e->message_type == st_atm[AtomNetActiveWindow])
+        FocusClient(c);
 }
 
 void
