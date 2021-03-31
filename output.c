@@ -10,9 +10,6 @@
 #define sfforeach(o, c, d) for (c = o->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
 #define sbforeach(o, c, d) for (c = o->ctail, d = c ? c->prev : 0; c; c = d, d = c ? c->prev : 0)
 
-//static void InsertClient(Client *c, Client *prev, Client *next);
-//static void RemoveClient(Client *c);
-
 static void PushClientFront(Output *o, Client *c);
 static void PushClientBack(Output *o, Client *c);
 static void RemoveClient(Output *o, Client *c);
@@ -113,38 +110,12 @@ Client*
 NextOutputClient(Output *o, Client *c)
 {
     return c->next ? c->next : o->chead;
-    ///* find the first successor matching */
-    //for (Client *ic = c->next; ic; ic = ic->next)
-    //    if (ic->focusable)
-    //        return ic;
-
-    ///* if not found then find the first one from the head */
-    //for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
-    //    if (ic->focusable)
-    //        return ic;
-
-    /* not found */
-    return NULL;
 }
 
 Client*
 PrevOutputClient(Output *o, Client *c)
 {
     return c->prev ? c->prev : o->ctail;
-    //Client *nf = NULL;
-    //for (Client *ic = o->clients; ic && ic != c; ic = ic->next)
-    //    if (ic->focusable)
-    //        nf = ic;
-
-    //if (nf)
-    //    return nf;
-
-    //for (Client *ic = c->next; ic; ic = ic->next)
-    //    if (ic->focusable)
-    //        nf = ic;
-
-    //return nf;
-    return NULL;
 }
 
 
@@ -187,14 +158,6 @@ PrevOutputClient(Output *o, Client *c)
 //            RemoveClientFromOutputDesktop(m, c, i);
 //
 //    AddClientToOutputDesktop(m, c, d);
-//}
-
-//void
-//InsertClient(Client *c, Client *prev, Client *next) {
-//    next->prev = c;
-//    c->next = next;
-//    c->prev = prev;
-//    prev->next = c;
 //}
 
 void
