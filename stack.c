@@ -38,40 +38,32 @@ static void DestroyOutputs();
 static void ManageExistingWindows();
 //static void RestoreManagedWindows();
 static void GrabKeys();
+static void SetActive(Client *c);
 
 static Window supporting;
 static Bool running = False;
 static Output *outputs = NULL;
-static Output *oactive = NULL;
-static Client *cactive = NULL;
+static Output *active = NULL;
+static Client *focused = NULL;
 static int (*DefaultErrorHandler)(Display *, XErrorEvent *) = NULL;
 
 void
 CycleForward()
 {
-    Client *c = NextOutputClient(oactive, cactive);
-    if (c) {
-        if (c->focusable) {
-            FocusClient(c);
-        } else {
-            RaiseClient(c);
-            cactive = c;
-        }
-    }
+    //DLog("focused %ld: ", focused->window);
+    if (!focused)
+        return;
+
+    SetActive(NextOutputClient(active, focused));
 }
 
 void
 CycleBackward()
 {
-    Client *c = PrevOutputClient(oactive, cactive);
-    if (c) {
-        if (c->focusable) {
-            FocusClient(c);
-        } else {
-            RaiseClient(c);
-            cactive = c;
-        }
-    }
+    if (!focused)
+        return;
+
+    SetActive(PrevOutputClient(active, focused));
 }
 
 Client*
@@ -134,6 +126,7 @@ OnEvent(XEvent *e)
     /* Dispatch to clients */
     Client *c = Lookup(e->xany.window);
     if (c) {
+        DLog("found a client:%ld, type:%d", c->window, e->type);
         switch (e->type) {
             case Expose:
                 OnClientExpose(c, &e->xexpose);
@@ -144,14 +137,9 @@ OnEvent(XEvent *e)
             case PropertyNotify:
                 OnClientPropertyNotify(c, &e->xproperty);
             break;
-            case FocusIn:
-                cactive = c;
-                OnClientFocusIn(c, &e->xfocus);
-            break;
-            case FocusOut:
-                OnClientFocusOut(c, &e->xfocus);
-            break;
             case ButtonPress:
+                if (c != focused)
+                    SetActive(c);
                 OnClientButtonPress(c, &e->xbutton);
             break;
             case ButtonRelease:
@@ -169,9 +157,6 @@ OnEvent(XEvent *e)
             case ClientMessage:
                 OnClientMessage(c, &e->xclient);
             break;
-            //case KeyPress:
-            //    OnClientKeyPress(c, &e->xkey);
-            //break;
         }
     }
 }
@@ -196,21 +181,15 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
-    DLog();
     if (!Lookup(e->window)) {
         XWindowAttributes xwa;
         XGetWindowAttributes(st_dpy, e->window, &xwa);
         if (!xwa.override_redirect) {
             Client *c = CreateClient(e->window);
-            if (c->focusable) {
-                FocusClient(c);
-            } else {
-                RaiseClient(c);
-                cactive = c;
-            }
             XSync(st_dpy, False);
-            AttachClientToOutput(oactive, c);
-            XSetInputFocus(st_dpy, e->window, RevertToPointerRoot, CurrentTime);
+            AttachClientToOutput(active, c);
+            SetActive(c);
+            focused = c;
             XChangeProperty(st_dpy, st_root,
                     st_atm[AtomNetClientList], XA_WINDOW, 32, PropModeAppend,
                     (unsigned char *) &e->window, 1);
@@ -221,7 +200,6 @@ OnMapRequest(XMapRequestEvent *e)
 void
 OnUnmapNotify(XUnmapEvent *e)
 {
-    DLog("%ld:%ld", e->event, e->window);
     /* ignore UnmapNotify for reparented pre-existing window */
     if (e->event == st_root || e->event == None) {
         DLog("Reparenting forget that!");
@@ -230,6 +208,10 @@ OnUnmapNotify(XUnmapEvent *e)
 
     Client *c = Lookup(e->window);
     if (c) {
+        /* find a new home for the active window */
+        if (c == focused)
+            SetActive(NextOutputClient(c->output, c));
+
         DetachClientFromOutput(c->output, c);
         DestroyClient(c);
 
@@ -238,17 +220,14 @@ OnUnmapNotify(XUnmapEvent *e)
             for (Client *c2 = o->chead; c2; c2 = c2->next)
                 XChangeProperty(st_dpy, st_root, st_atm[AtomNetClientList], XA_WINDOW,
                         32, PropModeAppend, (unsigned char *) &c2->window, 1);
-        /* TODO: find the new cactive */
-        //XSync(st_dpy, False);
     }
 }
 
 void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
-    DLog("XXX: Not implemented yet.");
     Client *c = Lookup(e->window);
-    if (c) { DLog("Found a client"); }
+    if (c) { ELog("Found a client"); }
 }
 
 void
@@ -273,8 +252,8 @@ OnKeyPress(XKeyPressedEvent *e)
                     (*st_cfg.shortcuts[i].callback.vcb)();
                     break;
                 case CallbackClient:
-                    if (cactive)
-                        (*st_cfg.shortcuts[i].callback.ccb)(cactive);
+                    if (focused)
+                        (*st_cfg.shortcuts[i].callback.ccb)(focused);
                     break;
             }
             break;
@@ -358,7 +337,7 @@ ScanOutputs()
         outputs = CreateOutput(0, 0, DisplayWidth(st_dpy, st_scn),
                 XDisplayHeight(st_dpy, st_scn));
 
-    oactive = outputs;
+    active = outputs;
 }
 
 void
@@ -397,7 +376,7 @@ ManageExistingWindows()
                  * we discar events to prevent the unmap to be catched
                  * and wrongly interpreted */
                 XSync(st_dpy, True);
-                AttachClientToOutput(oactive, c);
+                AttachClientToOutput(active, c);
                 XSetInputFocus(st_dpy, wins[i], RevertToPointerRoot, CurrentTime);
                 XChangeProperty(st_dpy, st_root, st_atm[AtomNetClientList],
                         XA_WINDOW, 32, PropModeAppend,
@@ -441,6 +420,16 @@ GrabKeys()
                 XGrabKey(st_dpy, code,
                         st_cfg.shortcuts[i].modifier | modifiers[j],
                         st_root, True, GrabModeSync, GrabModeAsync);
+}
+
+void
+SetActive(Client *c)
+{
+    if (focused)
+        SetClientActive(focused, False);
+    if (c)
+        SetClientActive(c, True);
+    focused = c;
 }
 
 void

@@ -37,8 +37,9 @@ static const Config default_config = {
         //{Modkey | ShiftMask, XK_w, CallbackClient,  {MinimizeClient}},
         //{Modkey | ShiftMask, XK_f, CallbackClient,  {FullscreenClient}},
         {Modkey            ,    XK_Down,    CallbackClient,     {RestoreClient}},
-        {Modkey,                XK_Tab,     CallbackVoid,       {CycleForward}},
-        {Modkey | ShiftMask,    XK_Tab,     CallbackVoid,       {CycleBackward}}
+        {Modkey            ,    XK_Right,   CallbackVoid,       {CycleForward}},
+        // TEST
+        {Modkey            ,    XK_Left,    CallbackVoid,       {CycleBackward}}
     },
     .terminal = {"uxterm", NULL}
 };

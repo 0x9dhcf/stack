@@ -12,6 +12,7 @@
 #include <string.h>
 #include <limits.h>
 
+
 #define DoNotPropagateMask (\
           ButtonPressMask\
         | ButtonReleaseMask\
@@ -37,12 +38,15 @@
         | ButtonMotionMask          /* …mouse is moved   */                         \
         | ExposureMask              /* …our window needs to be redrawn */           \
         | EnterWindowMask                                                           \
-        | LeaveNotify)
+        | LeaveWindowMask)
 
 #define ClientEventMask (\
           PropertyChangeMask\
         | StructureNotifyMask\
-        | FocusChangeMask)
+        | EnterWindowMask                                                           \
+        | LeaveWindowMask)
+        //| ButtonPressMask)
+        //| FocusChangeMask)
 
 #define DLogClient(cptr) {\
     DLog("window:\t%ld @ (%d, %d) [%d x %d]\n"\
@@ -153,8 +157,8 @@ CreateClient(Window w)
 
     /* client */
     attrs.event_mask = ClientEventMask;
-    attrs.do_not_propagate_mask = DoNotPropagateMask;
-    XChangeWindowAttributes(st_dpy, c->window, CWEventMask | CWDontPropagate, &attrs);
+    //attrs.do_not_propagate_mask = DoNotPropagateMask;
+    XChangeWindowAttributes(st_dpy, c->window, CWEventMask /*| CWDontPropagate */, &attrs);
     XSetWindowBorderWidth(st_dpy, c->window, 0);
     XReparentWindow(st_dpy, c->window, c->frame, 0, 0);
     XMapWindow(st_dpy, c->window);
@@ -167,7 +171,7 @@ CreateClient(Window w)
     c->sbw = b;
     c->decorated = decorated;
     c->fdecorated = decorated;
-    c->focused = False;
+    c->active = False;
     c->urgent = False;
     //c->minimized = False;
     c->vmaximixed = False;
@@ -208,7 +212,6 @@ CreateClient(Window w)
 void
 DestroyClient(Client *c)
 {
-    DLog();
     if (c->name)
         free(c->name);
 
@@ -287,7 +290,7 @@ MoveResizeClient(Client *c, int x, int y, int w, int h, Bool sh)
                 || h < 2 * st_cfg.border_width + st_cfg.topbar_height + 1))
         return;
 
-    DLog("(%d, %d), [%d x %d], apply hints: %d", x, y, w, h, sh);
+    //DLog("(%d, %d), [%d x %d], apply hints: %d", x, y, w, h, sh);
     c->x = x;
     c->y = y;
     c->w = w;
@@ -377,7 +380,6 @@ MinimizeClient(Client *c)
 void
 FullscreenClient(Client *c, Bool b)
 {
-    DLog("%d", b);
     if (c->fixed || !c->output)
         return;
 
@@ -439,15 +441,26 @@ RestoreClient(Client *c)
 }
 
 void
-FocusClient(Client *c)
+SetClientActive(Client *c, Bool b)
 {
-    if (! c->focusable)
-        return;
-
-    XSetInputFocus(st_dpy, c->window, RevertToPointerRoot, CurrentTime);
-    //XChangeProperty(st_dpy, st_root, st_atm[AtomNetActiveWindow],
-    //        XA_WINDOW, 32, PropModeReplace, (unsigned char *) &(c->window), 1);
-    //SendClientMessage(c, st_atm[AtomWMTakeFocus]);
+    DLog("%ld: %d", c->window, b);
+    if (b) {
+        if (c->focusable) {
+            XSetInputFocus(st_dpy, c->window, RevertToPointerRoot, CurrentTime);
+        //    SendClientMessage(c, st_atm[AtomWMTakeFocus]);
+        }
+        c->urgent = False;
+        c->active = True;
+        Decorate(c);
+        RaiseClient(c);
+        XChangeProperty(st_dpy, st_root, st_atm[AtomNetActiveWindow],
+                XA_WINDOW, 32, PropModeReplace, (unsigned char *) &(c->window), 1);
+    } else {
+        c->active = False;
+        Decorate(c);
+        XDeleteProperty(st_dpy, st_root, st_atm[AtomNetActiveWindow]);
+    }
+    GrabButtons(c);
 }
 
 void
@@ -460,8 +473,9 @@ OnClientExpose(Client *c, XExposeEvent *e)
 void
 OnClientEnter(Client *c, XCrossingEvent *e)
 {
+    /* redraw button if hovered */
     int bg, fg;
-    if (c->focused) {
+    if (c->active) {
         bg = st_cfg.active_button_hovered_background;
         fg = st_cfg.active_button_hovered_foreground;
     } else {
@@ -485,8 +499,9 @@ OnClientEnter(Client *c, XCrossingEvent *e)
 
 void OnClientLeave(Client *c, XCrossingEvent *e)
 {
+    /* redraw button if hovered */
     int bg, fg;
-    if (c->focused) {
+    if (c->active) {
         bg = st_cfg.active_button_background;
         fg = st_cfg.active_button_foreground;
     } else {
@@ -577,45 +592,9 @@ OnClientPropertyNotify(Client *c, XPropertyEvent *e)
 }
 
 void
-OnClientFocusIn(Client *c, XFocusInEvent *e)
-{
-    /* ignore focus changes due to keyboard grabs */
-    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-        return;
-
-    if (e->detail == NotifyPointer)
-        return;
-
-    c->urgent = False;
-    c->focused = True;
-    RaiseClient(c);
-    Decorate(c);
-    GrabButtons(c);
-
-    XChangeProperty(st_dpy, st_root, st_atm[AtomNetActiveWindow], XA_WINDOW, 32,
-            PropModeReplace, (unsigned char *) &(c->window), 1);
-}
-
-void
-OnClientFocusOut(Client *c, XFocusOutEvent *e)
-{
-    // Ignore focus changes due to keyboard grabs.
-    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-        return;
-
-    if (e->detail == NotifyPointer)
-        return;
-
-    c->focused = False;
-    Decorate(c);
-    GrabButtons(c);
-
-    XDeleteProperty(st_dpy, st_root, st_atm[AtomNetActiveWindow]);
-}
-
-void
 OnClientButtonPress(Client *c, XButtonEvent *e)
 {
+    DLog();
     c->lx = e->x_root;
     c->ly = e->y_root;
     c->px = c->x;
@@ -641,7 +620,6 @@ OnClientButtonPress(Client *c, XButtonEvent *e)
 
     if (e->window == c->window)
         XAllowEvents(st_dpy, ReplayPointer, e->time);
-
 }
 
 void
@@ -657,6 +635,9 @@ OnClientButtonRelease(Client *c, XButtonEvent *e)
 
     if (e->window == c->topbar || e->window == c->window)
         XDefineCursor(st_dpy, e->window, st_cur[CursorNormal]);
+
+    if (e->window == c->window)
+        XAllowEvents(st_dpy, ReplayPointer, e->time);
 }
 
 void
@@ -720,8 +701,9 @@ OnClientMessage(Client *c, XClientMessageEvent *e)
         }
     }
 
+    // XXX: ???
     if (e->message_type == st_atm[AtomNetActiveWindow])
-        FocusClient(c);
+        XSetInputFocus(st_dpy, c->window, RevertToPointerRoot, CurrentTime);
 }
 
 void
@@ -730,7 +712,7 @@ GrabButtons(Client *c)
     unsigned int modifiers[] = { 0, LockMask, st_nlm, st_nlm|LockMask };
 
     XUngrabButton(st_dpy, AnyButton, AnyModifier, c->window);
-    if (!c->focused) {
+    if (!c->active) {
         XGrabButton(st_dpy, AnyButton, AnyModifier, c->window, False,
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync,
                 GrabModeSync, None, None);
@@ -792,7 +774,6 @@ Configure(Client *c)
 void
 ApplyWmNormalHints(Client *c)
 {
-    DLog();
     int baseismin = (c->bw == c->minw) && (c->bh == c->minh);
 
     /* temporarily remove base dimensions, ICCCM 4.1.2.3 */
@@ -851,7 +832,6 @@ Notify(Client *c)
 void
 SendClientMessage(Client *c, Atom proto)
 {
-    DLog();
     XClientMessageEvent  cm;
 
     (void)memset(&cm, 0, sizeof(cm));
@@ -877,7 +857,7 @@ Decorate(Client *c)
     if (c->urgent) {
         bg = bbg = st_cfg.urgent_background;
         fg = bfg = st_cfg.urgent_foreground;
-    } else if (c->focused) {
+    } else if (c->active) {
         bg = st_cfg.active_background;
         fg = st_cfg.active_foreground;
         bbg = st_cfg.active_button_background;

@@ -51,7 +51,7 @@ typedef struct _Client {
     /* state */
     Bool decorated;
     Bool fdecorated;        /* pre fullscreen decoration status */
-    Bool focused;
+    Bool active;
     Bool urgent;
     //Bool minimized;
     Bool vmaximixed;
@@ -103,15 +103,16 @@ void MinimizeClient(Client *c);
 void RaiseClient(Client *c);
 void LowerClient(Client *c);
 void RestoreClient(Client *c);
-void FocusClient(Client *c);
+void SetClientActive(Client *c, Bool b);
+//void FocusClient(Client *c, Bool b);
 
 void OnClientExpose(Client *c, XExposeEvent *e);
 void OnClientEnter(Client *c, XCrossingEvent *e);
 void OnClientLeave(Client *c, XCrossingEvent *e);
 void OnClientConfigureRequest(Client *c, XConfigureRequestEvent *e);
 void OnClientPropertyNotify(Client *c, XPropertyEvent *e);
-void OnClientFocusIn(Client *c, XFocusInEvent *e);
-void OnClientFocusOut(Client *c, XFocusOutEvent *e);
+//void OnClientFocusIn(Client *c, XFocusInEvent *e);
+//void OnClientFocusOut(Client *c, XFocusOutEvent *e);
 void OnClientButtonPress(Client *c, XButtonEvent *e);
 void OnClientButtonRelease(Client *c, XButtonEvent *e);
 void OnClientMotionNotify(Client *c, XMotionEvent *e);
