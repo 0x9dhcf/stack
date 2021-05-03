@@ -1,13 +1,33 @@
-#include "font.h"
 #include "X11/Xft/Xft.h"
+
+#include "config.h"
+#include "font.h"
 #include "log.h"
-#include "stack.h"
+#include "x11.h"
+
+XftFont *stLabelFont = NULL;
+XftFont *stIconFont = NULL;
+
+/* XXX config should be loaded */
+void
+InitializeFonts()
+{
+    stLabelFont = XftFontOpenName(stDisplay, 0, stConfig.labelFontname);
+    stIconFont = XftFontOpenName(stDisplay, 0, stConfig.iconFontname);
+}
+
+void
+TeardownFonts()
+{
+    XftFontClose(stDisplay, stLabelFont);
+    XftFontClose(stDisplay, stIconFont);
+}
 
 void
 GetTextPosition(const char *s, XftFont *ft, HAlign ha, VAlign va, int w, int h, int *x, int *y)
 {
     XGlyphInfo info;
-    XftTextExtentsUtf8(st_dpy, ft, (FcChar8*)s, strlen(s), &info);
+    XftTextExtentsUtf8(stDisplay, ft, (FcChar8*)s, strlen(s), &info);
 
     switch ((int)ha) {
         case AlignLeft:
@@ -38,19 +58,19 @@ WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y)
 {
     XftColor xftc;
     XftDraw *draw;
-    Visual *v = DefaultVisual(st_dpy, 0);
-    Colormap cm = DefaultColormap(st_dpy, 0);
+    Visual *v = DefaultVisual(stDisplay, 0);
+    Colormap cm = DefaultColormap(stDisplay, 0);
 
-    draw = XftDrawCreate(st_dpy, d, v, cm);
+    draw = XftDrawCreate(stDisplay, d, v, cm);
       
     char name[] = "#ffffff";
     snprintf(name, sizeof(name), "#%06X", color);
-    XftColorAllocName (st_dpy, DefaultVisual(st_dpy, DefaultScreen(st_dpy)),
-    DefaultColormap(st_dpy, DefaultScreen(st_dpy)), name, &xftc);
+    XftColorAllocName (stDisplay, DefaultVisual(stDisplay, DefaultScreen(stDisplay)),
+        DefaultColormap(stDisplay, DefaultScreen(stDisplay)), name, &xftc);
       
     XftDrawStringUtf8(draw, &xftc, ft, x, y, (XftChar8 *)s, strlen(s));
     XftDrawDestroy(draw);
-    XftColorFree(st_dpy,v, cm, &xftc);
+    XftColorFree(stDisplay,v, cm, &xftc);
 }
 
 

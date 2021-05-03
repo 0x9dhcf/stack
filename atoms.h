@@ -1,7 +1,16 @@
 #ifndef __ATOMS_H__
 #define __ATOMS_H__
 
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+
 enum AtomType {
+    /* icccm */
+    AtomWMDeleteWindow,
+    AtomWMTakeFocus,
+    AtomWMProtocols,
+
+    /* ewmh */
     AtomNetSupported,
     AtomNetClientList,
     AtomNetClientListStacking,
@@ -81,7 +90,12 @@ enum AtomType {
     AtomNetWMActionClose,
     AtomNetWMActionAbove,
     AtomNetWMActionBelow,
+
     AtomCount
 };
+
+extern Atom stAtoms[AtomCount];
+
+void InitializeAtoms();
 
 #endif

@@ -12,19 +12,17 @@
 #include "output.h"
 
 #define RootEventMask (\
-          SubstructureRedirectMask                                          \
-        | StructureNotifyMask /* when the user adds a screen (e.g. video    \
-                               * projector), the root window gets a         \
-                               * ConfigureNotify */                         \
-        | PropertyChangeMask                                                \
-        | ButtonPressMask                                                   \
-        | PointerMotionMask                                                 \
-        | FocusChangeMask                                                   \
-        | EnterWindowMask                                                   \
+          SubstructureRedirectMask\
+        | StructureNotifyMask\
+        | PropertyChangeMask\
+        | ButtonPressMask\
+        | PointerMotionMask\
+        | FocusChangeMask\
+        | EnterWindowMask\
         | LeaveWindowMask)
 
 static Client *Lookup(Window w);
-static int ErrorHandler(Display *d, XErrorEvent *e);
+//static int ErrorHandler(Display *d, XErrorEvent *e);
 static void OnEvent(XEvent *e);
 static void OnConfigureRequest(XConfigureRequestEvent *e);
 static void OnMapRequest(XMapRequestEvent *e);
@@ -75,26 +73,6 @@ Lookup(Window w)
             return c;
     }
     return NULL;
-}
-
-int
-ErrorHandler(Display *d, XErrorEvent *e)
-{
-    /* ignore some error */
-    if (e->error_code == BadWindow
-            || (e->request_code == X_SetInputFocus && e->error_code == BadMatch)
-            || (e->request_code == X_PolyText8 && e->error_code == BadDrawable)
-            || (e->request_code == X_PolyFillRectangle && e->error_code == BadDrawable)
-            || (e->request_code == X_PolySegment && e->error_code == BadDrawable)
-            || (e->request_code == X_ConfigureWindow && e->error_code == BadMatch)
-            || (e->request_code == X_GrabButton && e->error_code == BadAccess)
-            || (e->request_code == X_GrabKey && e->error_code == BadAccess)
-            || (e->request_code == X_CopyArea && e->error_code == BadDrawable)) {
-        return 0;
-    }
-    ELog("fatal error: request code=%d, error code=%d\n",
-            e->request_code, e->error_code);
-    return DefaultErrorHandler(d, e); /* may call exit */
 }
 
 void
@@ -161,118 +139,7 @@ OnEvent(XEvent *e)
     }
 }
 
-void
-OnConfigureRequest(XConfigureRequestEvent *e)
-{
-    if (!Lookup(e->window)) {
-        XWindowChanges xwc;
-        xwc.x = e->x;
-        xwc.y = e->y;
-        xwc.width = e->width;
-        xwc.height = e->height;
-        xwc.border_width = e->border_width;
-        xwc.sibling = e->above;
-        xwc.stack_mode = e->detail;
-        XConfigureWindow(st_dpy, e->window, e->value_mask, &xwc);
-        XSync(st_dpy, False);
-    }
-}
 
-void
-OnMapRequest(XMapRequestEvent *e)
-{
-    if (!Lookup(e->window)) {
-        XWindowAttributes xwa;
-        XGetWindowAttributes(st_dpy, e->window, &xwa);
-        if (!xwa.override_redirect) {
-            Client *c = CreateClient(e->window);
-            XSync(st_dpy, False);
-            AttachClientToOutput(active, c);
-            SetActive(c);
-            focused = c;
-            XChangeProperty(st_dpy, st_root,
-                    st_atm[AtomNetClientList], XA_WINDOW, 32, PropModeAppend,
-                    (unsigned char *) &e->window, 1);
-        }
-    }
-}
-
-void
-OnUnmapNotify(XUnmapEvent *e)
-{
-    /* ignore UnmapNotify for reparented pre-existing window */
-    if (e->event == st_root || e->event == None) {
-        DLog("Reparenting forget that!");
-        return;
-    }
-
-    Client *c = Lookup(e->window);
-    if (c) {
-        /* find a new home for the active window */
-        if (c == focused)
-            SetActive(NextOutputClient(c->output, c));
-
-        DetachClientFromOutput(c->output, c);
-        DestroyClient(c);
-
-        XDeleteProperty(st_dpy, st_root, st_atm[AtomNetClientList]);
-        for (Output *o = outputs; o; o = o->next)
-            for (Client *c2 = o->chead; c2; c2 = c2->next)
-                XChangeProperty(st_dpy, st_root, st_atm[AtomNetClientList], XA_WINDOW,
-                        32, PropModeAppend, (unsigned char *) &c2->window, 1);
-    }
-}
-
-void
-OnDestroyNotify(XDestroyWindowEvent *e)
-{
-    Client *c = Lookup(e->window);
-    if (c) { ELog("Found a client"); }
-}
-
-void
-OnKeyPress(XKeyPressedEvent *e)
-{
-    KeySym keysym;
-    //keysym = XkbKeycodeToKeysym(st_dpy, e->keycode, 0, e->state & ShiftMask ? 1 : 0);
-    keysym = XkbKeycodeToKeysym(st_dpy, e->keycode, 0, 0);
-
-    //if (keysym == XK_q && (ShiftMask | MODKEY) == e->state)
-    //    StopMainLoop();
-
-    // TODO manage binding
-    if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
-        Spawn((char**)st_cfg.terminal);
-
-    for (int i = 0; i < ShortcutCount; ++i) {
-        if (keysym == (st_cfg.shortcuts[i].keysym) &&
-                CleanMask(st_cfg.shortcuts[i].modifier) == CleanMask(e->state)) {
-            switch (st_cfg.shortcuts[i].type) {
-                case CallbackVoid:
-                    (*st_cfg.shortcuts[i].callback.vcb)();
-                    break;
-                case CallbackClient:
-                    if (focused)
-                        (*st_cfg.shortcuts[i].callback.ccb)(focused);
-                    break;
-            }
-            break;
-        }
-    }
-}
-
-void
-Spawn(char **args)
-{
-    if (fork() == 0) {
-        if (st_dpy)
-              close(ConnectionNumber(st_dpy));
-        setsid();
-        execvp((char *)args[0], (char **)args);
-        ELog(" failed");
-        exit(EXIT_SUCCESS);
-    }
-}
 
 void
 CreateSupportingWindow()
@@ -304,53 +171,6 @@ CreateSupportingWindow()
 
     /* Reset the client list. */
     XDeleteProperty(st_dpy, st_root, st_atm[AtomNetClientList]);
-}
-
-/* XXX not re entrant */
-void
-ScanOutputs()
-{
-    XRRScreenResources *sr;
-    XRRCrtcInfo *ci;
-    int i;
-
-    sr = XRRGetScreenResources(st_dpy, st_root);
-    for (i = 0, ci = NULL; i < sr->ncrtc; ++i) {
-        ci = XRRGetCrtcInfo(st_dpy, sr, sr->crtcs[i]);
-        if (ci == NULL)
-            continue;
-        if (ci->noutput == 0) {
-            XRRFreeCrtcInfo(ci);
-            continue;
-        }
-        //DLog("Found output: (%d, %d) [%d, %d]",
-        //        ci->x, ci->y, ci->width, ci->height);
-        Output *o = CreateOutput(ci->x, ci->y, ci->width, ci->height);
-        o->next = outputs;
-        outputs = o;
-        XRRFreeCrtcInfo(ci);
-    }
-    XRRFreeScreenResources(sr);
-
-    /* fallback */
-    if (!outputs)
-        outputs = CreateOutput(0, 0, DisplayWidth(st_dpy, st_scn),
-                XDisplayHeight(st_dpy, st_scn));
-
-    active = outputs;
-}
-
-void
-DestroyOutputs()
-{
-    DLog();
-    Output *o = outputs;
-    while (o) {
-        Output *p = o->next;
-        DestroyOutput(o);
-        o = p;
-    }
-    DLog();
 }
 
 void
@@ -399,29 +219,8 @@ ManageExistingWindows()
 //    }
 //}
 
-void
-GrabKeys()
-{
-    KeyCode code;
-    unsigned int modifiers[] = { 0, LockMask, st_nlm, st_nlm | LockMask };
 
-    XUngrabKey(st_dpy, AnyKey, AnyModifier, st_root);
-
-    // TODO manage binding
-    // For now just a way to launch a terminal
-    if ((code = XKeysymToKeycode(st_dpy, XK_Return)))
-        for (int j = 0; j < 4; ++j)
-            XGrabKey(st_dpy, code, Modkey |ShiftMask | modifiers[j],
-                    st_root, True, GrabModeSync, GrabModeAsync);
-
-    for (int i = 0; i < ShortcutCount; ++i)
-        if ((code = XKeysymToKeycode(st_dpy, st_cfg.shortcuts[i].keysym)))
-            for (int j = 0; j < 4; ++j)
-                XGrabKey(st_dpy, code,
-                        st_cfg.shortcuts[i].modifier | modifiers[j],
-                        st_root, True, GrabModeSync, GrabModeAsync);
-}
-
+// XXX: move to Action
 void
 SetActive(Client *c)
 {

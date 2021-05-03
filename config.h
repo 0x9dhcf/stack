@@ -1,28 +1,23 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#ifdef NDEBUG
+#define Modkey Mod4Mask
+#else
+#define Modkey Mod1Mask
+#endif
+
 typedef struct _Client Client;
 
-typedef enum _CallbackType {
-    CallbackVoid,
-    CallbackClient
-} CallbackType;
-
-typedef struct _Shortcut {
-    unsigned long modifier;
-    unsigned long keysym;
-    CallbackType type;
-    union {
-        void (*vcb)();
-        void (*ccb)(Client *);
-    } callback;
-} Shortcut;
-
-enum ClientShortcutNames {
+enum Shortcuts {
     ShortcutQuit,
-    ShortcutVMaximize,
-    ShortcutHMaximize,
-    ShortcutFMaximize,
+    ShortcutMaximizeVertically,
+    ShortcutMaximizeHorizontally,
+    ShortcutMaximizeLeft,
+    ShortcutMaximizeRight,
+    ShortcutMaximizeTop,
+    ShortcutMaximizeBottom,
+    ShortcutMaximize,
     //ShortcutMinimize, No minimize for now
     //ShortcutFullscreen,
     ShortcutRestore,
@@ -31,33 +26,40 @@ enum ClientShortcutNames {
     ShortcutCount
 };
 
+typedef struct _Shortcut {
+    unsigned long modifier;
+    unsigned long keysym;
+} Shortcut;
+
 typedef struct _Config {
-    int border_width;
-    int topbar_height;
-    int handle_width;
-    int button_size;
-    int button_gap;
-    int active_background;
-    int active_foreground;
-    int inactive_background;
-    int inactive_foreground;
-    int urgent_background;
-    int urgent_foreground;
-    int active_button_background;
-    int active_button_foreground;
-    int inactive_button_background;
-    int inactive_button_foreground;
-    int active_button_hovered_background;
-    int active_button_hovered_foreground;
-    int inactive_button_hovered_background;
-    int inactive_button_hovered_foreground;
-    char *button_icons[2]; /* close, maximize, minimize */
-    char *label_fontname;
-    char *icon_fontname;
-
+    int borderWidth;
+    int topbarHeight;
+    int handleWidth;
+    int buttonSize;
+    int buttonGap;
+    int activeBackground;
+    int activeForeground;
+    int inactiveBackground;
+    int inactiveForeground;
+    int urgentBackground;
+    int urgentForeground;
+    int activeButtonBackground;
+    int activeButtonForeground;
+    int inactiveButtonBackground;
+    int inactiveButtonForeground;
+    int activeButtonHoveredBackground;
+    int activeButtonHoveredForeground;
+    int inactiveButtonHoveredBackground;
+    int inactiveButtonHoveredForeground;
+    char *buttonIcons[3]; /* close, maximize, minimize */
+    char *labelFontname;
+    char *iconFontname;
     Shortcut shortcuts[ShortcutCount];
-
     char *terminal[2];
 } Config;
+
+extern Config stConfig;
+
+void LoadConfig();
 
 #endif

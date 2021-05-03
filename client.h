@@ -1,15 +1,13 @@
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 
-#include "X11/XKBlib.h"
-#include "X11/Xlib.h"
+#include <X11/Xlib.h>
+
+#include "config.h"
+#include "hints.h"
 #include "stack.h"
 
-/* window position and size offsets */
-#define WXOffset(c) (c->decorated ? st_cfg.border_width : 0)
-#define WYOffset(c) (c->decorated ? st_cfg.border_width + st_cfg.topbar_height : 0)
-#define WWOffset(c) (c->decorated ? 2 * st_cfg.border_width : 0)
-#define WHOffset(c) (c->decorated ? 2 * st_cfg.border_width + st_cfg.topbar_height: 0)
+typedef struct _Monitor Monitor;
 
 enum Handles {
     HandleNorth,
@@ -26,11 +24,39 @@ enum Handles {
 enum Buttons {
     ButtonClose,
     ButtonMaximize,
-    // ButtonIconify, No iconify yet
+    ButtonMinimize,
     ButtonCount
 };
 
-typedef struct _Output Output;
+enum State {
+    StateNone                       = 0,
+    StateAcceptFocus                = (1<<0),
+    StateUrgent                     = (1<<1),
+    StateTakeFocus                  = (1<<2),
+    StateDeleteWindow               = (1<<3),
+    StateDecorated                  = (1<<4),
+    StateFixed                      = (1<<5),
+    StateActive                     = (1<<6),
+    StateMaximizedVertically        = (1<<7),
+    StateMaximizedHorizontally      = (1<<8),
+    StateMaximizedLeft              = (1<<9),
+    StateMaximizedTop               = (1<<10),
+    StateMaximizedRight             = (1<<11),
+    StateMaximizedBottom            = (1<<12),
+    StateMinimized                  = (1<<13),
+    StateFullscreen                 = (1<<14),
+    StateAbove                      = (1<<15),
+    StateBelow                      = (1<<16),
+    StateSticky                     = (1<<17),
+    StateMaximized                  = (StateMaximizedVertically
+                                    |  StateMaximizedHorizontally),
+    StateMaximizedAny               = (StateMaximizedVertically
+                                    |  StateMaximizedHorizontally
+                                    |  StateMaximizedLeft
+                                    |  StateMaximizedTop
+                                    |  StateMaximizedRight
+                                    |  StateMaximizedBottom)
+};
 
 typedef struct _Client {
     /* components */
@@ -41,82 +67,54 @@ typedef struct _Client {
     Window handles[HandleCount];
 
     /* geometries */
-    int x, y, w, h;         /* current geometry                 */
-    int mx, my, mw, mh;     /* pre maximization geometry        */
-    //int hx, hy, hw, hh;   /* pre minimisation geometry        */
-    int fx, fy, fw, fh;     /* pre fullscreen geometry          */
-    int px, py, pw, ph;     /* pre pointer motion geometry      */
-    int sbw;                /* saved border width               */
+    int wx, wy, ww, wh;     /* window absolute geometry */
+    int fx, fy, fw, fh;     /* frame absolute geometry  */
+    int swx, swy, sww, swh; /* saved window geoemtry    */
+    int sfx, sfy, sfw, sfh; /* saved frame geometry     */
+    int sbw;                /* saved border width       */
 
     /* state */
-    Bool decorated;
-    Bool fdecorated;        /* pre fullscreen decoration status */
-    Bool active;
-    Bool urgent;
-    //Bool minimized;
-    Bool vmaximixed;
-    Bool hmaximixed;
-    Bool fullscreen;
+    int states;
 
-    /* ewmh */
-    char *name;
-    Bool focusable;
-    Bool deletable;
-    Bool fixed;
-    char *class;
-    char *instance;
+    char *name;             /* ewmh or icccm name       */
+    WMClass wmclass;        /* icccm class              */
+    WMNormals normals;      /* size hints               */
+    WMStrut strut;          /* strut                    */
 
-    /* normal hints */
-    int bw, bh;
-    int incw, inch;
-    int minw, minh;
-    int maxw, maxh;
-    float mina, maxa;
+    Monitor *monitor;
 
-    /* strut */
-    int top;
-    int right;
-    int left;
-    int bottom;
-
-    /* internal */
-    int tags;
-    int lx, ly;         /* last seen pointer                */
-    Time lt;            /* last time for pointer motion     */
-    Output *output;
     struct _Client *prev;
     struct _Client *next;
 } Client;
 
+//void CloseClient(Client *c);
+
 Client *CreateClient(Window w);
-void DestroyClient(Client *c);
 
-void CloseClient(Client *c);
-void MoveClient(Client *c, int x, int y);
-void ResizeClient(Client *c, int w, int h, Bool sh);
-void MoveResizeClient(Client *c, int x, int y, int w, int h, Bool sh);
-void MaximizeClientHorizontally(Client *c);
-void MaximizeClientVertically(Client *c);
-void MaximizeClient(Client *c);
-void MinimizeClient(Client *c);
-//void FullscreenClient(Client *c); No need to be public
-void RaiseClient(Client *c);
-void LowerClient(Client *c);
-void RestoreClient(Client *c);
+void MoveClientWindow(Client *c, int x, int y);
+void ResizeClientWindow(Client *c, int w, int h, Bool sh);
+void MoveResizeClientWindow(Client *c, int x, int y, int w, int h, Bool sh);
+
+void MoveClientFrame(Client *c, int x, int y);
+void ResizeClientFrame(Client *c, int w, int h, Bool sh);
+void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
+
+void MaximizeClient(Client *c, int flag, Bool user);
+void MinimizeClient(Client *c, Bool user);
+void FullscreenClient(Client *c, Bool user);
+void RestoreClient(Client *c, Bool user);
+void RaiseClient(Client *c, Bool user);
+void LowerClient(Client *c, Bool user);
+
+void RefreshClient(Client *c);
+
+void UpdateClientName(Client *c);
+void UpdateClientHints(Client *c);
+void UpdateClientState(Client *c);
+
 void SetClientActive(Client *c, Bool b);
-//void FocusClient(Client *c, Bool b);
 
-void OnClientExpose(Client *c, XExposeEvent *e);
-void OnClientEnter(Client *c, XCrossingEvent *e);
-void OnClientLeave(Client *c, XCrossingEvent *e);
-void OnClientConfigureRequest(Client *c, XConfigureRequestEvent *e);
-void OnClientPropertyNotify(Client *c, XPropertyEvent *e);
-//void OnClientFocusIn(Client *c, XFocusInEvent *e);
-//void OnClientFocusOut(Client *c, XFocusOutEvent *e);
-void OnClientButtonPress(Client *c, XButtonEvent *e);
-void OnClientButtonRelease(Client *c, XButtonEvent *e);
-void OnClientMotionNotify(Client *c, XMotionEvent *e);
-void OnClientMessage(Client *c, XClientMessageEvent *e);
-
+void NotifyClient(Client *c);
+//void SendClientMessage(Client *c, Atom proto);
 
 #endif
