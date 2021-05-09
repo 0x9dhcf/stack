@@ -3,6 +3,7 @@
 
 #include <X11/extensions/Xrandr.h>
 
+#include "atoms.h"
 #include "client.h"
 #include "log.h"
 #include "manage.h"
@@ -17,6 +18,8 @@
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);
 static void RemoveClient(Monitor *m, Client *c);
+static void AddClientToDesktop(Monitor *m, Client *c, int d);
+static void RemoveClientFromDesktop(Monitor *m, Client *c, int d);
 
 Monitor *stMonitors = NULL;
 
@@ -44,10 +47,17 @@ InitializeMonitors()
         }
         memset(m, 0 , sizeof(Monitor));
 
-        m->x = m->wx = ci->x;
-        m->y = m->wy = ci->y;
-        m->w = m->ww = ci->width;
-        m->h = m->wh = ci->height;
+        m->x = ci->x;
+        m->y = ci->y;
+        m->w = ci->width;
+        m->h = ci->height;
+        for (int i = 0; i < DesktopCount; ++i) {
+            m->desktops[i].wx = m->x;
+            m->desktops[i].wy = m->y;
+            m->desktops[i].ww = m->w;
+            m->desktops[i].wh = m->h;
+        }
+        m->activeDesktop = 0;
         m->chead= NULL;
         m->ctail= NULL;
         m->next = stMonitors;
@@ -56,21 +66,30 @@ InitializeMonitors()
         if (!stActiveMonitor)
             stActiveMonitor = m;
         XRRFreeCrtcInfo(ci);
-        DLog("monitor: (%d, %d) [%d x %d]", m->x, m->y, m->w, m->h);
     }
     XRRFreeScreenResources(sr);
 
     /* fallback */
     if (!stMonitors) {
         stMonitors = malloc(sizeof(Monitor));
-        stMonitors->x = stMonitors->wx = 0;
-        stMonitors->y = stMonitors->wy = 0;
-        stMonitors->w = stMonitors->ww = DisplayWidth(stDisplay, stScreen);
-        stMonitors->h = stMonitors->wh = XDisplayHeight(stDisplay, stScreen);
+        stMonitors->x = 0;
+        stMonitors->y = 0;
+        stMonitors->w = DisplayWidth(stDisplay, stScreen);
+        stMonitors->h = XDisplayHeight(stDisplay, stScreen);
+        for (int i = 0; i < DesktopCount; ++i) {
+            stMonitors->desktops[i].wx = stMonitors->x;
+            stMonitors->desktops[i].wy = stMonitors->y;
+            stMonitors->desktops[i].ww = stMonitors->w;
+            stMonitors->desktops[i].wh = stMonitors->h;
+        }
+        stMonitors->activeDesktop = 0;
         stMonitors->chead= NULL;
         stMonitors->ctail= NULL;
         stMonitors->next = NULL;
     }
+    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
+            XA_CARDINAL, 32, PropModeReplace,
+            (unsigned char *)&stMonitors->activeDesktop, 1);
 }
 
 void
@@ -81,8 +100,7 @@ TeardownMonitors()
         Monitor *p = m->next;
         Client *c, *d;
         sfforeach(m, c, d) {
-            RemoveClient(m, c);
-            // XXX DestroyClient(c);
+            RemoveClient(m, c); /* should not happen */
         }
         free(m);
         m = p;
@@ -93,32 +111,68 @@ void
 AttachClientToMonitor(Monitor *m, Client *c)
 {
     c->monitor = m;
+    c->desktop = m->activeDesktop;
     PushClientFront(m, c);
 
-    DLog("working area: (%d, %d) [%d x %d]", m->wx, m->wy, m->ww, m->wh);
-    DLog("strut : %d, %d %d,  %d", c->strut.left, c->strut.top, c->strut.right, c->strut.bottom);
-    /* compute the new working area */
-    m->wx = Max(m->wx, m->x + c->strut.left);
-    m->wy = Max(m->wy, m->y + c->strut.top);
-    m->ww = Min(m->ww, m->w - (c->strut.right + c->strut.left));
-    m->wh = Min(m->wh, m->h - (c->strut.top + c->strut.bottom));
-
-    DLog("working area: (%d, %d) [%d x %d]", m->wx, m->wy, m->ww, m->wh);
-
-    /* keep the frame inbound */
+    AddClientToDesktop(m, c, c->desktop);
     MoveResizeClientFrame(c,
-            Max(c->fx, m->wx),
-            Max(c->fy, m->wy),
-            Min(c->fw, m->ww),
-            Min(c->fh, m->wh),
-            False);
+            Max(c->fx, c->monitor->desktops[c->desktop].wx),
+            Max(c->fy, c->monitor->desktops[c->desktop].wy),
+            Min(c->fw, c->monitor->desktops[c->desktop].ww),
+            Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+
+    if ((c->strut.right || c->strut.left || c->strut.top || c->strut.bottom)
+            && c->desktop == m->activeDesktop)
+        Restack(m);
 }
 
 void
 DetachClientFromMonitor(Monitor *m, Client *c)
 {
     c->monitor = NULL;
+    c->desktop = 0;
     RemoveClient(m, c);
+
+    RemoveClientFromDesktop(m, c, c->desktop);
+    if ((c->strut.right || c->strut.left || c->strut.top || c->strut.bottom)
+            && c->desktop == m->activeDesktop)
+        Restack(m);
+}
+
+void
+SetActiveDesktop(Monitor *m, int desktop)
+{
+    if (desktop < 0 || desktop >= DesktopCount)
+        return;
+
+    m->activeDesktop = desktop;
+    /* affect all sickies to this desktop */
+    for (Client *c = m->chead; c; c = c->next) {
+        if (c->states & NetWMStateSticky || c->types & NetWMTypeFixed) {
+            RemoveClientFromDesktop(m, c, c->desktop);
+            c->desktop = desktop;
+            AddClientToDesktop(m, c, c->desktop);
+        }
+    }
+
+    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
+            XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
+
+    Restack(m);
+}
+
+void
+Restack(Monitor *m)
+{
+    DLog();
+
+    Client *c;
+    fforeach(m, c) {
+        if (c->desktop == m->activeDesktop)
+            ShowClient(c);
+        else /* hide the client */
+            HideClient(c);
+    }
 }
 
 Client *
@@ -152,48 +206,6 @@ PreviousClient(Monitor *m, Client *c)
 {
     return c->prev ? c->prev : m->ctail;
 }
-
-
-//void
-//AddClientToOutputDesktop(Output *o, Client *c, Desktop d)
-//{
-//    CLIENT_ADD_DESKTOP(c, d);
-//    o->desktops[d].x = MAX(o->desktops[d].x, o->desktops[d].x + c->strut.left);
-//    o->desktops[d].y = MAX(o->desktops[d].y, o->desktops[d].y + c->strut.top);
-//    o->desktops[d].w = MIN(o->desktops[d].w, o->w - (c->strut.left + c->strut.right));
-//    o->desktops[d].h = MIN(o->desktops[d].h, o->h - (c->strut.top + c->strut.bottom));
-//    DLog("AddClientToOutputDesktop: (%d, %d) [%d x %d]",
-//            o->desktops[d].x, o->desktops[d].y,
-//            o->desktops[d].w, o->desktops[d].h);
-//}
-//
-//void
-//RemoveClientFromOutputDesktop(Output *o, Client *c, Desktop d)
-//{
-//    CLIENT_DEL_DESKTOP(c, d);
-//    o->desktops[d].x = o->x;
-//    o->desktops[d].y = o->y;
-//    o->desktops[d].w = o->w;
-//    o->desktops[d].h = o->h;
-//    for (Client *p = o->clients; p; p = p->next) {
-//        if (CLIENT_IS_ON_DESKTOP(p, d)) {
-//            o->desktops[d].x = MAX(o->desktops[d].x, o->desktops[d].x + p->strut.left);
-//            o->desktops[d].y = MAX(o->desktops[d].y, o->desktops[d].y + p->strut.top);
-//            o->desktops[d].w = MIN(o->desktops[d].w, o->w - (c->strut.left + p->strut.right));
-//            o->desktops[d].h = MIN(o->desktops[d].h, o->h - (c->strut.top + p->strut.bottom));
-//        }
-//    }
-//}
-//
-//void
-//MoveClientToOutputDesktop(Output *m, Client *c, Desktop d)
-//{
-//    for (int i = 0; i < DESKTOP_COUNT; ++i)
-//        if (CLIENT_IS_ON_DESKTOP(c, i))
-//            RemoveClientFromOutputDesktop(m, c, i);
-//
-//    AddClientToOutputDesktop(m, c, d);
-//}
 
 void
 RemoveClient(Monitor *m, Client *c)
@@ -242,3 +254,40 @@ PushClientBack(Monitor *m, Client *c)
     c->next = NULL;
 }
 
+void
+AddClientToDesktop(Monitor *m, Client *c, int d)
+{
+    if (d < 0 || d >= DesktopCount)
+        return;
+
+    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        m->desktops[d].wx = Max(m->desktops[d].wx, m->x + c->strut.left);
+        m->desktops[d].wy = Max(m->desktops[d].wy, m->y + c->strut.top);
+        m->desktops[d].ww = Min(m->desktops[d].ww, m->w -
+                (c->strut.right + c->strut.left));
+        m->desktops[d].wh = Min(m->desktops[d].wh, m->h -
+                (c->strut.top + c->strut.bottom));
+    }
+}
+
+void
+RemoveClientFromDesktop(Monitor *m, Client *c, int d)
+{
+    if (d < 0 || d >= DesktopCount)
+        return;
+
+    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        m->desktops[d].wx = m->x;
+        m->desktops[d].wy = m->y;
+        m->desktops[d].ww = m->w;
+        m->desktops[d].wh = m->h;
+        for (Client *mc = m->chead; mc; mc = mc->next) {
+            m->desktops[d].wx = Max(m->desktops[d].wx, m->x + mc->strut.left);
+            m->desktops[d].wy = Max(m->desktops[d].wy, m->y + mc->strut.top);
+            m->desktops[d].ww = Min(m->desktops[d].ww, m->w -
+                    (mc->strut.right + mc->strut.left));
+            m->desktops[d].wh = Min(m->desktops[d].wh, m->h -
+                    (mc->strut.top + mc->strut.bottom));
+        }
+    }
+}

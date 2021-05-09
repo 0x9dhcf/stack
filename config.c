@@ -15,7 +15,7 @@ static const Config defaultConfig = {
     .buttonGap = 5,
 
     /* window */
-    .activeBackground                   = 0xC8C8C8,
+    .activeBackground                   = 0xD8D8D8,
     .activeForeground                   = 0x202020,
 
     .inactiveBackground                 = 0xE8E8E8,
@@ -26,7 +26,7 @@ static const Config defaultConfig = {
 
     /* Buttons */
     .activeButtonBackground             = 0xE8E8E8,
-    .activeButtonForeground             = 0x202020,
+    .activeButtonForeground             = 0x808080,
 
     .inactiveButtonBackground           = 0xE8E8E8,
     .inactiveButtonForeground           = 0x808080,
@@ -37,9 +37,9 @@ static const Config defaultConfig = {
     .inactiveButtonHoveredBackground    = 0xF8F8F8,
     .inactiveButtonHoveredForeground    = 0x202020,
 
-    //.buttonIcons = { "\uf410", "\uf2d0", "\uf2d1" },
+    //.buttonIcons = { "\uf057", "\uf111", "\uf192" },
     .buttonIcons = { "C", "M", "I" },
-    .labelFontname = "Sans:antialias=true:size=11",
+    .labelFontname = "Sans:antialias=true:size=9",
     .iconFontname = "Sans:antialias=true:size=11",
     //.iconFontname = "Font Awesome 5 Free Regular:size=11",
     .shortcuts = {
@@ -53,7 +53,9 @@ static const Config defaultConfig = {
         { Modkey,                 XK_Up       },
         { Modkey,                 XK_Down     },
         { Modkey,                 XK_Tab      },
-        { Modkey | ShiftMask,     XK_Tab      }
+        { Modkey | ShiftMask,     XK_Tab      },
+        { Modkey,                 XK_1        },
+        { Modkey,                 XK_2        }
     },
     .terminal = {"uxterm", NULL}
 };

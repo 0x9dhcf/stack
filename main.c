@@ -22,50 +22,16 @@
 #include "monitor.h"
 #include "x11.h"
 
-#define RootEventMask (\
-        SubstructureRedirectMask    /* Map/Configure Request    */\
-      | SubstructureNotifyMask)     /* UnmapNotify              */
-
-static void GrabShortcutKeys();
-static void TrapSignal(int sig);
 static int WMDetectedErrorHandler(Display *d, XErrorEvent *e);
 static int EventLoopErrorHandler(Display *d, XErrorEvent *e);
+static void TrapSignal(int sig);
+static void InitializeWindowManager();
+static void TeardownWindowManager();
 
-static XErrorHandler defaultErrorHandler; 
+static XErrorHandler defaultErrorHandler;
 static Window supportingWindow;
 
 Bool stRunning;
-
-void
-GrabShortcutKeys()
-{
-    KeyCode code;
-    unsigned int modifiers[] = { 0, LockMask, stNumLockMask, stNumLockMask | LockMask };
-
-    XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
-
-    // TODO manage binding
-    // For now just a way to launch a terminal
-    if ((code = XKeysymToKeycode(stDisplay, XK_Return)))
-        for (int j = 0; j < 4; ++j)
-            XGrabKey(stDisplay, code, Modkey | ShiftMask | modifiers[j],
-                    stRoot, True, GrabModeSync, GrabModeAsync);
-
-    for (int i = 0; i < ShortcutCount; ++i)
-        if ((code = XKeysymToKeycode(stDisplay, stConfig.shortcuts[i].keysym))) {
-            for (int j = 0; j < 4; ++j)
-                XGrabKey(stDisplay, code,
-                        stConfig.shortcuts[i].modifier | modifiers[j],
-                        stRoot, True, GrabModeSync, GrabModeAsync);
-        }
-}
-
-void
-TrapSignal(int sig)
-{
-    (void)sig;
-    stRunning = False;
-}
 
 int
 WMDetectedErrorHandler(Display *d, XErrorEvent *e)
@@ -89,6 +55,7 @@ EventLoopErrorHandler(Display *d, XErrorEvent *e)
             || (e->request_code == X_GrabButton && e->error_code == BadAccess)
             || (e->request_code == X_GrabKey && e->error_code == BadAccess)
             || (e->request_code == X_CopyArea && e->error_code == BadDrawable)) {
+        DLog("error ignored");
         return 0;
     }
     ELog("fatal error: request code=%d, error code=%d\n",
@@ -97,9 +64,31 @@ EventLoopErrorHandler(Display *d, XErrorEvent *e)
 }
 
 void
-CreateSupportingWindow()
+TrapSignal(int sig)
+{
+    (void)sig;
+    stRunning = False;
+}
+
+void
+InitializeWindowManager()
 {
     XSetWindowAttributes wa;
+    Window *wins,  w0, w1, rwin, cwin;
+    unsigned int nwins, mask;
+    int rx, ry, wx, wy;
+    KeyCode code;
+    unsigned int modifiers[] = { 0, LockMask, stNumLockMask, stNumLockMask | LockMask };
+
+    /* check for existing wm */
+    XErrorHandler xerror = XSetErrorHandler(WMDetectedErrorHandler);
+    XSelectInput(stDisplay, stRoot, SubstructureRedirectMask);
+    XSync(stDisplay, False);
+    XSetErrorHandler(xerror);
+    XSync(stDisplay, False);
+
+    /* Setup */
+    defaultErrorHandler = XSetErrorHandler(EventLoopErrorHandler);
 
     supportingWindow = XCreateSimpleWindow(stDisplay, stRoot, 0, 0, 1, 1, 0,
             0, 0);
@@ -107,10 +96,8 @@ CreateSupportingWindow()
     XChangeProperty(stDisplay, supportingWindow,
             stAtoms[AtomNetSupportingWMCheck], XA_WINDOW, 32,
             PropModeReplace, (unsigned char *) &supportingWindow, 1);
-
     XChangeProperty(stDisplay, supportingWindow, XA_WM_NAME, XA_STRING, 8,
             PropModeReplace, (unsigned char*)"stack", 5);
-
     XChangeProperty(stDisplay, supportingWindow, stAtoms[AtomNetWMPID],
             XA_INTEGER, 32, PropModeReplace,
             (unsigned char *) &supportingWindow, 1);
@@ -119,12 +106,12 @@ CreateSupportingWindow()
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetSupportingWMCheck],
             XA_WINDOW, 32, PropModeReplace,
             (unsigned char *) &supportingWindow, 1);
-
     XChangeProperty(stDisplay, stRoot, XA_WM_NAME, XA_STRING, 8,
             PropModeReplace, (unsigned char*)"stack", 5);
-
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetWMPID], XA_INTEGER, 32,
             PropModeReplace, (unsigned char *) &supportingWindow, 1);
+    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetSupported], XA_ATOM, 32,
+        PropModeReplace, (unsigned char *) stAtoms, AtomCount);
 
     wa.cursor = stCursors[CursorNormal];
     wa.event_mask = RootEventMask;
@@ -134,20 +121,18 @@ CreateSupportingWindow()
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetSupported], XA_ATOM, 32,
             PropModeReplace, (unsigned char *) stAtoms , AtomCount);
 
+    /* inform about the number of desktops */
+    int desktops = DesktopCount;
+    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetNumberOfDesktops], XA_CARDINAL, 32,
+            PropModeReplace, (unsigned char *)&desktops, 1);
+
     /* Reset the client list. */
     XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetClientList]);
-}
 
-void
-ManageExistingWindows()
-{
-    Window *wins,  w0, w1, rwin, cwin;
-    unsigned int nwins, mask;
-    int rx, ry, wx, wy;
-
+    /* manage exiting windows */
     XQueryPointer(stDisplay, stRoot, &rwin, &cwin, &rx, &ry, &wx, &wy, &mask);
 
-    /* to avoid unmap genetated by reparenting to destroy the newly created client */
+    /* to avoid unmap generated by reparenting to destroy the newly created client */
     if (XQueryTree(stDisplay, stRoot, &w0, &w1, &wins, &nwins)) {
         for (unsigned int i = 0; i < nwins; ++i) {
             XWindowAttributes xwa;
@@ -172,6 +157,41 @@ ManageExistingWindows()
         }
         XFree(wins);
     }
+
+    /* grab shortcuts */
+    XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
+
+    // TODO manage binding
+    // For now just a way to launch a terminal
+    if ((code = XKeysymToKeycode(stDisplay, XK_Return)))
+        for (int j = 0; j < 4; ++j)
+            XGrabKey(stDisplay, code, Modkey | ShiftMask | modifiers[j],
+                    stRoot, True, GrabModeSync, GrabModeAsync);
+
+    for (int i = 0; i < ShortcutCount; ++i) {
+        if ((code = XKeysymToKeycode(stDisplay, stConfig.shortcuts[i].keysym))) {
+            for (int j = 0; j < 4; ++j)
+                XGrabKey(stDisplay, code,
+                        stConfig.shortcuts[i].modifier | modifiers[j],
+                        stRoot, True, GrabModeSync, GrabModeAsync);
+        }
+    }
+}
+
+void
+TeardownWindowManager()
+{
+    for (Monitor *m = stMonitors; m; m = m->next) {
+        Client *c, *d;
+        for (c = m->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
+            ForgetWindow(c->window);
+    }
+
+    XDestroyWindow(stDisplay, supportingWindow);
+    XSetInputFocus(stDisplay, PointerRoot, RevertToPointerRoot, CurrentTime);
+    XSetErrorHandler(defaultErrorHandler);
+    XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
+    XSelectInput(stDisplay, stRoot, NoEventMask);
 }
 
 int
@@ -182,35 +202,21 @@ main(int argc, char **argv)
     int xConnection;
     fd_set fdSet;
 
-    /* be sure to exit as properly as possible */
     signal(SIGINT, TrapSignal);
     signal(SIGKILL, TrapSignal);
     signal(SIGTERM, TrapSignal);
 
     LoadConfig();
 
-    /* Initialize */
     InitializeX11();
     InitializeAtoms();
     InitializeCursors();
     InitializeFonts();
     InitializeMonitors();
-    
-    /* Check for exiting wm runnig */
-    XErrorHandler xerror = XSetErrorHandler(WMDetectedErrorHandler);
-    XSelectInput(stDisplay, stRoot, SubstructureRedirectMask);
-    XSync(stDisplay, False);
-    XSetErrorHandler(xerror);
+    InitializeWindowManager();
+
     XSync(stDisplay, False);
 
-    /* Setup */
-    defaultErrorHandler = XSetErrorHandler(EventLoopErrorHandler);
-    CreateSupportingWindow();
-    ManageExistingWindows();
-    GrabShortcutKeys();
-    XSync(stDisplay, False);
-
-    /* Start event loop */
     xConnection = XConnectionNumber(stDisplay);
     stRunning = True;
     while (stRunning) {
@@ -228,11 +234,7 @@ main(int argc, char **argv)
         }
     }
 
-    /* Clean up */
-    XDestroyWindow(stDisplay, supportingWindow);
-    XSetInputFocus(stDisplay, PointerRoot, RevertToPointerRoot, CurrentTime);
-    XSetErrorHandler(defaultErrorHandler);
-    XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
+    TeardownWindowManager();
     TeardownMonitors();
     TeardownFonts();
     TeardownCursors();

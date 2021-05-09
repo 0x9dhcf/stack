@@ -31,7 +31,9 @@ static void (*callbacks[ShortcutCount])() = {
     [ShortcutMaximize]              = Maximize,
     [ShortcutRestore]               = Restore,
     [ShortcutCycleForward]          = CycleForward,
-    [ShortcutCycleBackward]         = CycleBackward
+    [ShortcutCycleBackward]         = CycleBackward,
+    [ShortcutShowDesktop1]          = ShowDesktop1,
+    [ShortcutShowDesktop2]          = ShowDesktop2
 };
 
 static void OnConfigureRequest(XConfigureRequestEvent *e);
@@ -39,6 +41,8 @@ static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
 static void OnDestroyNotify(XDestroyWindowEvent *e);
 static void OnExpose(XExposeEvent *e);
+//static void OnFocusIn(XFocusInEvent *e);
+//static void OnFocusOut(XFocusOutEvent *e);
 static void OnEnter(XCrossingEvent *e);
 static void OnLeave(XCrossingEvent *e);
 static void OnPropertyNotify(XPropertyEvent *e);
@@ -79,6 +83,12 @@ DispatchEvent(XEvent *e)
         case MotionNotify:
             OnMotionNotify(&e->xmotion);
         break;
+        //case FocusIn:
+        //    OnFocusIn(&e->xfocus);
+        //break;
+        //case FocusOut:
+        //    OnFocusOut(&e->xfocus);
+        //break;
         case EnterNotify:
             OnEnter(&e->xcrossing);
         break;
@@ -97,7 +107,7 @@ DispatchEvent(XEvent *e)
 void
 OnConfigureRequest(XConfigureRequestEvent *e)
 {
-    DLog();
+    //DLog();
     Client *c = Lookup(e->window);
 
     if (!c) {
@@ -112,13 +122,11 @@ OnConfigureRequest(XConfigureRequestEvent *e)
         XConfigureWindow(stDisplay, e->window, e->value_mask, &xwc);
         XSync(stDisplay, False);
     } else {
-        Bool notify = False;
-
         if (e->value_mask & CWBorderWidth)
             c->sbw = e->border_width;
 
         if (e->value_mask & (CWX|CWY|CWWidth|CWHeight)
-                && (c->states & StateMaximized) != StateMaximized)
+                && !(c->states & NetWMStateMaximized))
                 {
             int x, y, w, h;
 
@@ -137,20 +145,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
                 h = e->height;
 
             MoveResizeClientWindow(c, x, y, w, h, False);
-            notify = True;
-        }
 
-        /* As the window is reparented, XRaiseWindow and XLowerWindow
-           will generate a ConfigureRequest. */
-        if (e->value_mask & CWStackMode) {
-            if (e->detail == Above || e->detail == TopIf)
-                RaiseClient(c, False);
-            if (e->detail == Below || e->detail == BottomIf)
-                LowerClient(c, False);
-            notify = True;
-        }
-
-        if (notify) {
             XConfigureEvent xce;
             xce.event = e->window;
             xce.window = e->window;
@@ -165,32 +160,42 @@ OnConfigureRequest(XConfigureRequestEvent *e)
             XSendEvent(stDisplay, e->window, False, SubstructureNotifyMask, (XEvent*)&e);
             XSync(stDisplay, False);
         }
+
+        /* As the window is reparented, XRaiseWindow and XLowerWindow
+           will generate a ConfigureRequest. */
+        if (e->value_mask & CWStackMode) {
+            if (e->detail == Above || e->detail == TopIf)
+                RaiseClient(c);
+            if (e->detail == Below || e->detail == BottomIf)
+                LowerClient(c);
+            SetNetWMState(c->window, c->states);
+        }
     }
 }
 
 void
 OnMapRequest(XMapRequestEvent *e)
 {
-    DLog();
+    //DLog();
     ManageWindow(e->window, False);
 }
 
 void
 OnUnmapNotify(XUnmapEvent *e)
 {
-    DLog();
-    /* ignore UnmapNotify for reparented pre-existing window */
-    if (e->event == stRoot || e->event == None) {
-        DLog("Reparenting forget that!");
-        return;
-    }
-    ForgetWindow(e->window);
+    //DLog("window: %ld", e->event);
+
+    /* ignore UnmapNotify from reparenting  */
+    if (e->event != stRoot && e->event != None)
+        ForgetWindow(e->window);
 }
 
+/* XXX: useless */
 void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
-    DLog();
+    //DLog("window: %ld", e->window);
+
     Client *c = Lookup(e->window);
     if (c) { ELog("Found a client"); }
 }
@@ -198,17 +203,18 @@ OnDestroyNotify(XDestroyWindowEvent *e)
 void
 OnExpose(XExposeEvent *e)
 {
-    DLog();
+    //DLog("window: %ld", e->window);
+
     Client *c = Lookup(e->window);
     if (c && e->window == c->frame)
         RefreshClient(c);
 }
 
-// TODO: move update to hints and use setter
 void
 OnPropertyNotify(XPropertyEvent *e)
 {
-    DLog();
+    //DLog("window: %ld", e->window);
+
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -216,20 +222,29 @@ OnPropertyNotify(XPropertyEvent *e)
     if (!c || e->window != c->window)
         return;
 
-    if (e->atom == XA_WM_NAME || e->atom == stAtoms[AtomNetWMName])
-        UpdateClientName(c);
+    if (e->atom == XA_WM_NAME || e->atom == stAtoms[AtomNetWMName]) {
+        GetWMName(c->window, &c->name);
+        RefreshClient(c);
+    }
 
-    if (e->atom == XA_WM_HINTS)
-        UpdateClientHints(c);
+    if (e->atom == XA_WM_HINTS) {
+        GetWMHints(c->window, &c->hints);
+        if (c->hints & HintsUrgent) {
+            RefreshClient(c);
+        }
+    }
 
+    /* A Client wishing to change the state of a window MUST send a
+     * _NET_WM_STATE client message to the root window
     if (e->atom == stAtoms[AtomNetWMState])
         UpdateClientState(c);
+    */
 }
 
 void
 OnButtonPress(XButtonEvent *e)
 {
-    DLog();
+    //DLog();
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -240,18 +255,18 @@ OnButtonPress(XButtonEvent *e)
     motionStartY = c->fy;
     motionStartW = c->fw;
     motionStartH = c->fh;
-    
+
     if (e->window == c->topbar || (e->window == c->window && e->state == Modkey))
         XDefineCursor(stDisplay, e->window, stCursors[CursorMove]);
 
-    if (e->window != c->buttons[ButtonClose])
-        SetActiveClient(c);
-
     if (e->window == c->buttons[ButtonMaximize]) {
-        if ((c->states & StateMaximized) == StateMaximized)
-            RestoreClient(c, True);
-        else
-            MaximizeClient(c, StateMaximized, True);
+        if ((c->states & NetWMStateMaximized))
+            RestoreClient(c);
+        else {
+            MaximizeClientVertically(c);
+            MaximizeClientHorizontally(c);
+            SetNetWMState(c->window, c->states);
+        }
     }
 
     /* TODO: when we know how to restore
@@ -261,21 +276,23 @@ OnButtonPress(XButtonEvent *e)
     */
 
     if (e->window == c->buttons[ButtonClose]) {
-        if (c->states & StateDeleteWindow)
+        if (c->protocols & NetWMProtocolDeleteWindow)
             SendMessage(c->window, stAtoms[AtomWMDeleteWindow]);
         else
             XKillClient(stDisplay, c->window);
     }
 
-    //XAllowEvents(stDisplay, ReplayPointer, CurrentTime);
+    if (e->window != c->buttons[ButtonClose])
+        SetActiveClient(c);
+
     if (e->window == c->window)
-        XAllowEvents(stDisplay, ReplayPointer, e->time);
+        XAllowEvents(stDisplay, ReplayPointer, CurrentTime);
 }
 
 void
 OnButtonRelease(XButtonEvent *e)
 {
-    DLog();
+    //DLog();
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -292,21 +309,25 @@ OnButtonRelease(XButtonEvent *e)
         XDefineCursor(stDisplay, e->window, stCursors[CursorNormal]);
 
     if (e->window == c->window)
-        XAllowEvents(stDisplay, ReplayPointer, e->time);
+        XAllowEvents(stDisplay, ReplayPointer, CurrentTime);
 }
 
 void
 OnMotionNotify(XMotionEvent *e)
 {
+    //DLog();
     Client *c = Lookup(e->window);
-    if (!c)
+
+    /* prevent moving fixed, maximized or fulscreen window
+     * avoid to move to often as well */
+    if (!c || c->types & NetWMTypeFixed
+            || c->states & (NetWMStateMaximized | NetWMStateFullscreen)
+            || (e->time - lastSeenPointerTime) <= (1000 / 60))
         return;
 
     int vx = e->x_root - lastSeenPointerX;
     int vy = e->y_root - lastSeenPointerY;
 
-    if ((e->time - lastSeenPointerTime) <= (1000 / 60))
-        return;
     lastSeenPointerTime = e->time;
 
     /* we do not apply normal hints during motion but when button is released
@@ -339,11 +360,11 @@ OnMotionNotify(XMotionEvent *e)
       return;
 }
 
-// XXX to be checked
 void
 OnMessage(XClientMessageEvent *e)
 {
-    DLog();
+    //DLog();
+    // TODO: Root active window and Cureent desktop
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -352,49 +373,88 @@ OnMessage(XClientMessageEvent *e)
         if (e->data.l[1] == (long)stAtoms[AtomNetWMStateFullscreen]
                 || e->data.l[2] == (long)stAtoms[AtomNetWMStateFullscreen]) {
             if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
-                FullscreenClient(c, True);
+                RestoreClient(c);
             if (e->data.l[0] == 1) /* _NET_WM_STATE_ADD */
-                FullscreenClient(c, True);
+                FullscreenClient(c);
             if (e->data.l[0] == 2) { /* _NET_WM_STATE_TOGGLE */
-                if (c->states & StateFullscreen)
-                    RestoreClient(c, True);
+                if (c->states & NetWMStateFullscreen)
+                    RestoreClient(c);
                 else
-                    FullscreenClient(c, True);
+                    FullscreenClient(c);
             }
         }
         if (e->data.l[1] == (long)stAtoms[AtomNetWMStateDemandsAttention]
                 || e->data.l[2] == (long)stAtoms[AtomNetWMStateDemandsAttention]) {
             if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
-                c->states &= ~StateUrgent;
+                c->states &= ~NetWMStateDemandsAttention;
             if (e->data.l[0] == 1) /* _NET_WM_STATE_ADD */
-                c->states |= StateUrgent;
+                c->states |= NetWMStateDemandsAttention;
             if (e->data.l[0] == 2) { /* _NET_WM_STATE_TOGGLE */
-                if (c->states & StateUrgent)
-                    c->states &= ~StateUrgent;
+                if (c->states & NetWMStateDemandsAttention)
+                    c->states &= ~NetWMStateDemandsAttention;
                 else
-                    c->states |= StateUrgent;
+                    c->states |= NetWMStateDemandsAttention;
             }
             RefreshClient(c);
         }
+        SetNetWMState(c-> window, c->states);
+
+        //TODO: sticky
     }
 
-    // XXX: ???
     if (e->message_type == stAtoms[AtomNetActiveWindow])
         XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
 }
 
-
+//void
+//OnFocusIn(XFocusInEvent *e)
+//{
+//    DLog("window: %ld", e->window);
+//
+//    /* ignore focus changes due to keyboard grabs */
+//    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
+//        return;
+//
+//    if (e->detail == NotifyPointer)
+//          return;
+//
+//    Client *c = Lookup(e->window);
+//    if (c && c != stActiveClient) {
+//        SetClientActive(c, True);
+//        stActiveClient = c;
+//    }
+//}
+//
+//void
+//OnFocusOut(XFocusOutEvent *e)
+//{
+//    DLog("window: %ld", e->window);
+//
+//    /* ignore focus changes due to keyboard grabs */
+//    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
+//        return;
+//
+//    if (e->detail == NotifyPointer)
+//          return;
+//
+//    Client *c = Lookup(e->window);
+//    if (c) {
+//        SetClientActive(c, False);
+//        if (c == stActiveClient)
+//            stActiveClient = NULL;
+//    }
+//}
 
 void
 OnEnter(XCrossingEvent *e)
 {
-    DLog();
+    //DLog();
     Client *c = Lookup(e->window);
 
     if (c) {
         /* redraw button if hovered */
         int bg, fg;
-        if (c->states & StateActive) {
+        if (c->active) {
             bg = stConfig.activeButtonHoveredBackground;
             fg = stConfig.activeButtonHoveredForeground;
         } else {
@@ -410,8 +470,8 @@ OnEnter(XCrossingEvent *e)
                 GetTextPosition(stConfig.buttonIcons[i], stIconFont,
                         AlignCenter, AlignMiddle, stConfig.buttonSize,
                         stConfig.buttonSize, &x, &y);
-                WriteText(c->buttons[i], stConfig.buttonIcons[i], stIconFont, fg,
-                        x, y);
+                WriteText(c->buttons[i], stConfig.buttonIcons[i],
+                        stIconFont, fg, x, y);
             }
         }
     }
@@ -419,13 +479,13 @@ OnEnter(XCrossingEvent *e)
 
 void OnLeave(XCrossingEvent *e)
 {
-    DLog();
+    //DLog();
     Client *c = Lookup(e->window);
 
     if (c) {
         /* redraw button if hovered */
         int bg, fg;
-        if (c->states & StateActive) {
+        if (c->active) {
             bg = stConfig.activeButtonBackground;
             fg = stConfig.activeButtonForeground;
         } else {
@@ -441,8 +501,8 @@ void OnLeave(XCrossingEvent *e)
                 GetTextPosition(stConfig.buttonIcons[i], stIconFont,
                         AlignCenter, AlignMiddle, stConfig.buttonSize,
                         stConfig.buttonSize, &x, &y);
-                WriteText(c->buttons[i], stConfig.buttonIcons[i], stIconFont, fg,
-                        x, y);
+                WriteText(c->buttons[i], stConfig.buttonIcons[i],
+                        stIconFont, fg, x, y);
             }
         }
     }
@@ -452,7 +512,7 @@ void OnLeave(XCrossingEvent *e)
 void
 OnKeyPress(XKeyPressedEvent *e)
 {
-    DLog();
+    //DLog();
     KeySym keysym;
     //keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0);
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);

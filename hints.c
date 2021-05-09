@@ -41,20 +41,19 @@ GetWMName(Window w, char **name)
 }
 
 void
-GetWMHints(Window w, int *h)
+GetWMHints(Window w, WMHints *h)
 {
+    DLog();
+    /* the default is to be focusable */
+    *h = HintsFocusable;
     XWMHints *hints = XGetWMHints(stDisplay, w);
     if (hints) {
         /* urgency */
         if (hints->flags & XUrgencyHint)
             *h |= HintsUrgent;
-        else
-            *h &= ~HintsUrgent;
 
         /* focusable */
-        if (hints->flags & InputHint && hints->input)
-            *h |= HintsFocusable;
-        else
+        if (hints->flags & InputHint && ! hints->input)
             *h &= ~HintsFocusable;
 
         XFree(hints);
@@ -62,7 +61,7 @@ GetWMHints(Window w, int *h)
 }
 
 void
-GetWMProtocols(Window w, int *h)
+GetWMProtocols(Window w, WMProtocols *h)
 {
     Atom *protocols;
     int n;
@@ -115,7 +114,6 @@ GetWMNormals(Window w, WMNormals *h)
 void
 GetWMClass(Window w, WMClass *klass)
 {
-
     XClassHint hints;
 
     if (klass->cname)
@@ -137,16 +135,32 @@ GetWMClass(Window w, WMClass *klass)
 void
 GetWMStrut(Window w, WMStrut *strut)
 {
-    /* TODO */
-    (void)w;
+    Atom type;
+    int format, status;
+    unsigned long num_items, bytes_after;
+    Atom *prop;
+
+    prop = NULL;
     strut->left = strut->right = strut->top = strut->bottom = 0;
+    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMStrutpartial], 0, 12,
+            False, XA_CARDINAL, &type, &format, &num_items, &bytes_after,
+            (unsigned char**)&prop);
+
+    if ((status == Success) && prop) {
+        strut->left = prop[0];
+        strut->right = prop[1];
+        strut->top = prop[2];
+        strut->bottom = prop[3];
+        XFree(prop);
+        DLog("got strut: [%d, %d, %d, %d]", strut->left, strut->right, strut->top, strut->bottom);
+    }
+
 }
 
 void
-GetNetWMWindowType(Window w, int *h)
+GetNetWMWindowType(Window w, NetWMWindowType *h)
 {
     Atom type;
-
     int format;
     unsigned long i, num_items, bytes_after;
     Atom *atoms;
@@ -157,7 +171,7 @@ GetNetWMWindowType(Window w, int *h)
             False, XA_ATOM, &type, &format, &num_items, &bytes_after,
             (unsigned char**)&atoms);
 
-    DLog("nb atoms: %ld", num_items);
+    *h = 0;
     for (i = 0; i < num_items; ++i) {
         if (atoms[i] == stAtoms[AtomNetWMWindowTypeNormal])
             *h |= NetWMTypeNormal;
@@ -188,7 +202,7 @@ GetNetWMWindowType(Window w, int *h)
 }
 
 void
-GetNetWMState(Window w, int *h)
+GetNetWMState(Window w, NetWMState *h)
 {
     Atom type;
     int format;
@@ -235,7 +249,7 @@ GetNetWMState(Window w, int *h)
 }
 
 void
-SetNetWMState(Window w, int h)
+SetNetWMState(Window w, NetWMState h)
 {
     Atom type;
     int format, count, n;
@@ -253,7 +267,6 @@ SetNetWMState(Window w, int h)
     count = 0;
     for(i = 0; i < num_items; ++i) {
         if (atoms[i] == stAtoms[AtomNetWMStateModal]
-                || atoms[i] == stAtoms[AtomNetWMStateSticky]
                 || atoms[i] == stAtoms[AtomNetWMStateShaded]
                 || atoms[i] == stAtoms[AtomNetWMStateSkipTaskbar]
                 || atoms[i] == stAtoms[AtomNetWMStateSkipPager]) {
@@ -280,7 +293,6 @@ SetNetWMState(Window w, int h)
     j = 0;
     for(i = 0; i < num_items; ++i) {
         if (atoms[i] == stAtoms[AtomNetWMStateModal]
-                || atoms[i] == stAtoms[AtomNetWMStateSticky]
                 || atoms[i] == stAtoms[AtomNetWMStateShaded]
                 || atoms[i] == stAtoms[AtomNetWMStateSkipTaskbar]
                 || atoms[i] == stAtoms[AtomNetWMStateSkipPager]) {
@@ -307,7 +319,7 @@ SetNetWMState(Window w, int h)
     /* finally set them */
     XChangeProperty(stDisplay, w, stAtoms[AtomNetWMState], XA_ATOM, 32,
             PropModeReplace, (unsigned char*)natoms, count);
- 
+
     XFree(atoms);
     XFree(natoms);
 }
@@ -315,16 +327,16 @@ SetNetWMState(Window w, int h)
 void
 SendMessage(Window w, Atom a)
 {
-    XClientMessageEvent  cm;
+    XEvent e;
 
-    (void)memset(&cm, 0, sizeof(cm));
-    cm.type = ClientMessage;
-    cm.window = w;
-    cm.message_type = stAtoms[AtomWMProtocols];
-    cm.format = 32;
-    cm.data.l[0] = a;
-    cm.data.l[1] = CurrentTime;
+    //(void)memset(&e, 0, sizeof(e));
+    e.type = ClientMessage;
+    e.xclient.window = w;
+    e.xclient.message_type = stAtoms[AtomWMProtocols];
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = a;
+    e.xclient.data.l[1] = CurrentTime;
 
-    XSendEvent(stDisplay, w, False, NoEventMask, (XEvent *)&cm);
+    XSendEvent(stDisplay, w, False, NoEventMask, (XEvent *)&e);
 }
 

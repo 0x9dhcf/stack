@@ -26,5 +26,7 @@ void Maximize();
 void Restore();
 void CycleForward();
 void CycleBackward();
+void ShowDesktop1();
+void ShowDesktop2();
 
 #endif

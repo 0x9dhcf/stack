@@ -23,6 +23,9 @@ enum Shortcuts {
     ShortcutRestore,
     ShortcutCycleForward,
     ShortcutCycleBackward,
+    // TEST
+    ShortcutShowDesktop1,
+    ShortcutShowDesktop2,
     ShortcutCount
 };
 

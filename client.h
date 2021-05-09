@@ -28,35 +28,10 @@ enum Buttons {
     ButtonCount
 };
 
-enum State {
-    StateNone                       = 0,
-    StateAcceptFocus                = (1<<0),
-    StateUrgent                     = (1<<1),
-    StateTakeFocus                  = (1<<2),
-    StateDeleteWindow               = (1<<3),
-    StateDecorated                  = (1<<4),
-    StateFixed                      = (1<<5),
-    StateActive                     = (1<<6),
-    StateMaximizedVertically        = (1<<7),
-    StateMaximizedHorizontally      = (1<<8),
-    StateMaximizedLeft              = (1<<9),
-    StateMaximizedTop               = (1<<10),
-    StateMaximizedRight             = (1<<11),
-    StateMaximizedBottom            = (1<<12),
-    StateMinimized                  = (1<<13),
-    StateFullscreen                 = (1<<14),
-    StateAbove                      = (1<<15),
-    StateBelow                      = (1<<16),
-    StateSticky                     = (1<<17),
-    StateMaximized                  = (StateMaximizedVertically
-                                    |  StateMaximizedHorizontally),
-    StateMaximizedAny               = (StateMaximizedVertically
-                                    |  StateMaximizedHorizontally
-                                    |  StateMaximizedLeft
-                                    |  StateMaximizedTop
-                                    |  StateMaximizedRight
-                                    |  StateMaximizedBottom)
-};
+typedef struct _Transient {
+    Client *client;
+    struct _Transient *next;
+} Transient;
 
 typedef struct _Client {
     /* components */
@@ -67,29 +42,38 @@ typedef struct _Client {
     Window handles[HandleCount];
 
     /* geometries */
-    int wx, wy, ww, wh;     /* window absolute geometry */
-    int fx, fy, fw, fh;     /* frame absolute geometry  */
-    int swx, swy, sww, swh; /* saved window geoemtry    */
-    int sfx, sfy, sfw, sfh; /* saved frame geometry     */
-    int sbw;                /* saved border width       */
+    int wx, wy, ww, wh;     /* window absolute geometry                 */
+    int fx, fy, fw, fh;     /* frame absolute geometry                  */
+    int sfx, sfy, sfw, sfh; /* saved frame geometry post fullscreen     */
+    int smx, smy, smw, smh; /* saved frame geometry post maximixed      */
+    int sbw;                /* saved border width                       */
 
-    /* state */
-    int states;
+    /* statuses */
+    Bool active;
+    Bool decorated;
+    int desktop;
 
+    /* icccm, ewmh*/
     char *name;             /* ewmh or icccm name       */
     WMClass wmclass;        /* icccm class              */
     WMNormals normals;      /* size hints               */
     WMStrut strut;          /* strut                    */
+    WMProtocols protocols;
+    WMHints hints;
+    NetWMWindowType types;
+    NetWMState states;
+    Client *transfor;       /* transient for            */
+    Transient *transients;  /* clients transient for us */
 
+    /* internals */
     Monitor *monitor;
 
     struct _Client *prev;
     struct _Client *next;
 } Client;
 
-//void CloseClient(Client *c);
-
-Client *CreateClient(Window w);
+void HideClient(Client *c);
+void ShowClient(Client *c);
 
 void MoveClientWindow(Client *c, int x, int y);
 void ResizeClientWindow(Client *c, int w, int h, Bool sh);
@@ -99,22 +83,19 @@ void MoveClientFrame(Client *c, int x, int y);
 void ResizeClientFrame(Client *c, int w, int h, Bool sh);
 void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
 
-void MaximizeClient(Client *c, int flag, Bool user);
-void MinimizeClient(Client *c, Bool user);
-void FullscreenClient(Client *c, Bool user);
-void RestoreClient(Client *c, Bool user);
-void RaiseClient(Client *c, Bool user);
-void LowerClient(Client *c, Bool user);
+void MaximizeClientHorizontally(Client *c);
+void MaximizeClientVertically(Client *c);
+void MaximizeClientLeft(Client *c);
+void MaximizeClientRight(Client *c);
+void MaximizeClientTop(Client *c);
+void MaximizeClientBottom(Client *c);
+void MinimizeClient(Client *c);
+void FullscreenClient(Client *c);
+void RestoreClient(Client *c);
+void RaiseClient(Client *c);
+void LowerClient(Client *c);
 
 void RefreshClient(Client *c);
-
-void UpdateClientName(Client *c);
-void UpdateClientHints(Client *c);
-void UpdateClientState(Client *c);
-
 void SetClientActive(Client *c, Bool b);
-
-void NotifyClient(Client *c);
-//void SendClientMessage(Client *c, Atom proto);
 
 #endif

@@ -1,7 +1,7 @@
 #include "atoms.h"
 #include "x11.h"
 
-static char* names[] =  {    
+static char* names[] =  {
     "WM_DELETE_WINDOW",
     "WM_TAKE_FOCUS",
     "WM_PROTOCOLS",
@@ -85,7 +85,6 @@ static char* names[] =  {
     "_NET_WM_ACTION_ABOVE",
     "_NET_WM_ACTION_BELOW"
 };
-
 
 Atom stAtoms[AtomCount];
 
