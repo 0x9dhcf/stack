@@ -6,6 +6,11 @@
 #define Max(v1, v2) (v1 > v2 ? v1 : v2)
 #define Min(v1, v2) (v1 < v2 ? v1 : v2)
 
-extern Bool stRunning;
+typedef struct _Monitor Monitor;
+typedef struct _Client Client;
+
+extern Bool     stRunning;
+extern Monitor  *stActiveMonitor;
+extern Client   *stActiveClient;
 
 #endif

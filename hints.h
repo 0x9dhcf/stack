@@ -31,25 +31,51 @@ typedef enum _NetWMWindowType {
     NetWMTypeTooltip        = (1<<13),
     NetWMTypeFixed          = NetWMTypeDesktop
                             | NetWMTypeDock
+                            | NetWMTypeSplash,
+    NetWMTypeAny            = NetWMTypeNormal
+                            | NetWMTypeDialog
+                            | NetWMTypeDesktop
+                            | NetWMTypeDock
+                            | NetWMTypeMenu
+                            | NetWMTypeNotification
                             | NetWMTypeSplash
+                            | NetWMTypeToolbar
+                            | NetWMTypeUtility
+                            | NetWMTypeCombo
+                            | NetWMTypeDnd
+                            | NetWMTypeDropdownMenu
+                            | NetWMTypePopupMenu
+                            | NetWMTypeTooltip
 } NetWMWindowType;
 
 typedef enum _NetWMState {
-    NetWMStateNone             = 0,
-    NetWMStateModal            = (1<<0),
-    NetWMStateSticky           = (1<<1),
-    NetWMStateMaximizedVert    = (1<<2),
-    NetWMStateMaximizedHorz    = (1<<3),
-    NetWMStateShaded           = (1<<4),
-    NetWMStateSkipTaskbar      = (1<<5),
-    NetWMStateSkipPager        = (1<<6),
-    NetWMStateHidden           = (1<<7),
-    NetWMStateFullscreen       = (1<<8),
-    NetWMStateAbove            = (1<<9),
-    NetWMStateBelow            = (1<<10),
-    NetWMStateDemandsAttention = (1<<11),
-    NetWMStateMaximized        = NetWMStateMaximizedHorz
-                               | NetWMStateMaximizedVert
+    NetWMStateNone              = 0,
+    NetWMStateModal             = (1<<0),
+    NetWMStateSticky            = (1<<1),
+    NetWMStateMaximizedVert     = (1<<2),
+    NetWMStateMaximizedHorz     = (1<<3),
+    NetWMStateShaded            = (1<<4),
+    NetWMStateSkipTaskbar       = (1<<5),
+    NetWMStateSkipPager         = (1<<6),
+    NetWMStateHidden            = (1<<7),
+    NetWMStateFullscreen        = (1<<8),
+    NetWMStateAbove             = (1<<9),
+    NetWMStateBelow             = (1<<10),
+    NetWMStateDemandsAttention  = (1<<11),
+    NetWMStateMaximized         = NetWMStateMaximizedHorz
+                                | NetWMStateMaximizedVert,
+    NetWMStateAny               = NetWMStateModal
+                                | NetWMStateSticky
+                                | NetWMStateMaximizedVert
+                                | NetWMStateMaximizedHorz
+                                | NetWMStateShaded
+                                | NetWMStateSkipTaskbar
+                                | NetWMStateSkipPager
+                                | NetWMStateHidden
+                                | NetWMStateFullscreen
+                                | NetWMStateAbove
+                                | NetWMStateBelow
+                                | NetWMStateDemandsAttention
 } NetWMState;
 
 typedef enum _NetWMAllowedActions {

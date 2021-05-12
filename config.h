@@ -1,38 +1,15 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include "shortcut.h"
+
 #ifdef NDEBUG
 #define Modkey Mod4Mask
 #else
 #define Modkey Mod1Mask
 #endif
 
-typedef struct _Client Client;
-
-enum Shortcuts {
-    ShortcutQuit,
-    ShortcutMaximizeVertically,
-    ShortcutMaximizeHorizontally,
-    ShortcutMaximizeLeft,
-    ShortcutMaximizeRight,
-    ShortcutMaximizeTop,
-    ShortcutMaximizeBottom,
-    ShortcutMaximize,
-    //ShortcutMinimize, No minimize for now
-    //ShortcutFullscreen,
-    ShortcutRestore,
-    ShortcutCycleForward,
-    ShortcutCycleBackward,
-    // TEST
-    ShortcutShowDesktop1,
-    ShortcutShowDesktop2,
-    ShortcutCount
-};
-
-typedef struct _Shortcut {
-    unsigned long modifier;
-    unsigned long keysym;
-} Shortcut;
+#define ShortcutCount 21
 
 typedef struct _Config {
     int borderWidth;
@@ -57,8 +34,8 @@ typedef struct _Config {
     char *buttonIcons[3]; /* close, maximize, minimize */
     char *labelFontname;
     char *iconFontname;
-    Shortcut shortcuts[ShortcutCount];
     char *terminal[2];
+    Shortcut shortcuts[ShortcutCount];
 } Config;
 
 extern Config stConfig;

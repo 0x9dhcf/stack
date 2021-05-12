@@ -3,12 +3,15 @@
 
 #include <X11/Xlib.h>
 
+#include "hints.h"
+
 #define DesktopCount 10
 
 typedef struct _Client Client;
 
 typedef struct _Desktop {
     int wx, wy, ww, wh; /* the working area geometry    */
+    Client *activeOnLeave;
 } Desktop;
 
 typedef struct _Monitor {
@@ -33,8 +36,8 @@ void DetachClientFromMonitor(Monitor *m, Client *c);
 void SetActiveDesktop(Monitor *m, int desktop);
 void Restack(Monitor *m);
 
-Client* LookupMonitorClient(Monitor *m, Window w);
-Client* NextClient(Monitor *m, Client *c);
-Client* PreviousClient(Monitor *m, Client *c);
+//Client* LookupMonitorClient(Monitor *m, Window w);
+//Client* NextClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s);
+//Client* PreviousClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s);
 
 #endif

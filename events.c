@@ -20,22 +20,6 @@ static int  motionStartY;
 static int  motionStartW;
 static int  motionStartH;
 
-static void (*callbacks[ShortcutCount])() = {
-    [ShortcutQuit]                  = Quit,
-    [ShortcutMaximizeVertically]    = MaximizeVertically,
-    [ShortcutMaximizeHorizontally]  = MaximizeHorizontally,
-    [ShortcutMaximizeLeft]          = MaximizeLeft,
-    [ShortcutMaximizeRight]         = MaximizeRight,
-    [ShortcutMaximizeTop]           = MaximizeTop,
-    [ShortcutMaximizeBottom]        = MaximizeBottom,
-    [ShortcutMaximize]              = Maximize,
-    [ShortcutRestore]               = Restore,
-    [ShortcutCycleForward]          = CycleForward,
-    [ShortcutCycleBackward]         = CycleBackward,
-    [ShortcutShowDesktop1]          = ShowDesktop1,
-    [ShortcutShowDesktop2]          = ShowDesktop2
-};
-
 static void OnConfigureRequest(XConfigureRequestEvent *e);
 static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
@@ -517,15 +501,16 @@ OnKeyPress(XKeyPressedEvent *e)
     //keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0);
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
 
-
     /* TODO manage binding */
     if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
         Spawn((char**)stConfig.terminal);
 
     for (int i = 0; i < ShortcutCount; ++i) {
-        if (keysym == (stConfig.shortcuts[i].keysym) &&
-                CleanMask(stConfig.shortcuts[i].modifier) == CleanMask(e->state)) {
-            callbacks[i]();
+        Shortcut sc = stConfig.shortcuts[i];
+        if (keysym == (sc.keysym) &&
+                CleanMask(sc.modifier) == CleanMask(e->state)) {
+            if (sc.type == CV) sc.cb.vcb.f();
+            if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
             break;
         }
     }

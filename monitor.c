@@ -10,11 +10,6 @@
 #include "monitor.h"
 #include "x11.h"
 
-#define fforeach(o, c) for (c = o->chead; c; c = c->next)
-#define bforeach(o, c) for (c = o->ctail; c; c = c->prev)
-#define sfforeach(o, c, d) for (c = o->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
-#define sbforeach(o, c, d) for (c = o->ctail, d = c ? c->prev : 0; c; c = d, d = c ? c->prev : 0)
-
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);
 static void RemoveClient(Monitor *m, Client *c);
@@ -98,8 +93,9 @@ TeardownMonitors()
     Monitor *m = stMonitors;
     while (m) {
         Monitor *p = m->next;
-        Client *c, *d;
-        sfforeach(m, c, d) {
+        //Client *c, *d;
+        for (Client *c = m->chead, *d = c ? c->next : 0; c; 
+                c = d, d = c ? c->next : 0) {
             RemoveClient(m, c); /* should not happen */
         }
         free(m);
@@ -115,11 +111,12 @@ AttachClientToMonitor(Monitor *m, Client *c)
     PushClientFront(m, c);
 
     AddClientToDesktop(m, c, c->desktop);
-    MoveResizeClientFrame(c,
-            Max(c->fx, c->monitor->desktops[c->desktop].wx),
-            Max(c->fy, c->monitor->desktops[c->desktop].wy),
-            Min(c->fw, c->monitor->desktops[c->desktop].ww),
-            Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+    if (!(c->types & NetWMTypeFixed))
+        MoveResizeClientFrame(c,
+                Max(c->fx, c->monitor->desktops[c->desktop].wx),
+                Max(c->fy, c->monitor->desktops[c->desktop].wy),
+                Min(c->fw, c->monitor->desktops[c->desktop].ww),
+                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
 
     if ((c->strut.right || c->strut.left || c->strut.top || c->strut.bottom)
             && c->desktop == m->activeDesktop)
@@ -145,7 +142,16 @@ SetActiveDesktop(Monitor *m, int desktop)
     if (desktop < 0 || desktop >= DesktopCount)
         return;
 
+    if (stActiveClient && stActiveClient->desktop == m->activeDesktop)
+        m->desktops[m->activeDesktop].activeOnLeave = stActiveClient;
+    else
+        m->desktops[m->activeDesktop].activeOnLeave = NULL;;
+
     m->activeDesktop = desktop;
+
+    if (m->desktops[m->activeDesktop].activeOnLeave)
+        SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
+
     /* affect all sickies to this desktop */
     for (Client *c = m->chead; c; c = c->next) {
         if (c->states & NetWMStateSticky || c->types & NetWMTypeFixed) {
@@ -166,8 +172,7 @@ Restack(Monitor *m)
 {
     DLog();
 
-    Client *c;
-    fforeach(m, c) {
+    for (Client *c = m->chead; c; c = c->next) {
         if (c->desktop == m->activeDesktop)
             ShowClient(c);
         else /* hide the client */
@@ -175,37 +180,48 @@ Restack(Monitor *m)
     }
 }
 
-Client *
-LookupMonitorClient(Monitor *m, Window w)
-{
-    Client *c;
-    fforeach(m, c) {
-        if (c->window == w || c->frame == w || c->topbar == w)
-            return c;
+//Client *
+//LookupMonitorClient(Monitor *m, Window w)
+//{
+//    for (Client *c = m->chead; c; c = c->next) {
+//        if (c->window == w || c->frame == w || c->topbar == w)
+//            return c;
+//
+//        for (int i = 0; i < ButtonCount; ++i)
+//            if (c->buttons[i] == w)
+//                return c;
+//
+//        for (int i = 0; i < HandleCount; ++i)
+//            if (c->handles[i] == w)
+//                return c;
+//    };
+//
+//    return NULL;
+//}
 
-        for (int i = 0; i < ButtonCount; ++i)
-            if (c->buttons[i] == w)
-                return c;
-
-        for (int i = 0; i < HandleCount; ++i)
-            if (c->handles[i] == w)
-                return c;
-    };
-
-    return NULL;
-}
-
-Client*
-NextClient(Monitor *m, Client *c)
-{
-    return c->next ? c->next : m->chead;
-}
-
-Client*
-PreviousClient(Monitor *m, Client *c)
-{
-    return c->prev ? c->prev : m->ctail;
-}
+//Client*
+//NextClient(Monitor *m, Client *c)
+//{
+//    //return c->next ? c->next : m->chead;
+//
+//    Client *nc;
+//    for (nc = c->next ? c->next : m->chead;
+//            nc != c || nc->types & t || nc->states & s;
+//            nc = nc->next ? nc->next : m->chead);
+//    return nc;
+//
+//}
+//
+//Client*
+//PreviousClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s)
+//{
+//    //return c->prev ? c->prev : m->ctail;
+//    Client *nc;
+//    for (nc = c->prev ? c->prev : m->ctail;
+//            nc != c || nc->types & t ||  nc->states & s;
+//            nc = nc->prev ? nc->prev : m->ctail);
+//    return nc;
+//}
 
 void
 RemoveClient(Monitor *m, Client *c)

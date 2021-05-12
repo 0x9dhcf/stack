@@ -27,6 +27,7 @@ SRC = atoms.c\
 	  main.c\
 	  manage.c\
 	  monitor.c\
+	  shortcut.c\
 	  x11.c
 HDR = atoms.h\
 	  client.h\
@@ -39,6 +40,7 @@ HDR = atoms.h\
 	  manage.h\
 	  monitor.h\
 	  stack.h\
+	  shortcut.h\
 	  x11.h
 OBJ = ${SRC:.c=.o}
 

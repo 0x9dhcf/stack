@@ -72,6 +72,9 @@ typedef struct _Client {
     struct _Client *next;
 } Client;
 
+Client *NextClient(Client *c);
+Client *PreviousClient(Client *c);
+
 void HideClient(Client *c);
 void ShowClient(Client *c);
 
@@ -85,6 +88,7 @@ void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
 
 void MaximizeClientHorizontally(Client *c);
 void MaximizeClientVertically(Client *c);
+void MaximizeClient(Client *c);
 void MaximizeClientLeft(Client *c);
 void MaximizeClientRight(Client *c);
 void MaximizeClientTop(Client *c);

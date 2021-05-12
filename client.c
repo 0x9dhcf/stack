@@ -23,6 +23,18 @@ static void SaveGeometries(Client *c);
 static void SynchronizeFrameGeometry(Client *c);
 static void SynchronizeWindowGeometry(Client *c);
 
+Client*
+NextClient(Client *c)
+{
+    return c->next ? c->next : c->monitor->chead;
+}
+
+Client*
+PreviousClient(Client *c)
+{
+    return c->prev ? c->prev : c->monitor->ctail;
+}
+
 void
 HideClient(Client *c)
 {
@@ -38,7 +50,6 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
-    DLog();
     /* adapt to any  working area changes */
     if (c->states & NetWMStateMaximized) {
         if (c->states & NetWMStateMaximizedHorz)
@@ -162,6 +173,13 @@ MaximizeClientVertically(Client *c)
 }
 
 void
+MaximizeClient(Client *c)
+{
+    MaximizeClientVertically(c);
+    MaximizeClientHorizontally(c);
+}
+
+void
 MaximizeClientLeft(Client *c)
 {
     SaveGeometries(c);
@@ -272,7 +290,6 @@ LowerClient(Client *c)
 void
 SetClientActive(Client *c, Bool b)
 {
-    DLog();
     unsigned int modifiers[] = { 0, LockMask, stNumLockMask, stNumLockMask|LockMask };
 
     if (b && !c->active) {
@@ -307,7 +324,9 @@ RefreshClient(Client *c)
 {
     int bg, fg, bbg, bfg, x, y;
 
-    if (!c->decorated)
+    /* do not attempt to refresh non decorated or hidden clients */
+    if (!c->decorated || (c->desktop != c->monitor->activeDesktop &&
+                !(c->states & NetWMStateSticky)))
         return;
 
     /* select the colors */
@@ -445,8 +464,6 @@ Configure(Client *c)
 void
 SaveGeometries(Client *c)
 {
-    DLog();
-
     if (!(c->states & NetWMStateFullscreen)) {
         c->sfx = c->fx;
         c->sfy = c->fy;

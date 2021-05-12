@@ -31,7 +31,9 @@ static void TeardownWindowManager();
 static XErrorHandler defaultErrorHandler;
 static Window supportingWindow;
 
-Bool stRunning;
+Bool stRunning = False;
+Monitor *stActiveMonitor = NULL;
+Client *stActiveClient = NULL;
 
 int
 WMDetectedErrorHandler(Display *d, XErrorEvent *e)
@@ -169,10 +171,11 @@ InitializeWindowManager()
                     stRoot, True, GrabModeSync, GrabModeAsync);
 
     for (int i = 0; i < ShortcutCount; ++i) {
-        if ((code = XKeysymToKeycode(stDisplay, stConfig.shortcuts[i].keysym))) {
+        Shortcut sc = stConfig.shortcuts[i];
+        if ((code = XKeysymToKeycode(stDisplay, sc.keysym))) {
             for (int j = 0; j < 4; ++j)
                 XGrabKey(stDisplay, code,
-                        stConfig.shortcuts[i].modifier | modifiers[j],
+                        sc.modifier | modifiers[j],
                         stRoot, True, GrabModeSync, GrabModeAsync);
         }
     }

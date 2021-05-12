@@ -43,7 +43,6 @@ GetWMName(Window w, char **name)
 void
 GetWMHints(Window w, WMHints *h)
 {
-    DLog();
     /* the default is to be focusable */
     *h = HintsFocusable;
     XWMHints *hints = XGetWMHints(stDisplay, w);
@@ -152,9 +151,7 @@ GetWMStrut(Window w, WMStrut *strut)
         strut->top = prop[2];
         strut->bottom = prop[3];
         XFree(prop);
-        DLog("got strut: [%d, %d, %d, %d]", strut->left, strut->right, strut->top, strut->bottom);
     }
-
 }
 
 void
@@ -199,6 +196,8 @@ GetNetWMWindowType(Window w, NetWMWindowType *h)
             *h |= NetWMTypeTooltip;
     }
     XFree(atoms);
+    if (!*h)
+        *h |= NetWMTypeNormal;
 }
 
 void

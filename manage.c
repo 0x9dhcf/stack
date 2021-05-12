@@ -2,7 +2,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "X11/X.h"
 #include "atoms.h"
 #include "client.h"
 #include "cursors.h"
@@ -13,9 +12,6 @@
 #include "monitor.h"
 #include "stack.h"
 #include "x11.h"
-
-Monitor *stActiveMonitor = NULL;
-Client *stActiveClient = NULL;
 
 void
 ManageWindow(Window w, Bool exists)
@@ -49,8 +45,6 @@ ManageWindow(Window w, Bool exists)
     GetWMName(w, &c->name);
     GetWMClass(w, &c->wmclass);
     GetWMStrut(w, &c->strut);
-
-    DLog("isFixed: %d, stiky: %d", c->types & NetWMTypeFixed ? 1 : 0, c->states & NetWMStateSticky ? 1 : 0);
 
     c->active = False;
     c->decorated = (c->types & NetWMTypeFixed) ? False : True;
@@ -178,10 +172,19 @@ ForgetWindow(Window w)
     Client *c = Lookup(w);
     if (c) {
         /* find a new home for the active window */
-        if (c == stActiveClient)
-            SetActiveClient(NextClient(c->monitor, c));
-        if (stActiveClient == c)
-            stActiveClient = NULL;
+        if (c == stActiveClient) {
+            Client *nc = NULL;
+            for (nc = NextClient(stActiveClient);
+                    nc != stActiveClient
+                        && (nc->desktop != stActiveClient->desktop
+                        || !(nc->types & NetWMTypeNormal)
+                        || nc->states & NetWMStateHidden);
+                    nc = NextClient(nc));
+            if (nc)
+                SetActiveClient(nc);
+            else
+                stActiveClient = NULL;
+        }
 
         /* if transient for someone unregister this client */
         if (c->transfor) {
@@ -232,9 +235,18 @@ Client *
 Lookup(Window w)
 {
     for (Monitor *m = stMonitors; m; m = m->next) {
-        Client *c = LookupMonitorClient(m, w);
-        if (c)
-            return c;
+        for (Client *c = m->chead; c; c = c->next) {
+            if (c->window == w || c->frame == w || c->topbar == w)
+                return c;
+
+            for (int i = 0; i < ButtonCount; ++i)
+                if (c->buttons[i] == w)
+                    return c;
+
+            for (int i = 0; i < HandleCount; ++i)
+                if (c->handles[i] == w)
+                    return c;
+        };
     }
     return NULL;
 }
@@ -256,125 +268,4 @@ SetActiveClient(Client *c)
     }
 }
 
-void
-Spawn(char **args)
-{
-    if (fork() == 0) {
-        if (stDisplay)
-              close(ConnectionNumber(stDisplay));
-        setsid();
-        execvp((char *)args[0], (char **)args);
-        ELog(" failed");
-        exit(EXIT_SUCCESS);
-    }
-}
-
-void
-Quit()
-{
-    stRunning = False;
-}
-
-/* XXX: can I think of something less efficient */
-void
-MaximizeVertically()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientVertically(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-MaximizeHorizontally()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientHorizontally(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void MaximizeLeft()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientLeft(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-MaximizeRight()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientRight(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-MaximizeTop()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientTop(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-MaximizeBottom()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientBottom(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-Maximize()
-{
-    if (stActiveClient && !(stActiveClient->types & NetWMTypeFixed)) {
-        MaximizeClientHorizontally(stActiveClient);
-        MaximizeClientVertically(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-Restore()
-{
-    if (stActiveClient) {
-        RestoreClient(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
-    }
-}
-
-void
-CycleForward()
-{
-    Client *nc = NULL;
-    if (stActiveClient && (nc = NextClient(stActiveMonitor, stActiveClient)))
-        SetActiveClient(nc);
-}
-
-void
-CycleBackward()
-{
-    Client *nc = NULL;
-    if (stActiveClient && (nc = PreviousClient(stActiveMonitor, stActiveClient)))
-        SetActiveClient(nc);
-}
-
-void
-ShowDesktop1()
-{
-    DLog();
-    SetActiveDesktop(stActiveMonitor, 0);
-}
-
-void
-ShowDesktop2()
-{
-    DLog();
-    SetActiveDesktop(stActiveMonitor, 1);
-}
 

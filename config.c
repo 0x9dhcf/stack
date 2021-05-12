@@ -6,6 +6,7 @@
 #include "config.h"
 #include "manage.h"
 #include "client.h"
+#include "monitor.h"
 
 static const Config defaultConfig = {
     .borderWidth = 1,
@@ -43,19 +44,27 @@ static const Config defaultConfig = {
     .iconFontname = "Sans:antialias=true:size=11",
     //.iconFontname = "Font Awesome 5 Free Regular:size=11",
     .shortcuts = {
-        { Modkey | ShiftMask,     XK_q        },
-        { Modkey | ShiftMask,     XK_h        },
-        { Modkey | ShiftMask,     XK_v        },
-        { Modkey | ShiftMask,     XK_Left     },
-        { Modkey | ShiftMask,     XK_Right    },
-        { Modkey | ShiftMask,     XK_Up       },
-        { Modkey | ShiftMask,     XK_Down     },
-        { Modkey,                 XK_Up       },
-        { Modkey,                 XK_Down     },
-        { Modkey,                 XK_Tab      },
-        { Modkey | ShiftMask,     XK_Tab      },
-        { Modkey,                 XK_1        },
-        { Modkey,                 XK_2        }
+        { Modkey | ShiftMask,     XK_q,     CV,     { .vcb={Quit} } },
+        { Modkey | ShiftMask,     XK_h,     CV,     { .vcb={MaximizeActiveClientHorizontally} } },
+        { Modkey | ShiftMask,     XK_v,     CV,     { .vcb={MaximizeActiveClientVertically} } },
+        { Modkey | ShiftMask,     XK_Left,  CV,     { .vcb={MaximizeActiveClientLeft} } },
+        { Modkey | ShiftMask,     XK_Right, CV,     { .vcb={MaximizeActiveClientRight} } },
+        { Modkey | ShiftMask,     XK_Up,    CV,     { .vcb={MaximizeActiveClientTop} } },
+        { Modkey | ShiftMask,     XK_Down,  CV,     { .vcb={MaximizeActiveClientBottom} } },
+        { Modkey,                 XK_Up,    CV,     { .vcb={MaximizeActiveClient} } },
+        { Modkey,                 XK_Down,  CV,     { .vcb={RestoreActiveClient} } },
+        { Modkey,                 XK_Tab,   CV,     { .vcb={CycleActiveMonitorForward} } },
+        { Modkey | ShiftMask,     XK_Tab,   CV,     { .vcb={CycleActiveMonitorBackward} } },
+        { Modkey,                 XK_1,     CI,     { .icb={ShowActiveMonitorDesktop, 0} } },
+        { Modkey,                 XK_2,     CI,     { .icb={ShowActiveMonitorDesktop, 1} } },
+        { Modkey,                 XK_3,     CI,     { .icb={ShowActiveMonitorDesktop, 2} } },
+        { Modkey,                 XK_4,     CI,     { .icb={ShowActiveMonitorDesktop, 3} } },
+        { Modkey,                 XK_5,     CI,     { .icb={ShowActiveMonitorDesktop, 4} } },
+        { Modkey,                 XK_6,     CI,     { .icb={ShowActiveMonitorDesktop, 5} } },
+        { Modkey,                 XK_7,     CI,     { .icb={ShowActiveMonitorDesktop, 6} } },
+        { Modkey,                 XK_8,     CI,     { .icb={ShowActiveMonitorDesktop, 7} } },
+        { Modkey,                 XK_9,     CI,     { .icb={ShowActiveMonitorDesktop, 8} } },
+        { Modkey,                 XK_0,     CI,     { .icb={ShowActiveMonitorDesktop, 9} } }
     },
     .terminal = {"uxterm", NULL}
 };
