@@ -1,15 +1,23 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include "shortcut.h"
-
 #ifdef NDEBUG
 #define Modkey Mod4Mask
 #else
 #define Modkey Mod1Mask
 #endif
 
-#define ShortcutCount 21
+#define ShortcutCount 31
+
+typedef struct _Shortcut {
+    unsigned long modifier;
+    unsigned long keysym;
+    enum {CV, CI} type;
+    union {
+        struct { void (*f)(); } vcb;
+        struct { void (*f)(int); int i; } icb;
+    } cb;
+} Shortcut;
 
 typedef struct _Config {
     int borderWidth;

@@ -39,12 +39,10 @@ void
 HideClient(Client *c)
 {
     /* move all windows off screen without changing anything */
-    XMoveWindow(stDisplay, c->frame, -c->fw, -c->fh);
-    if (!(c->types & NetWMTypeFixed)) {
-        for (int i = 0; i < HandleCount; ++i) {
-            XMoveWindow(stDisplay, c->handles[i], -c->fw, -c->fh);
-        }
-    }
+    XMoveWindow(stDisplay, c->frame, -c->fw, c->fy);
+    if (!(c->types & NetWMTypeFixed))
+        for (int i = 0; i < HandleCount; ++i)
+            XMoveWindow(stDisplay, c->handles[i], -c->fw, c->fy);
 }
 
 void
@@ -68,6 +66,34 @@ ShowClient(Client *c)
     }
 }
 
+//void
+//MapClient(Client *c)
+//{
+//    if (!c->mapped) {
+//        XMapWindow(stDisplay, c->frame);
+//        if (!(c->types & NetWMTypeFixed))
+//            for (int i = 0; i < HandleCount; ++i)
+//                XMapWindow(stDisplay, c->handles[i]);
+//        for (Transient *tc = c->transients; tc; tc = tc->next)
+//            MapClient(tc->client);
+//        c->mapped = True;
+//    }
+//}
+//
+//void
+//UnmapClient(Client *c)
+//{
+//    if (c->mapped) {
+//        XUnmapWindow(stDisplay, c->frame);
+//        if (!(c->types & NetWMTypeFixed))
+//            for (int i = 0; i < HandleCount; ++i)
+//                XUnmapWindow(stDisplay, c->handles[i]);
+//        for (Transient *tc = c->transients; tc; tc = tc->next)
+//            UnmapClient(tc->client);
+//        c->mapped = False;
+//    }
+//}
+//
 void
 MoveClientWindow(Client *c, int x, int y)
 {
@@ -409,14 +435,16 @@ ApplyNormalHints(Client *c)
 void
 Configure(Client *c)
 {
-    //DLog("frame (absolute)\t: (%d, %d) [%d x %d]", c->fx, c->fy, c->fw, c->fh);
-    //DLog("window (absolute)\t: (%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
+    /*
+    DLog("frame (absolute)\t: (%d, %d) [%d x %d]", c->fx, c->fy, c->fw, c->fh);
+    DLog("window (absolute)\t: (%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
+    */
     int hw, wx, wy;
 
     /* compute the relative window position */
     wx = c->wx - c->fx;
     wy = c->wy - c->fy;
-    //DLog("window (relative)\t: (%d, %d) [%d x %d]", wx, wy, c->ww, c->wh);
+    /*DLog("window (relative)\t: (%d, %d) [%d x %d]", wx, wy, c->ww, c->wh);*/
 
     /* place frame and window */
     XMoveResizeWindow(stDisplay, c->frame, c->fx, c->fy, c->fw, c->fh);
@@ -433,11 +461,10 @@ Configure(Client *c)
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);
         }
-    } else { /* move the topbar outside the frame */
+    } else if (!(c->types & NetWMTypeFixed)){ /* move the topbar outside the frame */
         XMoveWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 -(stConfig.borderWidth + stConfig.topbarHeight));
     }
-
 
     /* suround frame by handles */
     if (!(c->types & NetWMTypeFixed)) {

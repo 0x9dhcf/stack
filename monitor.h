@@ -1,5 +1,5 @@
-#ifndef __OUTPUT_H__
-#define __OUTPUT_H__
+#ifndef __MONITOR_H__
+#define __MONITOR_H__
 
 #include <X11/Xlib.h>
 
@@ -25,7 +25,7 @@ typedef struct _Monitor {
     struct _Monitor *next;
 } Monitor;
 
-/* head of the list of monitors */
+/* head of the the monitors list */
 extern Monitor *stMonitors;
 
 void InitializeMonitors();
@@ -33,11 +33,9 @@ void TeardownMonitors();
 
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
+void AddClientToDesktop(Monitor *m, Client *c, int d);
+void RemoveClientFromDesktop(Monitor *m, Client *c, int d);
 void SetActiveDesktop(Monitor *m, int desktop);
 void Restack(Monitor *m);
-
-//Client* LookupMonitorClient(Monitor *m, Window w);
-//Client* NextClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s);
-//Client* PreviousClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s);
 
 #endif

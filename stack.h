@@ -9,8 +9,10 @@
 typedef struct _Monitor Monitor;
 typedef struct _Client Client;
 
+// XXX: manage.h ?
 extern Bool     stRunning;
 extern Monitor  *stActiveMonitor;
 extern Client   *stActiveClient;
+extern Client   *stLastActiveClient;
 
 #endif

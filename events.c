@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <X11/XKBlib.h>
 
 #include "atoms.h"
@@ -35,6 +37,7 @@ static void OnButtonRelease(XButtonEvent *e);
 static void OnMotionNotify(XMotionEvent *e);
 static void OnMessage(XClientMessageEvent *e);
 static void OnKeyPress(XKeyPressedEvent *e);
+static void Spawn(char **args);
 
 void
 DispatchEvent(XEvent *e)
@@ -171,7 +174,7 @@ OnUnmapNotify(XUnmapEvent *e)
 
     /* ignore UnmapNotify from reparenting  */
     if (e->event != stRoot && e->event != None)
-        ForgetWindow(e->window);
+        ForgetWindow(e->window, False);
 }
 
 /* XXX: useless */
@@ -498,7 +501,7 @@ OnKeyPress(XKeyPressedEvent *e)
 {
     //DLog();
     KeySym keysym;
-    //keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0);
+    /* keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0); */
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
 
     /* TODO manage binding */
@@ -515,4 +518,18 @@ OnKeyPress(XKeyPressedEvent *e)
         }
     }
 }
+
+void
+Spawn(char **args)
+{
+    if (fork() == 0) {
+        if (stDisplay)
+              close(ConnectionNumber(stDisplay));
+        setsid();
+        execvp((char *)args[0], (char **)args);
+        ELog("%s: failed", args[0]);
+        exit(EXIT_SUCCESS);
+    }
+}
+
 

@@ -34,6 +34,7 @@ static Window supportingWindow;
 Bool stRunning = False;
 Monitor *stActiveMonitor = NULL;
 Client *stActiveClient = NULL;
+Client *stLastActiveClient = NULL;
 
 int
 WMDetectedErrorHandler(Display *d, XErrorEvent *e)
@@ -57,10 +58,11 @@ EventLoopErrorHandler(Display *d, XErrorEvent *e)
             || (e->request_code == X_GrabButton && e->error_code == BadAccess)
             || (e->request_code == X_GrabKey && e->error_code == BadAccess)
             || (e->request_code == X_CopyArea && e->error_code == BadDrawable)) {
-        DLog("error ignored");
+        DLog("ignored error: request code=%d, error code=%d",
+            e->request_code, e->error_code);
         return 0;
     }
-    ELog("fatal error: request code=%d, error code=%d\n",
+    ELog("error: request code=%d, error code=%d",
             e->request_code, e->error_code);
     return defaultErrorHandler(d, e); /* may call exit */
 }
@@ -187,7 +189,7 @@ TeardownWindowManager()
     for (Monitor *m = stMonitors; m; m = m->next) {
         Client *c, *d;
         for (c = m->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
-            ForgetWindow(c->window);
+            ForgetWindow(c->window, True);
     }
 
     XDestroyWindow(stDisplay, supportingWindow);
