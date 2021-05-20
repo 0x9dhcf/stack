@@ -7,7 +7,8 @@
 #define Modkey Mod1Mask
 #endif
 
-#define ShortcutCount 31
+/* XXX: Ugly */
+#define ShortcutCount 34
 
 typedef struct _Shortcut {
     unsigned long modifier;
@@ -42,7 +43,8 @@ typedef struct _Config {
     char *buttonIcons[3]; /* close, maximize, minimize */
     char *labelFontname;
     char *iconFontname;
-    char *terminal[2];
+    int masters;
+    float split;
     Shortcut shortcuts[ShortcutCount];
 } Config;
 

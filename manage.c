@@ -12,6 +12,8 @@
 #include "stack.h"
 #include "x11.h"
 
+Client *lastActiveClient = NULL;
+
 void
 ManageWindow(Window w, Bool exists)
 {
@@ -139,25 +141,28 @@ ManageWindow(Window w, Bool exists)
     MoveResizeClientWindow(c, wx, wy, ww, wh, False);
     AttachClientToMonitor(stActiveMonitor, c);
 
-    /* we can only apply structure states once attached */
-    if (c->states & NetWMStateMaximizedHorz)
-        MaximizeClientHorizontally(c);
-    if (c->states & NetWMStateMaximizedVert)
-        MaximizeClientVertically(c);
+    /* we can only apply structure states once attached in floating mode */
+    if (! stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
+        if (c->states & NetWMStateMaximizedHorz)
+            MaximizeClientHorizontally(c);
+        if (c->states & NetWMStateMaximizedVert)
+            MaximizeClientVertically(c);
 
-    if (c->states & NetWMStateHidden)
-        MinimizeClient(c);
+        if (c->states & NetWMStateHidden)
+            MinimizeClient(c);
 
-    if (c->states & NetWMStateFullscreen)
-        FullscreenClient(c);
+        if (c->states & NetWMStateFullscreen)
+            FullscreenClient(c);
 
-    if (c->states & NetWMStateAbove)
-        RaiseClient(c);
+        if (c->states & NetWMStateAbove)
+            RaiseClient(c);
 
-    if (c->states & NetWMStateBelow)
-        LowerClient(c);
+        if (c->states & NetWMStateBelow)
+            LowerClient(c);
+    }
 
-    SetActiveClient(c);
+    if (!(c->types & NetWMTypeFixed))
+        SetActiveClient(c);
 
     /* update the client list */
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetClientList], XA_WINDOW,
@@ -169,25 +174,7 @@ ForgetWindow(Window w, Bool survives)
 {
     Client *c = Lookup(w);
     if (c) {
-        //if (c == c->monitor->desktops[c->desktop].activeOnLeave)
-        //    c->monitor->desktops[c->desktop].activeOnLeave = NULL;
-        ///* find a new home for the active window */
-        //if (c == stActiveClient) {
-        //    Client *nc = NULL;
-        //    for (nc = NextClient(stActiveClient);
-        //            nc != stActiveClient
-        //                && (nc->desktop != stActiveClient->desktop
-        //                || !(nc->types & NetWMTypeNormal)
-        //                || nc->states & NetWMStateHidden);
-        //            nc = NextClient(nc));
-        //    if (nc && nc != c) {
-        //        DLog("set active: %ld", nc->window);
-        //        SetActiveClient(nc);
-        //    }
-        //    else
-        //        stActiveClient = NULL;
-        //}
-        FindNextActiveClient();
+        DetachClientFromMonitor(c->monitor, c);
 
         /* if transient for someone unregister this client */
         if (c->transfor) {
@@ -197,7 +184,14 @@ ForgetWindow(Window w, Bool survives)
             *tc = (*tc)->next;
         }
 
-        DetachClientFromMonitor(c->monitor, c);
+        if (c == lastActiveClient)
+            lastActiveClient = NULL;
+
+        if (c == stActiveClient) {
+            stActiveClient = NULL;
+            FindNextActiveClient();
+        }
+
         if (c->name)
             free(c->name);
 
@@ -263,7 +257,7 @@ SetActiveClient(Client *c)
 {
     if (c) {
         if (stActiveClient && stActiveClient != c) {
-            stLastActiveClient = stActiveClient;
+            lastActiveClient = stActiveClient;
             SetClientActive(stActiveClient, False);
             LowerClient(c);
             SetNetWMState(c->window, c->states);
@@ -280,26 +274,31 @@ SetActiveClient(Client *c)
 void
 FindNextActiveClient()
 {
+    Client *head = NULL;
+    Client *nc = NULL;
+
     if (stActiveClient) {
-        stActiveClient->monitor->desktops[stActiveClient->desktop].activeOnLeave = NULL;
-        Client *nc = NULL;
-        /* use the last active client is valid */
-        if (stLastActiveClient &&
-                stLastActiveClient->desktop == stActiveClient->desktop) {
-            nc = stLastActiveClient;
-        } else { /* try to find a new one */
-            for (nc = NextClient(stActiveClient);
-                    nc != stActiveClient
-                        && (nc->desktop != stActiveClient->desktop
-                        || !(nc->types & NetWMTypeNormal)
-                        || nc->states & NetWMStateHidden);
-                    nc = NextClient(nc));
-        }
-        if (nc && nc != stActiveClient)
-            SetActiveClient(nc);
-        else
-            stActiveClient = NULL;
+        head = stActiveClient;
+    } else {
+        head = stActiveMonitor->chead;
     }
+
+    /* use the last active client if valid */
+    if (lastActiveClient &&
+            lastActiveClient->desktop == stActiveMonitor->activeDesktop) {
+        nc = lastActiveClient;
+    } else if (head) { /* try to find a new one */
+        for (nc = NextClient(head);
+                nc != head
+                    && (nc->desktop != stActiveMonitor->activeDesktop
+                    || !(nc->types & NetWMTypeNormal)
+                    || nc->states & NetWMStateHidden);
+                nc = NextClient(nc));
+    }
+    if (nc)
+        SetActiveClient(nc);
+    else
+        stActiveClient = NULL;
 }
 
 void
@@ -386,11 +385,12 @@ CycleActiveMonitorForward()
 {
     if (stActiveClient) {
         Client *nc = NULL;
-        for (nc = NextClient(stActiveClient); nc != stActiveClient
-                    && (nc->desktop != stActiveClient->desktop
-                    || !(nc->types & NetWMTypeNormal)
-                    ||  nc->states & NetWMStateHidden);
-                nc = NextClient(nc));
+            for (nc = NextClient(stActiveClient);
+                    nc && nc != stActiveClient
+                        && (nc->desktop != stActiveClient->desktop
+                        || !(nc->types & NetWMTypeNormal)
+                        ||  nc->states & NetWMStateHidden);
+                    nc = NextClient(nc));
 
         if (nc)
             SetActiveClient(nc);
@@ -403,7 +403,7 @@ CycleActiveMonitorBackward()
     if (stActiveClient) {
         Client *pc = NULL;
         for (pc = PreviousClient(stActiveClient);
-                pc != stActiveClient
+                pc && pc != stActiveClient
                     && (pc->desktop != stActiveClient->desktop
                     || !(pc->types & NetWMTypeNormal)
                     || pc->states & NetWMStateHidden);
@@ -425,9 +425,40 @@ MoveActiveClientToDesktop(int desktop)
 {
     if (stActiveClient) {
         Client *toMove = stActiveClient;
-        FindNextActiveClient();
+        //toMove->monitor->desktops[stActiveClient->desktop].activeOnLeave = NULL;
         RemoveClientFromDesktop(toMove->monitor, toMove, toMove->desktop);
+        FindNextActiveClient();
         AddClientToDesktop(toMove->monitor, toMove, desktop);
         Restack(toMove->monitor);
+    }
+}
+
+void
+ToggleActiveDesktopDynamic()
+{
+    if (stActiveMonitor) {
+        Bool current = stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic;
+        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic = !current;
+        /* untile, restore all windows */
+        if (current) {
+            for (Client *c = stActiveMonitor->chead; c; c = c->next) {
+                if (c->desktop == stActiveMonitor->activeDesktop) {
+                    RestoreClient(c);
+                }
+            }
+        } else {
+            Restack(stActiveMonitor);
+        }
+    }
+}
+
+void
+ActiveDesktopAddMaster(int nb)
+{
+    if (stActiveMonitor
+            && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
+        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters = 
+            Max(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters + nb, 1);
+        Restack(stActiveMonitor);
     }
 }

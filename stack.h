@@ -13,6 +13,5 @@ typedef struct _Client Client;
 extern Bool     stRunning;
 extern Monitor  *stActiveMonitor;
 extern Client   *stActiveClient;
-extern Client   *stLastActiveClient;
 
 #endif

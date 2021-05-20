@@ -34,7 +34,6 @@ static Window supportingWindow;
 Bool stRunning = False;
 Monitor *stActiveMonitor = NULL;
 Client *stActiveClient = NULL;
-Client *stLastActiveClient = NULL;
 
 int
 WMDetectedErrorHandler(Display *d, XErrorEvent *e)
@@ -166,10 +165,14 @@ InitializeWindowManager()
     XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
 
     // TODO manage binding
-    // For now just a way to launch a terminal
+    // For now just a way to launch a terminal and dmenu
     if ((code = XKeysymToKeycode(stDisplay, XK_Return)))
         for (int j = 0; j < 4; ++j)
             XGrabKey(stDisplay, code, Modkey | ShiftMask | modifiers[j],
+                    stRoot, True, GrabModeSync, GrabModeAsync);
+    if ((code = XKeysymToKeycode(stDisplay, XK_p)))
+        for (int j = 0; j < 4; ++j)
+            XGrabKey(stDisplay, code, Modkey | modifiers[j],
                     stRoot, True, GrabModeSync, GrabModeAsync);
 
     for (int i = 0; i < ShortcutCount; ++i) {

@@ -10,9 +10,15 @@
 #include "font.h"
 #include "hints.h"
 #include "manage.h"
+#include "monitor.h"
 #include "stack.h"
 #include "log.h"
 #include "x11.h"
+
+static char *terminal[] = {"uxterm", NULL};
+static char *dmenu[] = {"dmenu_run", "-h", "26", "-fn",
+    "Sans:antialias=true:size:size=11", "-nb", "#000000", "-nf", "#ffffff",
+    "-sb", "#5294E2", "-sf", "#000000", NULL };
 
 static int  lastSeenPointerX;
 static int  lastSeenPointerY;
@@ -184,7 +190,7 @@ OnDestroyNotify(XDestroyWindowEvent *e)
     //DLog("window: %ld", e->window);
 
     Client *c = Lookup(e->window);
-    if (c) { ELog("Found a client"); }
+    if (c) { ELog("Found a client??"); }
 }
 
 void
@@ -243,16 +249,18 @@ OnButtonPress(XButtonEvent *e)
     motionStartW = c->fw;
     motionStartH = c->fh;
 
-    if (e->window == c->topbar || (e->window == c->window && e->state == Modkey))
-        XDefineCursor(stDisplay, e->window, stCursors[CursorMove]);
+    if (!c->tiled) {
+        if (e->window == c->topbar || (e->window == c->window && e->state == Modkey))
+            XDefineCursor(stDisplay, e->window, stCursors[CursorMove]);
 
-    if (e->window == c->buttons[ButtonMaximize]) {
-        if ((c->states & NetWMStateMaximized))
-            RestoreClient(c);
-        else {
-            MaximizeClientVertically(c);
-            MaximizeClientHorizontally(c);
-            SetNetWMState(c->window, c->states);
+        if (e->window == c->buttons[ButtonMaximize]) {
+            if ((c->states & NetWMStateMaximized))
+                RestoreClient(c);
+            else {
+                MaximizeClientVertically(c);
+                MaximizeClientHorizontally(c);
+                SetNetWMState(c->window, c->states);
+            }
         }
     }
 
@@ -284,11 +292,13 @@ OnButtonRelease(XButtonEvent *e)
     if (!c)
         return;
 
-    for (int i = 0; i < HandleCount; ++i) {
-        if (e->window == c->handles[i]) {
-            /* apply the size hints */
-            MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, True);
-            break;
+    if (! c->tiled) {
+        for (int i = 0; i < HandleCount; ++i) {
+            if (e->window == c->handles[i]) {
+                /* apply the size hints */
+                MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, True);
+                break;
+            }
         }
     }
 
@@ -317,34 +327,43 @@ OnMotionNotify(XMotionEvent *e)
 
     lastSeenPointerTime = e->time;
 
-    /* we do not apply normal hints during motion but when button is released
-     * to make the resizing visually smoother. Some client apply normals by
-     * themselves anway (e.g gnome-terminal) */
-    if (e->window == c->topbar || e->window == c->window)
-        MoveClientFrame(c, motionStartX + vx, motionStartY + vy);
-    else if (e->window == c->handles[HandleNorth])
-        MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
-                motionStartW, motionStartH - vy , False);
-    else if (e->window == c->handles[HandleWest])
-        ResizeClientFrame(c, motionStartW + vx, motionStartH, False);
-    else if (e->window == c->handles[HandleSouth])
-        ResizeClientFrame(c, motionStartW, motionStartH + vy, False);
-    else if (e->window == c->handles[HandleEast])
-        MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
-                motionStartW - vx, motionStartH, False);
-    else if (e->window == c->handles[HandleNorthEast])
-        MoveResizeClientFrame(c, motionStartX + vx, motionStartY + vy,
-                motionStartW - vx, motionStartH - vy, False);
-    else if (e->window == c->handles[HandleNorthWest])
-        MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
-                motionStartW + vx, motionStartH - vy, False);
-    else if (e->window == c->handles[HandleSouthWest])
-        ResizeClientFrame(c, motionStartW + vx, motionStartH + vy, False);
-    else if (e->window == c->handles[HandleSouthEast])
-        MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
-                motionStartW - vx, motionStartH + vy, False);
-    else
-      return;
+    if (c->tiled) {
+        if (e->window == c->handles[HandleWest]
+                || e->window == c->handles[HandleEast]) {
+            c->monitor->desktops[c->desktop].split = 
+                (e->x_root - c->monitor->x) / (float)c->monitor->w;
+            Restack(c->monitor);
+        }
+    } else {
+        /* we do not apply normal hints during motion but when button is released
+         * to make the resizing visually smoother. Some client apply normals by
+         * themselves anway (e.g gnome-terminal) */
+        if (e->window == c->topbar || e->window == c->window)
+            MoveClientFrame(c, motionStartX + vx, motionStartY + vy);
+        else if (e->window == c->handles[HandleNorth])
+            MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
+                    motionStartW, motionStartH - vy , False);
+        else if (e->window == c->handles[HandleWest])
+            ResizeClientFrame(c, motionStartW + vx, motionStartH, False);
+        else if (e->window == c->handles[HandleSouth])
+            ResizeClientFrame(c, motionStartW, motionStartH + vy, False);
+        else if (e->window == c->handles[HandleEast])
+            MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
+                    motionStartW - vx, motionStartH, False);
+        else if (e->window == c->handles[HandleNorthEast])
+            MoveResizeClientFrame(c, motionStartX + vx, motionStartY + vy,
+                    motionStartW - vx, motionStartH - vy, False);
+        else if (e->window == c->handles[HandleNorthWest])
+            MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
+                    motionStartW + vx, motionStartH - vy, False);
+        else if (e->window == c->handles[HandleSouthWest])
+            ResizeClientFrame(c, motionStartW + vx, motionStartH + vy, False);
+        else if (e->window == c->handles[HandleSouthEast])
+            MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
+                    motionStartW - vx, motionStartH + vy, False);
+        else
+          return;
+    }
 }
 
 void
@@ -506,8 +525,11 @@ OnKeyPress(XKeyPressedEvent *e)
 
     /* TODO manage binding */
     if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
-        Spawn((char**)stConfig.terminal);
+        Spawn((char**)terminal);
+    if (keysym == (XK_p) && CleanMask(Modkey) == CleanMask(e->state))
+        Spawn((char**)dmenu);
 
+    /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
         Shortcut sc = stConfig.shortcuts[i];
         if (keysym == (sc.keysym) &&

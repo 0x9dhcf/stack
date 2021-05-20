@@ -46,11 +46,13 @@ typedef struct _Client {
     int fx, fy, fw, fh;     /* frame absolute geometry                  */
     int sfx, sfy, sfw, sfh; /* saved frame geometry post fullscreen     */
     int smx, smy, smw, smh; /* saved frame geometry post maximixed      */
+    int stx, sty, stw, sth; /* saved frame geometry post tiling         */
     int sbw;                /* saved border width                       */
 
     /* statuses */
     Bool active;
     Bool decorated;
+    Bool tiled;
     int desktop;
 
     /* icccm, ewmh*/
@@ -85,6 +87,8 @@ void MoveResizeClientWindow(Client *c, int x, int y, int w, int h, Bool sh);
 void MoveClientFrame(Client *c, int x, int y);
 void ResizeClientFrame(Client *c, int w, int h, Bool sh);
 void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
+
+void TileClient(Client *c, int x, int y, int w, int h);
 
 void MaximizeClientHorizontally(Client *c);
 void MaximizeClientVertically(Client *c);

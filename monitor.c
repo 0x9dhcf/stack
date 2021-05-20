@@ -13,8 +13,6 @@
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);
 static void RemoveClient(Monitor *m, Client *c);
-//static void AddClientToDesktop(Monitor *m, Client *c, int d);
-//static void RemoveClientFromDesktop(Monitor *m, Client *c, int d);
 
 Monitor *stMonitors = NULL;
 
@@ -51,6 +49,8 @@ InitializeMonitors()
             m->desktops[i].wy = m->y;
             m->desktops[i].ww = m->w;
             m->desktops[i].wh = m->h;
+            m->desktops[i].masters = stConfig.masters;
+            m->desktops[i].split = stConfig.split;
         }
         m->activeDesktop = 0;
         m->chead= NULL;
@@ -76,6 +76,8 @@ InitializeMonitors()
             stMonitors->desktops[i].wy = stMonitors->y;
             stMonitors->desktops[i].ww = stMonitors->w;
             stMonitors->desktops[i].wh = stMonitors->h;
+            stMonitors->desktops[i].masters = stConfig.masters;
+            stMonitors->desktops[i].split = stConfig.split;
         }
         stMonitors->activeDesktop = 0;
         stMonitors->chead= NULL;
@@ -111,21 +113,30 @@ AttachClientToMonitor(Monitor *m, Client *c)
 
     AddClientToDesktop(m, c, c->desktop);
 
-    if ((c->strut.right || c->strut.left || c->strut.top || c->strut.bottom)
-            && c->desktop == m->activeDesktop)
+    if ((c->strut.right 
+                || c->strut.left
+                || c->strut.top
+                || c->strut.bottom 
+                || m->desktops[m->activeDesktop].dynamic))
         Restack(m);
 }
 
 void
 DetachClientFromMonitor(Monitor *m, Client *c)
 {
+    int desktop = c->desktop;
+    //Desktop desktop = m->desktops[c->desktop];
     c->monitor = NULL;
     c->desktop = 0;
     RemoveClient(m, c);
 
     RemoveClientFromDesktop(m, c, c->desktop);
-    if ((c->strut.right || c->strut.left || c->strut.top || c->strut.bottom)
-            && c->desktop == m->activeDesktop)
+    if ((c->strut.right 
+                || c->strut.left
+                || c->strut.top
+                || c->strut.bottom 
+                || (desktop == m->activeDesktop 
+                    && m->desktops[m->activeDesktop].dynamic)))
         Restack(m);
 }
 
@@ -145,6 +156,8 @@ AddClientToDesktop(Monitor *m, Client *c, int d)
     }
 
     c->desktop = d;
+    if (c->tiled && !m->desktops[d].dynamic)
+        RestoreClient(c);
 
     if (!(c->types & NetWMTypeFixed))
         MoveResizeClientFrame(c,
@@ -184,19 +197,12 @@ SetActiveDesktop(Monitor *m, int desktop)
         return;
 
     /* save the active client if any */
-    DLog("save activeOnLeave");
     if (stActiveClient && stActiveClient->desktop == m->activeDesktop)
         m->desktops[m->activeDesktop].activeOnLeave = stActiveClient;
     else
         m->desktops[m->activeDesktop].activeOnLeave = NULL;;
 
     m->activeDesktop = desktop;
-
-    /* restore the active client if any */
-    DLog("restore activeOnLeave");
-    if (m->desktops[m->activeDesktop].activeOnLeave)
-        SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
-    DLog("done activeOnLeave");
 
     /* affect all stickies to this desktop */
     for (Client *c = m->chead; c; c = c->next) {
@@ -207,67 +213,65 @@ SetActiveDesktop(Monitor *m, int desktop)
         }
     }
 
+    /* restore the active client if any */
+    if (m->desktops[m->activeDesktop].activeOnLeave)
+        SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
+    else 
+        FindNextActiveClient();
+
+    Restack(m);
+
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
 
-    Restack(m);
 }
 
 void
 Restack(Monitor *m)
 {
-    DLog();
+    /* if dynamic mode is enable  we always
+     *  retile the desktop */
+    if (m->desktops[m->activeDesktop].dynamic) {
+        Client *c;
+        int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
-    for (Client *c = m->chead; c; c = c->next) {
-        if (c->desktop == m->activeDesktop)
-            ShowClient(c);
+        for (c = m->chead; c; c = c->next)
+            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed))
+                n++;
+
+        Desktop *d =  &m->desktops[m->activeDesktop];
+        if (n > d->masters)
+            mw = d->masters ? d->ww * d->split : 0;
         else
-            HideClient(c);
+            mw = d->ww;
+
+        for (c = m->chead; c; c = c->next) {
+            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed)) {
+                if (i < d->masters) {
+                    int w = (mw - mx) / (Min(n, d->masters) - i);
+                    TileClient(c, d->wx + mx, d->wy, w, d->wh);
+                    if (mx + c->fw < d->ww)
+                        mx += c->fw;
+                } else {
+                    int h = (d->wh - ty) / (n - i);
+                    TileClient(c, d->wx + mw, d->wy + ty, d->ww - mw, h);
+                    if (ty + c->fh < d->wh)
+                        ty += c->fh;
+                }
+                i++;
+            } else if (!(c->types & NetWMTypeFixed)) {
+                HideClient(c);
+            }
+        }
+    } else {
+        for (Client *c = m->chead; c; c = c->next) {
+            if (c->desktop == m->activeDesktop)
+                ShowClient(c);
+            else
+                HideClient(c);
+        }
     }
 }
-
-//Client *
-//LookupMonitorClient(Monitor *m, Window w)
-//{
-//    for (Client *c = m->chead; c; c = c->next) {
-//        if (c->window == w || c->frame == w || c->topbar == w)
-//            return c;
-//
-//        for (int i = 0; i < ButtonCount; ++i)
-//            if (c->buttons[i] == w)
-//                return c;
-//
-//        for (int i = 0; i < HandleCount; ++i)
-//            if (c->handles[i] == w)
-//                return c;
-//    };
-//
-//    return NULL;
-//}
-
-//Client*
-//NextClient(Monitor *m, Client *c)
-//{
-//    //return c->next ? c->next : m->chead;
-//
-//    Client *nc;
-//    for (nc = c->next ? c->next : m->chead;
-//            nc != c || nc->types & t || nc->states & s;
-//            nc = nc->next ? nc->next : m->chead);
-//    return nc;
-//
-//}
-//
-//Client*
-//PreviousClient(Monitor *m, Client *c, NetWMWindowType t, NetWMState s)
-//{
-//    //return c->prev ? c->prev : m->ctail;
-//    Client *nc;
-//    for (nc = c->prev ? c->prev : m->ctail;
-//            nc != c || nc->types & t ||  nc->states & s;
-//            nc = nc->prev ? nc->prev : m->ctail);
-//    return nc;
-//}
 
 void
 RemoveClient(Monitor *m, Client *c)

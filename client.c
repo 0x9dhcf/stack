@@ -66,34 +66,6 @@ ShowClient(Client *c)
     }
 }
 
-//void
-//MapClient(Client *c)
-//{
-//    if (!c->mapped) {
-//        XMapWindow(stDisplay, c->frame);
-//        if (!(c->types & NetWMTypeFixed))
-//            for (int i = 0; i < HandleCount; ++i)
-//                XMapWindow(stDisplay, c->handles[i]);
-//        for (Transient *tc = c->transients; tc; tc = tc->next)
-//            MapClient(tc->client);
-//        c->mapped = True;
-//    }
-//}
-//
-//void
-//UnmapClient(Client *c)
-//{
-//    if (c->mapped) {
-//        XUnmapWindow(stDisplay, c->frame);
-//        if (!(c->types & NetWMTypeFixed))
-//            for (int i = 0; i < HandleCount; ++i)
-//                XUnmapWindow(stDisplay, c->handles[i]);
-//        for (Transient *tc = c->transients; tc; tc = tc->next)
-//            UnmapClient(tc->client);
-//        c->mapped = False;
-//    }
-//}
-//
 void
 MoveClientWindow(Client *c, int x, int y)
 {
@@ -178,6 +150,14 @@ MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
 
     SynchronizeWindowGeometry(c);
     Configure(c);
+}
+
+void
+TileClient(Client *c, int x, int y, int w, int h)
+{
+    SaveGeometries(c);
+    c->tiled = True;
+    MoveResizeClientFrame(c, x, y, w, h, False);
 }
 
 void
@@ -277,15 +257,18 @@ FullscreenClient(Client *c)
 void
 RestoreClient(Client *c)
 {
-    if (c->states & NetWMStateFullscreen) {
+    if (c->tiled) {
+        c->tiled = False;
+        MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
+    } else if (c->states & NetWMStateFullscreen) {
         c->decorated = True;
         c->states &= ~NetWMStateFullscreen;
         MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
-    } else {
+    } else if (c->states & NetWMStateMaximized) {
         c->states &= ~NetWMStateMaximized;
         MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     }
-}
+} 
 
 void
 RaiseClient(Client *c)
@@ -491,6 +474,12 @@ Configure(Client *c)
 void
 SaveGeometries(Client *c)
 {
+    if (!c->tiled) {
+        c->stx = c->fx;
+        c->sty = c->fy;
+        c->stw = c->fw;
+        c->sth = c->fh;
+    }
     if (!(c->states & NetWMStateFullscreen)) {
         c->sfx = c->fx;
         c->sfy = c->fy;

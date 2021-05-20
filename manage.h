@@ -26,5 +26,7 @@ void CycleActiveMonitorForward();
 void CycleActiveMonitorBackward();
 void ShowActiveMonitorDesktop(int desktop);
 void MoveActiveClientToDesktop(int desktop);
+void ToggleActiveDesktopDynamic();
+void ActiveDesktopAddMaster(int nb);
 
 #endif

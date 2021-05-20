@@ -11,6 +11,9 @@ typedef struct _Client Client;
 
 typedef struct _Desktop {
     int wx, wy, ww, wh; /* the working area geometry    */
+    Bool dynamic;
+    int masters;
+    float split;
     Client *activeOnLeave;
 } Desktop;
 
