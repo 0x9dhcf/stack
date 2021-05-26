@@ -11,22 +11,16 @@ Client *Lookup(Window w);
 void ForgetWindow(Window w, Bool survives);
 
 void SetActiveClient(Client *c);
-void FindNextActiveClient(); /* find a new home for the active */
+void FindNextActiveClient();
 
 void Quit();
-void MaximizeActiveClientVertically();
-void MaximizeActiveClientHorizontally();
-void MaximizeActiveClientLeft();
-void MaximizeActiveClientRight();
-void MaximizeActiveClientTop();
-void MaximizeActiveClientBottom();
-void MaximizeActiveClient();
-void RestoreActiveClient();
-void CycleActiveMonitorForward();
-void CycleActiveMonitorBackward();
-void ShowActiveMonitorDesktop(int desktop);
-void MoveActiveClientToDesktop(int desktop);
-void ToggleActiveDesktopDynamic();
-void ActiveDesktopAddMaster(int nb);
+void ActiveNext();
+void ActivePrev();
+void MoveForward();
+void MoveBackward();
+void ShowDesktop(int desktop);
+void MoveToDesktop(int desktop);
+void ToggleDynamic();
+void AddMaster(int nb);
 
 #endif

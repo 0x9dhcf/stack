@@ -5,9 +5,11 @@
 
 #include "atoms.h"
 #include "client.h"
+#include "config.h"
 #include "log.h"
 #include "manage.h"
 #include "monitor.h"
+#include "stack.h"
 #include "x11.h"
 
 static void PushClientFront(Monitor *m, Client *c);
@@ -95,7 +97,6 @@ TeardownMonitors()
     Monitor *m = stMonitors;
     while (m) {
         Monitor *p = m->next;
-        //Client *c, *d;
         for (Client *c = m->chead, *d = c ? c->next : 0; c;
                 c = d, d = c ? c->next : 0)
             RemoveClient(m, c); /* should not happen */
@@ -125,12 +126,9 @@ void
 DetachClientFromMonitor(Monitor *m, Client *c)
 {
     int desktop = c->desktop;
-    //Desktop desktop = m->desktops[c->desktop];
-    c->monitor = NULL;
-    c->desktop = 0;
     RemoveClient(m, c);
-
     RemoveClientFromDesktop(m, c, c->desktop);
+    c->monitor = NULL;
     if ((c->strut.right 
                 || c->strut.left
                 || c->strut.top
@@ -138,6 +136,72 @@ DetachClientFromMonitor(Monitor *m, Client *c)
                 || (desktop == m->activeDesktop 
                     && m->desktops[m->activeDesktop].dynamic)))
         Restack(m);
+}
+
+Client *
+NextClient(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return NULL;
+
+    return c->next ? c->next : m->chead;
+}
+
+Client *
+PreviousClient(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return NULL;
+
+    return c->prev ? c->prev : m->ctail;
+}
+
+void
+MoveClientAfter(Monitor *m, Client *c, Client *after)
+{
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        m->chead = c->next;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        m->ctail = c->prev;
+
+    if (after == m->ctail) {
+        PushClientBack(m, c);
+    } else {
+        c->next = after->next;
+        c->prev = after;
+        after->next->prev = c;
+        after->next = c;
+    }
+}
+
+void
+MoveClientBefore(Monitor *m, Client *c, Client *before)
+{
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        m->chead = c->next;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        m->ctail = c->prev;
+
+    if (before == m->chead) {
+        PushClientFront(m, c);
+    } else {
+        c->next = before;
+        c->prev = before->prev;
+        before->prev->next = c;
+        before->prev = c;
+    }
 }
 
 void
@@ -223,7 +287,6 @@ SetActiveDesktop(Monitor *m, int desktop)
 
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
-
 }
 
 void
@@ -264,18 +327,20 @@ Restack(Monitor *m)
             }
         }
     } else {
-        for (Client *c = m->chead; c; c = c->next) {
+        for (Client *c = m->chead; c; c = c->next)
             if (c->desktop == m->activeDesktop)
                 ShowClient(c);
             else
                 HideClient(c);
-        }
     }
 }
 
 void
 RemoveClient(Monitor *m, Client *c)
 {
+    if (c->monitor != m)
+        return;
+
     if (c->prev)
           c->prev->next = c->next;
     else
@@ -319,5 +384,3 @@ PushClientBack(Monitor *m, Client *c)
     m->ctail = c;
     c->next = NULL;
 }
-
-

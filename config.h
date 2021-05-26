@@ -1,26 +1,32 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include "client.h"
+
 #ifdef NDEBUG
 #define Modkey Mod4Mask
 #else
 #define Modkey Mod1Mask
 #endif
 
-/* XXX: Ugly */
-#define ShortcutCount 34
+/* XXX: Find another way!!! */
+#define ShortcutCount 36
+
+//typedef struct _Client Client;
 
 typedef struct _Shortcut {
     unsigned long modifier;
     unsigned long keysym;
-    enum {CV, CI} type;
+    enum {CV, CI, CC} type;
     union {
         struct { void (*f)(); } vcb;
         struct { void (*f)(int); int i; } icb;
+        struct { void (*f)(Client *); } ccb;
     } cb;
 } Shortcut;
 
 typedef struct _Config {
+    /* window */
     int borderWidth;
     int topbarHeight;
     int handleWidth;
@@ -32,6 +38,8 @@ typedef struct _Config {
     int inactiveForeground;
     int urgentBackground;
     int urgentForeground;
+
+    char *buttonIcons[ButtonCount]; /* close, maximize, minimize */
     int activeButtonBackground;
     int activeButtonForeground;
     int inactiveButtonBackground;
@@ -40,7 +48,8 @@ typedef struct _Config {
     int activeButtonHoveredForeground;
     int inactiveButtonHoveredBackground;
     int inactiveButtonHoveredForeground;
-    char *buttonIcons[3]; /* close, maximize, minimize */
+
+
     char *labelFontname;
     char *iconFontname;
     int masters;

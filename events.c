@@ -254,21 +254,19 @@ OnButtonPress(XButtonEvent *e)
             XDefineCursor(stDisplay, e->window, stCursors[CursorMove]);
 
         if (e->window == c->buttons[ButtonMaximize]) {
-            if ((c->states & NetWMStateMaximized))
+            if ((c->states & NetWMStateMaximized)) {
                 RestoreClient(c);
-            else {
-                MaximizeClientVertically(c);
-                MaximizeClientHorizontally(c);
-                SetNetWMState(c->window, c->states);
+            } else {
+                MaximizeClient(c);
             }
         }
-    }
 
-    /* TODO: when we know how to restore
-    if (e->window == c->buttons[ButtonMinimize]) {
-        MinimizeClient(c, True);
+        if (e->window == c->buttons[ButtonMinimize]) {
+            MinimizeClient(c);
+            FindNextActiveClient();
+        }
+
     }
-    */
 
     if (e->window == c->buttons[ButtonClose]) {
         if (c->protocols & NetWMProtocolDeleteWindow)
@@ -277,7 +275,7 @@ OnButtonPress(XButtonEvent *e)
             XKillClient(stDisplay, c->window);
     }
 
-    if (e->window != c->buttons[ButtonClose])
+    if (e->window != c->buttons[ButtonClose] && e->window != c->buttons[ButtonMinimize])
         SetActiveClient(c);
 
     if (e->window == c->window)
@@ -403,7 +401,6 @@ OnMessage(XClientMessageEvent *e)
             }
             RefreshClient(c);
         }
-        SetNetWMState(c-> window, c->states);
 
         //TODO: sticky
     }
@@ -536,6 +533,7 @@ OnKeyPress(XKeyPressedEvent *e)
                 CleanMask(sc.modifier) == CleanMask(e->state)) {
             if (sc.type == CV) sc.cb.vcb.f();
             if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
+            if (sc.type == CC) sc.cb.ccb.f(stActiveClient);
             break;
         }
     }

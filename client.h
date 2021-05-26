@@ -3,9 +3,7 @@
 
 #include <X11/Xlib.h>
 
-#include "config.h"
 #include "hints.h"
-#include "stack.h"
 
 typedef struct _Monitor Monitor;
 
@@ -29,7 +27,7 @@ enum Buttons {
 };
 
 typedef struct _Transient {
-    Client *client;
+    struct _Client *client;
     struct _Transient *next;
 } Transient;
 
@@ -45,7 +43,7 @@ typedef struct _Client {
     int wx, wy, ww, wh;     /* window absolute geometry                 */
     int fx, fy, fw, fh;     /* frame absolute geometry                  */
     int sfx, sfy, sfw, sfh; /* saved frame geometry post fullscreen     */
-    int smx, smy, smw, smh; /* saved frame geometry post maximixed      */
+    int smx, smy, smw, smh; /* saved frame geometry post max/minimixed  */
     int stx, sty, stw, sth; /* saved frame geometry post tiling         */
     int sbw;                /* saved border width                       */
 
@@ -64,8 +62,8 @@ typedef struct _Client {
     WMHints hints;
     NetWMWindowType types;
     NetWMState states;
-    Client *transfor;       /* transient for            */
-    Transient *transients;  /* clients transient for us */
+    struct _Client *transfor;   /* transient for            */
+    Transient *transients;      /* clients transient for us */
 
     /* internals */
     Monitor *monitor;
@@ -74,8 +72,6 @@ typedef struct _Client {
     struct _Client *next;
 } Client;
 
-Client *NextClient(Client *c);
-Client *PreviousClient(Client *c);
 
 void HideClient(Client *c);
 void ShowClient(Client *c);

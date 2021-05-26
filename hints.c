@@ -26,11 +26,26 @@ GetWMName(Window w, char **name)
 
     if (p.encoding == XA_STRING) {
         *name = strdup((char*)p.value);
+        //DLog("XA_STRING: %s", *name);
     } else {
+        //DLog("NOT XA_STRING");
         char **list = NULL;
         int n;
-        if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) == Success && n > 0 && *list) {
-            *name = strdup((char*)*list);
+        if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) == Success
+                && n > 0 && *list) {
+            //DLog("GET LIST");
+            if (n > 1) {
+                XTextProperty p2;
+                if (XmbTextListToTextProperty(stDisplay, list, n,
+                            XStringStyle, &p2) == Success) {
+                    *name = strdup((char *)p2.value);
+                    XFree(p2.value);
+                    //DLog("TEXT LIST > 1: %s", *name);
+                }
+            } else {
+                *name = strdup((char*)*list);
+                //DLog("TEXT LIST =< 1: %s", *name);
+            }
             XFreeStringList(list);
         }
     }

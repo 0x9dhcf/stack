@@ -23,18 +23,6 @@ static void SaveGeometries(Client *c);
 static void SynchronizeFrameGeometry(Client *c);
 static void SynchronizeWindowGeometry(Client *c);
 
-Client*
-NextClient(Client *c)
-{
-    return c->next ? c->next : c->monitor->chead;
-}
-
-Client*
-PreviousClient(Client *c)
-{
-    return c->prev ? c->prev : c->monitor->ctail;
-}
-
 void
 HideClient(Client *c)
 {
@@ -48,22 +36,14 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
-    /* adapt to any  working area changes */
-    if (c->states & NetWMStateMaximized) {
-        if (c->states & NetWMStateMaximizedHorz)
-            MaximizeClientHorizontally(c);
-        if (c->states & NetWMStateMaximizedVert)
-            MaximizeClientVertically(c);
-    } else {
-        if (c->types & NetWMTypeFixed)
-            MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
-        else
-            MoveResizeClientFrame(c,
-                    Max(c->fx, c->monitor->desktops[c->desktop].wx),
-                    Max(c->fy, c->monitor->desktops[c->desktop].wy),
-                    Min(c->fw, c->monitor->desktops[c->desktop].ww),
-                    Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
-    }
+    if (c->types & NetWMTypeFixed)
+        MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
+    else
+        MoveResizeClientFrame(c,
+                Max(c->fx, c->monitor->desktops[c->desktop].wx),
+                Max(c->fy, c->monitor->desktops[c->desktop].wy),
+                Min(c->fw, c->monitor->desktops[c->desktop].ww),
+                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
 }
 
 void
@@ -163,19 +143,25 @@ TileClient(Client *c, int x, int y, int w, int h)
 void
 MaximizeClientHorizontally(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedHorz;
-    MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
-            c->monitor->desktops[c->desktop].ww, c->fh, False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedHorz;
+        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
+                c->monitor->desktops[c->desktop].ww, c->fh, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 MaximizeClientVertically(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedVert;
-    MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
-            c->fw, c->monitor->desktops[c->desktop].wh, False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedVert;
+        MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
+                c->fw, c->monitor->desktops[c->desktop].wh, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
@@ -188,86 +174,121 @@ MaximizeClient(Client *c)
 void
 MaximizeClientLeft(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedVert;
-    c->states &= ~NetWMStateMaximizedHorz;
-    MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-            c->monitor->desktops[c->desktop].wy,
-            c->monitor->desktops[c->desktop].ww / 2,
-            c->monitor->desktops[c->desktop].wh, False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedVert;
+        c->states &= ~NetWMStateMaximizedHorz;
+        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
+                c->monitor->desktops[c->desktop].wy,
+                c->monitor->desktops[c->desktop].ww / 2,
+                c->monitor->desktops[c->desktop].wh, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 MaximizeClientRight(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedVert;
-    c->states &= ~NetWMStateMaximizedHorz;
-    MoveResizeClientFrame(c,
-            c->monitor->desktops[c->desktop].wx + c->monitor->desktops[c->desktop].ww /2,
-            c->monitor->desktops[c->desktop].wy, c->monitor->desktops[c->desktop].ww / 2,
-            c->monitor->desktops[c->desktop].wh, False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedVert;
+        c->states &= ~NetWMStateMaximizedHorz;
+        MoveResizeClientFrame(c,
+                c->monitor->desktops[c->desktop].wx
+                    + c->monitor->desktops[c->desktop].ww / 2,
+                c->monitor->desktops[c->desktop].wy,
+                c->monitor->desktops[c->desktop].ww / 2,
+                c->monitor->desktops[c->desktop].wh, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 MaximizeClientTop(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedHorz;
-    c->states &= ~NetWMStateMaximizedVert;
-    MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-            c->monitor->desktops[c->desktop].wy, c->monitor->desktops[c->desktop].ww,
-            c->monitor->desktops[c->desktop].wh / 2, False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedHorz;
+        c->states &= ~NetWMStateMaximizedVert;
+        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
+                c->monitor->desktops[c->desktop].wy,
+                c->monitor->desktops[c->desktop].ww,
+                c->monitor->desktops[c->desktop].wh / 2, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 MaximizeClientBottom(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateMaximizedHorz;
-    c->states &= ~NetWMStateMaximizedVert;
-    MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-            c->monitor->desktops[c->desktop].wy + c->monitor->desktops[c->desktop].wh / 2,
-            c->monitor->desktops[c->desktop].ww, c->monitor->desktops[c->desktop].wh / 2,
-            False);
+    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+        SaveGeometries(c);
+        c->states |= NetWMStateMaximizedHorz;
+        c->states &= ~NetWMStateMaximizedVert;
+        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
+                c->monitor->desktops[c->desktop].wy
+                    + c->monitor->desktops[c->desktop].wh / 2,
+                c->monitor->desktops[c->desktop].ww,
+                c->monitor->desktops[c->desktop].wh / 2,
+                False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 MinimizeClient(Client *c)
 {
-    SaveGeometries(c);
-    c->states |= NetWMStateHidden;
-    MoveResizeClientFrame(c, c->monitor->x, c->monitor->y + c->monitor->h,
-            c->fw, c->fw, False);
+    if (c && !(c->types & NetWMTypeFixed)) {
+        SaveGeometries(c);
+        c->states |= NetWMStateHidden;
+        MoveResizeClientFrame(c, c->monitor->x, c->monitor->y + c->monitor->h,
+                c->fw, c->fw, False);
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 FullscreenClient(Client *c)
 {
-    SaveGeometries(c);
+    if (c && !(c->types & NetWMTypeFixed)) {
+        SaveGeometries(c);
 
-    c->decorated = False;
-    c->states |= NetWMStateFullscreen;
+        c->decorated = False;
+        c->states |= NetWMStateFullscreen;
 
-    MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
-            c->monitor->h, False);
+        MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
+                c->monitor->h, False);
 
+        SetNetWMState(c->window, c->states);
+    }
 }
 
 void
 RestoreClient(Client *c)
 {
-    if (c->tiled) {
-        c->tiled = False;
-        MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
-    } else if (c->states & NetWMStateFullscreen) {
+    if (c->states & NetWMStateFullscreen) {
+        DLog("fullscreen");
         c->decorated = True;
         c->states &= ~NetWMStateFullscreen;
-        MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
-    } else if (c->states & NetWMStateMaximized) {
+        if (c->tiled)
+            Restack(c->monitor);
+        else 
+            MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
+    } else if (c->states & (NetWMStateMaximized | NetWMStateHidden)) {
+        DLog("max/min");
         c->states &= ~NetWMStateMaximized;
-        MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
+        c->states &= ~NetWMStateHidden;
+        if (c->tiled)
+            Restack(c->monitor);
+        else
+            MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
+    } else if (c->tiled) {
+        DLog("tiled");
+        c->tiled = False;
+        MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
+
+    SetNetWMState(c->window, c->states);
 } 
 
 void
@@ -279,8 +300,11 @@ RaiseClient(Client *c)
     if (!(c->types & NetWMTypeFixed))
         for (int i = 0; i < HandleCount; ++i)
             XRaiseWindow(stDisplay, c->handles[i]);
+
     for (Transient *tc = c->transients; tc; tc = tc->next)
         RaiseClient(tc->client);
+
+    SetNetWMState(c->window, c->states);
 }
 
 void
@@ -292,8 +316,11 @@ LowerClient(Client *c)
     if (!(c->types & NetWMTypeFixed))
         for (int i = 0; i < HandleCount; ++i)
             XLowerWindow(stDisplay, c->handles[i]);
+
     for (Transient *tc = c->transients; tc; tc = tc->next)
         LowerClient(tc->client);
+
+    SetNetWMState(c->window, c->states);
 }
 
 void
@@ -306,9 +333,14 @@ SetClientActive(Client *c, Bool b)
             XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
         else if (c->protocols & NetWMProtocolTakeFocus)
             SendMessage(c->window, stAtoms[AtomWMTakeFocus]);
+
         c->states &= ~NetWMStateDemandsAttention;
         c->hints &= ~HintsUrgent;
         c->active = b;
+
+        if (c->states & NetWMStateHidden)
+            RestoreClient(c);
+
         RefreshClient(c);
 
         if (!(c->types & NetWMTypeFixed))
@@ -316,6 +348,7 @@ SetClientActive(Client *c, Bool b)
                 XGrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window,
                         False, ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                         GrabModeAsync, GrabModeSync, None, None);
+
     }
 
     if (!b && c->active) {
@@ -418,16 +451,14 @@ ApplyNormalHints(Client *c)
 void
 Configure(Client *c)
 {
-    /*
-    DLog("frame (absolute)\t: (%d, %d) [%d x %d]", c->fx, c->fy, c->fw, c->fh);
-    DLog("window (absolute)\t: (%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
-    */
+    //DLog("frame (absolute)\t: (%d, %d) [%d x %d]", c->fx, c->fy, c->fw, c->fh);
+    //DLog("window (absolute)\t: (%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
     int hw, wx, wy;
 
     /* compute the relative window position */
     wx = c->wx - c->fx;
     wy = c->wy - c->fy;
-    /*DLog("window (relative)\t: (%d, %d) [%d x %d]", wx, wy, c->ww, c->wh);*/
+    //DLog("window (relative)\t: (%d, %d) [%d x %d]", wx, wy, c->ww, c->wh);
 
     /* place frame and window */
     XMoveResizeWindow(stDisplay, c->frame, c->fx, c->fy, c->fw, c->fh);
@@ -479,18 +510,21 @@ SaveGeometries(Client *c)
         c->sty = c->fy;
         c->stw = c->fw;
         c->sth = c->fh;
+        DLog("tiled : %ld (%d, %d) [%d x %d]", c->window, c->stx, c->sty, c->stw, c->sth);
     }
     if (!(c->states & NetWMStateFullscreen)) {
         c->sfx = c->fx;
         c->sfy = c->fy;
         c->sfw = c->fw;
         c->sfh = c->fh;
+        DLog("fullscreen : %ld (%d, %d) [%d x %d]", c->window, c->sfx, c->sfy, c->sfw, c->sfh);
     }
-    if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized))) {
+    if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized | NetWMStateHidden))) {
         c->smx = c->fx;
         c->smy = c->fy;
         c->smw = c->fw;
         c->smh = c->fh;
+        DLog("max/min : %ld (%d, %d) [%d x %d]", c->window, c->smx, c->smy, c->smw, c->smh);
     }
 }
 
