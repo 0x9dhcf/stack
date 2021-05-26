@@ -24,29 +24,65 @@ static const Config defaultConfig = {
     /* window */
     .activeBackground                   = 0xD8D8D8,
     .activeForeground                   = 0x202020,
-
     .inactiveBackground                 = 0xE8E8E8,
     .inactiveForeground                 = 0x808080,
-
     .urgentBackground                   = 0xFF0000,
     .urgentForeground                   = 0x202020,
 
     /* Buttons */
+    .buttonStyles = {
+        /* close */
+        {
+            .icon                       = "\ue5cd",
+            .activeBackground           = 0xD8D8D8,
+            .activeForeground           = 0x202020,
+            .inactiveBackground         = 0xE8E8E8,
+            .inactiveForeground         = 0x808080,
+            .activeHoveredBackground    = 0xFC4138,
+            .activeHoveredForeground    = 0xFFFFFF,
+            .inactiveHoveredBackground  = 0xFC4138,
+            .inactiveHoveredForeground  = 0xFFFFFF
+        },
+        /* maximize */
+        {
+            .icon                       = "\ue835",
+            .activeBackground           = 0xD8D8D8,
+            .activeForeground           = 0x202020,
+            .inactiveBackground         = 0xE8E8E8,
+            .inactiveForeground         = 0x808080,
+            .activeHoveredBackground    = 0xF8F8F8,
+            .activeHoveredForeground    = 0x202020,
+            .inactiveHoveredBackground  = 0xF8F8F8,
+            .inactiveHoveredForeground  = 0x202020
+        },
+        /* minimize */
+        {
+            .icon                       = "\ue931",
+            .activeBackground           = 0xD8D8D8,
+            .activeForeground           = 0x202020,
+            .inactiveBackground         = 0xE8E8E8,
+            .inactiveForeground         = 0x808080,
+            .activeHoveredBackground    = 0xF8F8F8,
+            .activeHoveredForeground    = 0x202020,
+            .inactiveHoveredBackground  = 0xF8F8F8,
+            .inactiveHoveredForeground  = 0x202020,
+        },
+    },
     //.activeButtonBackground             = 0xE8E8E8,
-    .activeButtonBackground             = 0xD8D8D8,
-    .activeButtonForeground             = 0x202020,
+    //.activeButtonBackground             = 0xD8D8D8,
+    //.activeButtonForeground             = 0x202020,
 
+    ////.inactiveButtonBackground           = 0xE8E8E8,
     //.inactiveButtonBackground           = 0xE8E8E8,
-    .inactiveButtonBackground           = 0xE8E8E8,
-    .inactiveButtonForeground           = 0x808080,
+    //.inactiveButtonForeground           = 0x808080,
 
-    .activeButtonHoveredBackground      = 0xF8F8F8,
-    .activeButtonHoveredForeground      = 0x202020,
+    //.activeButtonHoveredBackground      = 0xF8F8F8,
+    //.activeButtonHoveredForeground      = 0x202020,
 
-    .inactiveButtonHoveredBackground    = 0xF8F8F8,
-    .inactiveButtonHoveredForeground    = 0x202020,
+    //.inactiveButtonHoveredBackground    = 0xF8F8F8,
+    //.inactiveButtonHoveredForeground    = 0x202020,
 
-    .buttonIcons = { "\ue5cd", "\ue835", "\ue931" },
+    //.buttonIcons = { "\ue5cd", "\ue835", "\ue931" },
     //.buttonIcons = { "C", "M", "I" },
     .labelFontname = "Sans:antialias=true:size=10",
     //.iconFontname = "Font Awesome 5 Free Regular:antialias=true:size=14",

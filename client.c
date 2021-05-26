@@ -364,28 +364,28 @@ SetClientActive(Client *c, Bool b)
 void
 RefreshClient(Client *c)
 {
-    int bg, fg, bbg, bfg, x, y;
+    int bg, fg, /*bbg, bfg,*/ x, y;
 
     /* do not attempt to refresh non decorated or hidden clients */
     if (!c->decorated || (c->desktop != c->monitor->activeDesktop &&
                 !(c->states & NetWMStateSticky)))
         return;
 
-    /* select the colors */
+    /* select the frame colors */
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = bbg = stConfig.urgentBackground;
-        fg = bfg = stConfig.urgentForeground;
-    } else if (c->active) {
+        bg = /*bbg =*/ stConfig.urgentBackground;
+        fg = /*bfg =*/ stConfig.urgentForeground;
+    }  else if (c->active) {
         bg = stConfig.activeBackground;
         fg = stConfig.activeForeground;
-        bbg = stConfig.activeButtonBackground;
-        bfg = stConfig.activeButtonForeground;
+        //bbg = stConfig.activeButtonBackground;
+        //bfg = stConfig.activeButtonForeground;
     } else {
         bg = stConfig.inactiveBackground;
         fg = stConfig.inactiveForeground;
-        bbg = stConfig.inactiveButtonBackground;
-        bfg = stConfig.inactiveButtonForeground;
-    }
+        //bbg = stConfig.inactiveButtonBackground;
+        //bfg = stConfig.inactiveButtonForeground;
+    } 
 
     XSetWindowBackground(stDisplay, c->frame, bg);
     XClearWindow(stDisplay, c->frame);
@@ -397,12 +397,25 @@ RefreshClient(Client *c)
         WriteText(c->topbar, c->name, stLabelFont, fg, x, y);
     }
     for (int i = 0; i < ButtonCount; ++i) {
+        int bbg, bfg;
+        /* select the button colors */
+        if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+            bbg = stConfig.urgentBackground;
+            bfg = stConfig.urgentForeground;
+        }  else if (c->active) {
+            bbg = stConfig.buttonStyles[i].activeBackground;
+            bfg = stConfig.buttonStyles[i].activeForeground;
+        } else {
+            bbg = stConfig.buttonStyles[i].inactiveBackground;
+            bfg = stConfig.buttonStyles[i].inactiveForeground;
+        } 
+
         XSetWindowBackground(stDisplay, c->buttons[i], bbg);
         XClearWindow(stDisplay, c->buttons[i]);
-        GetTextPosition(stConfig.buttonIcons[i], stIconFont,
+        GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
                 AlignCenter, AlignMiddle, stConfig.buttonSize,
                 stConfig.buttonSize, &x, &y);
-        WriteText(c->buttons[i], stConfig.buttonIcons[i], stIconFont, bfg, x, y);
+        WriteText(c->buttons[i], stConfig.buttonStyles[i].icon, stIconFont, bfg, x, y);
     }
 }
 
@@ -471,7 +484,8 @@ Configure(Client *c)
                 stConfig.topbarHeight);
         for (int i = 0; i < ButtonCount; ++i) {
             XMoveResizeWindow(stDisplay, c->buttons[i],
-                    c->fw - (i + 1) * (stConfig.buttonSize + stConfig.buttonGap),
+                    //c->fw - (i + 1) * (stConfig.buttonSize + stConfig.buttonGap),
+                    c->fw - ((i+1) * (stConfig.buttonSize) + i * stConfig.buttonGap),
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);
         }

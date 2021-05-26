@@ -318,14 +318,11 @@ ActiveNext()
             for (nc = NextClient(stActiveMonitor, stActiveClient);
                     nc && nc != stActiveClient
                         && (nc->desktop != stActiveClient->desktop
-                        || !(nc->types & NetWMTypeNormal)
-                        /*||  nc->states & NetWMStateHidden*/);
+                        || !(nc->types & NetWMTypeNormal));
                     nc = NextClient(stActiveMonitor, nc));
 
-        if (nc) {
-            DLog("next: %ld", nc->window);
+        if (nc)
             SetActiveClient(nc);
-        }
     }
 }
 
@@ -337,8 +334,7 @@ ActivePrev()
         for (pc = PreviousClient(stActiveMonitor, stActiveClient);
                 pc && pc != stActiveClient
                     && (pc->desktop != stActiveClient->desktop
-                    || !(pc->types & NetWMTypeNormal)
-                    /*|| pc->states & NetWMStateHidden*/);
+                    || !(pc->types & NetWMTypeNormal));
                 pc = PreviousClient(stActiveMonitor, pc));
         if (pc)
             SetActiveClient(pc);
