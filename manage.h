@@ -14,8 +14,8 @@ void SetActiveClient(Client *c);
 void FindNextActiveClient();
 
 void Quit();
-void ActiveNext();
-void ActivePrev();
+void ActivateNext();
+void ActivatePrev();
 void MoveForward();
 void MoveBackward();
 void ShowDesktop(int desktop);

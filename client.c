@@ -267,7 +267,6 @@ void
 RestoreClient(Client *c)
 {
     if (c->states & NetWMStateFullscreen) {
-        DLog("fullscreen");
         c->decorated = True;
         c->states &= ~NetWMStateFullscreen;
         if (c->tiled)
@@ -275,7 +274,6 @@ RestoreClient(Client *c)
         else 
             MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
     } else if (c->states & (NetWMStateMaximized | NetWMStateHidden)) {
-        DLog("max/min");
         c->states &= ~NetWMStateMaximized;
         c->states &= ~NetWMStateHidden;
         if (c->tiled)
@@ -283,7 +281,6 @@ RestoreClient(Client *c)
         else
             MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     } else if (c->tiled) {
-        DLog("tiled");
         c->tiled = False;
         MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
@@ -458,7 +455,6 @@ ApplyNormalHints(Client *c)
     c->wh = c->wh < c->normals.minh ? c->normals.minh : c->wh;
     c->ww = c->ww > c->normals.maxw ? c->normals.maxw : c->ww;
     c->wh = c->wh > c->normals.maxh ? c->normals.maxh : c->wh;
-    //DLog("(%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
 }
 
 void
@@ -524,21 +520,18 @@ SaveGeometries(Client *c)
         c->sty = c->fy;
         c->stw = c->fw;
         c->sth = c->fh;
-        DLog("tiled : %ld (%d, %d) [%d x %d]", c->window, c->stx, c->sty, c->stw, c->sth);
     }
     if (!(c->states & NetWMStateFullscreen)) {
         c->sfx = c->fx;
         c->sfy = c->fy;
         c->sfw = c->fw;
         c->sfh = c->fh;
-        DLog("fullscreen : %ld (%d, %d) [%d x %d]", c->window, c->sfx, c->sfy, c->sfw, c->sfh);
     }
     if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized | NetWMStateHidden))) {
         c->smx = c->fx;
         c->smy = c->fy;
         c->smw = c->fw;
         c->smh = c->fh;
-        DLog("max/min : %ld (%d, %d) [%d x %d]", c->window, c->smx, c->smy, c->smw, c->smh);
     }
 }
 

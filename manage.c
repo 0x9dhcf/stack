@@ -256,7 +256,6 @@ void
 SetActiveClient(Client *c)
 {
     if (c) {
-        DLog("%ld", c->window);
         if (stActiveClient && stActiveClient != c) {
             lastActiveClient = stActiveClient;
             SetClientActive(stActiveClient, False);
@@ -297,11 +296,12 @@ FindNextActiveClient()
                 nc = NextClient(stActiveMonitor, nc));
     }
 
-    if (nc) {
-        DLog("found: %ld:", nc->window);
+    if (nc && !(nc->states & NetWMStateHidden)) {
         SetActiveClient(nc);
-    } else
+    } else if (stActiveClient) {
+        SetClientActive(stActiveClient, False);
         stActiveClient = NULL;
+    }
 }
 
 void
@@ -311,23 +311,22 @@ Quit()
 }
 
 void
-ActiveNext()
+ActivateNext()
 {
-    if (stActiveClient) {
-        Client *nc = NULL;
-            for (nc = NextClient(stActiveMonitor, stActiveClient);
-                    nc && nc != stActiveClient
-                        && (nc->desktop != stActiveClient->desktop
-                        || !(nc->types & NetWMTypeNormal));
-                    nc = NextClient(stActiveMonitor, nc));
+    Client *head = stActiveClient ? stActiveClient : stActiveMonitor->chead;
+    Client *nc = NULL;
+    for (nc = NextClient(stActiveMonitor, head);
+            nc && nc != head
+                && (nc->desktop != stActiveMonitor->activeDesktop
+                || !(nc->types & NetWMTypeNormal));
+            nc = NextClient(stActiveMonitor, nc));
 
-        if (nc)
-            SetActiveClient(nc);
-    }
+    if (nc)
+        SetActiveClient(nc);
 }
 
 void
-ActivePrev()
+ActivatePrev()
 {
     if (stActiveClient) {
         Client *pc = NULL;
