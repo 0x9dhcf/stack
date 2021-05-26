@@ -12,8 +12,6 @@
 /* XXX: Find another way!!! */
 #define ShortcutCount 36
 
-//typedef struct _Client Client;
-
 typedef struct _Shortcut {
     unsigned long modifier;
     unsigned long keysym;
