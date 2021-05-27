@@ -47,7 +47,10 @@ ManageWindow(Window w, Bool exists)
     GetWMStrut(w, &c->strut);
 
     c->active = False;
-    c->decorated = (c->types & NetWMTypeFixed) ? False : True;
+    c->fixed = c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash)
+        || (c->normals.minw == c->normals.maxw && c->normals.minh == c->normals.maxh);
+    c->decorated = !c->fixed;
+    //c->decorated = (c->types & NetWMTypeFixed) ? False : True;
     /* if transient for, register the client we are transient for
      * and regiter this new client as a transient of this
      * transient for client */
@@ -91,7 +94,7 @@ ManageWindow(Window w, Bool exists)
     XChangeWindowAttributes(stDisplay, w, CWEventMask | CWDontPropagate, &cattrs);
     XSetWindowBorderWidth(stDisplay, w, 0);
     XReparentWindow(stDisplay, w, c->frame, 0, 0);
-    if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
+    if (c->hints & HintsFocusable && !c->fixed) {
         XUngrabButton(stDisplay, AnyButton, AnyModifier, c->window);
         XGrabButton(stDisplay, Button1, AnyModifier, c->window, False,
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync,
@@ -102,7 +105,7 @@ ManageWindow(Window w, Bool exists)
 
     /* fixed windows are neither decorated nor resizable
      * thus don't need this */
-    if (!(c->types & NetWMTypeFixed)) {
+    if (!c->fixed) {
         /* topbar */
         XSetWindowAttributes tattrs = {0};
         tattrs.event_mask = HandleEventMask;
@@ -161,7 +164,7 @@ ManageWindow(Window w, Bool exists)
         //    LowerClient(c);
     }
 
-    if (!(c->types & NetWMTypeFixed))
+    if (!c->fixed)
         SetActiveClient(c);
 
     /* update the client list */
@@ -206,7 +209,7 @@ ForgetWindow(Window w, Bool survives)
             XSetWindowBorderWidth(stDisplay, c->window, c->sbw);
         }
 
-        if (!(c->types & NetWMTypeFixed)) {
+        if (!c->fixed) {
             for (int i = 0; i < ButtonCount; ++i)
                 XDestroyWindow(stDisplay, c->buttons[i]);
             XDestroyWindow(stDisplay, c->topbar);

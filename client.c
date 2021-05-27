@@ -28,7 +28,7 @@ HideClient(Client *c)
 {
     /* move all windows off screen without changing anything */
     XMoveWindow(stDisplay, c->frame, -c->fw, c->fy);
-    if (!(c->types & NetWMTypeFixed))
+    if (!c->fixed)
         for (int i = 0; i < HandleCount; ++i)
             XMoveWindow(stDisplay, c->handles[i], -c->fw, c->fy);
 }
@@ -36,7 +36,7 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
-    if (c->types & NetWMTypeFixed)
+    if (c->fixed)
         MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
     else
         MoveResizeClientFrame(c,
@@ -143,7 +143,7 @@ TileClient(Client *c, int x, int y, int w, int h)
 void
 MaximizeClientHorizontally(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
@@ -155,7 +155,7 @@ MaximizeClientHorizontally(Client *c)
 void
 MaximizeClientVertically(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
@@ -174,7 +174,7 @@ MaximizeClient(Client *c)
 void
 MaximizeClientLeft(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
@@ -189,7 +189,7 @@ MaximizeClientLeft(Client *c)
 void
 MaximizeClientRight(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
@@ -206,7 +206,7 @@ MaximizeClientRight(Client *c)
 void
 MaximizeClientTop(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
@@ -221,7 +221,7 @@ MaximizeClientTop(Client *c)
 void
 MaximizeClientBottom(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (c && !c->fixed && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
@@ -238,7 +238,7 @@ MaximizeClientBottom(Client *c)
 void
 MinimizeClient(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed)) {
+    if (c && !c->fixed) {
         SaveGeometries(c);
         c->states |= NetWMStateHidden;
         MoveResizeClientFrame(c, c->monitor->x, c->monitor->y + c->monitor->h,
@@ -250,7 +250,7 @@ MinimizeClient(Client *c)
 void
 FullscreenClient(Client *c)
 {
-    if (c && !(c->types & NetWMTypeFixed)) {
+    if (c && !c->fixed) {
         SaveGeometries(c);
 
         c->decorated = False;
@@ -294,7 +294,7 @@ RaiseClient(Client *c)
     c->states |= NetWMStateAbove;
     c->states &= ~NetWMStateBelow;
     XRaiseWindow(stDisplay, c->frame);
-    if (!(c->types & NetWMTypeFixed))
+    if (!c->fixed)
         for (int i = 0; i < HandleCount; ++i)
             XRaiseWindow(stDisplay, c->handles[i]);
 
@@ -310,7 +310,7 @@ LowerClient(Client *c)
     c->states |= NetWMStateBelow;
     c->states &= ~NetWMStateAbove;
     XLowerWindow(stDisplay, c->frame);
-    if (!(c->types & NetWMTypeFixed))
+    if (!c->fixed)
         for (int i = 0; i < HandleCount; ++i)
             XLowerWindow(stDisplay, c->handles[i]);
 
@@ -340,7 +340,7 @@ SetClientActive(Client *c, Bool b)
 
         RefreshClient(c);
 
-        if (!(c->types & NetWMTypeFixed))
+        if (!c->fixed)
             for (int i = 0; i < 4; ++i)
                 XGrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window,
                         False, ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
@@ -352,7 +352,7 @@ SetClientActive(Client *c, Bool b)
         c->active = b;
         RefreshClient(c);
         XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow]);
-        if (!(c->types & NetWMTypeFixed))
+        if (!c->fixed)
             for (int i = 0; i < 4; i++)
                 XUngrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window);
     }
@@ -485,13 +485,13 @@ Configure(Client *c)
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);
         }
-    } else if (!(c->types & NetWMTypeFixed)){ /* move the topbar outside the frame */
+    } else if (!c->fixed){ /* move the topbar outside the frame */
         XMoveWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 -(stConfig.borderWidth + stConfig.topbarHeight));
     }
 
     /* suround frame by handles */
-    if (!(c->types & NetWMTypeFixed)) {
+    if (!c->fixed) {
         hw = stConfig.handleWidth;
         XMoveResizeWindow(stDisplay, c->handles[HandleNorth],
                 c->fx, c->fy - hw, c->fw, hw);

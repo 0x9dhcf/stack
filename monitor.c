@@ -223,7 +223,7 @@ AddClientToDesktop(Monitor *m, Client *c, int d)
     if (c->tiled && !m->desktops[d].dynamic)
         RestoreClient(c);
 
-    if (!(c->types & NetWMTypeFixed))
+    if (!c->fixed)
         MoveResizeClientFrame(c,
                 Max(c->fx, c->monitor->desktops[c->desktop].wx),
                 Max(c->fy, c->monitor->desktops[c->desktop].wy),
@@ -270,7 +270,7 @@ SetActiveDesktop(Monitor *m, int desktop)
 
     /* affect all stickies to this desktop */
     for (Client *c = m->chead; c; c = c->next) {
-        if (c->states & NetWMStateSticky || c->types & NetWMTypeFixed) {
+        if (c->states & NetWMStateSticky || c->fixed) {
             RemoveClientFromDesktop(m, c, c->desktop);
             c->desktop = desktop;
             AddClientToDesktop(m, c, c->desktop);
@@ -299,7 +299,7 @@ Restack(Monitor *m)
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
         for (c = m->chead; c; c = c->next)
-            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed))
+            if (c->desktop == m->activeDesktop && !c->fixed)
                 n++;
 
         Desktop *d =  &m->desktops[m->activeDesktop];
@@ -309,7 +309,7 @@ Restack(Monitor *m)
             mw = d->ww;
 
         for (c = m->chead; c; c = c->next) {
-            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed)) {
+            if (c->desktop == m->activeDesktop && !c->fixed) {
                 if (i < d->masters) {
                     int w = (mw - mx) / (Min(n, d->masters) - i);
                     TileClient(c, d->wx + mx, d->wy, w, d->wh);
@@ -322,7 +322,7 @@ Restack(Monitor *m)
                         ty += c->fh;
                 }
                 i++;
-            } else if (!(c->types & NetWMTypeFixed)) {
+            } else if (!c->fixed) {
                 HideClient(c);
             }
         }

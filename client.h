@@ -49,21 +49,22 @@ typedef struct _Client {
 
     /* statuses */
     Bool active;
+    Bool fixed;
     Bool decorated;
     Bool tiled;
     int desktop;
 
     /* icccm, ewmh*/
-    char *name;             /* ewmh or icccm name       */
-    WMClass wmclass;        /* icccm class              */
-    WMNormals normals;      /* size hints               */
-    WMStrut strut;          /* strut                    */
+    char *name;
+    WMClass wmclass;
+    WMNormals normals;
+    WMStrut strut;
     WMProtocols protocols;
     WMHints hints;
     NetWMWindowType types;
     NetWMState states;
-    struct _Client *transfor;   /* transient for            */
-    Transient *transients;      /* clients transient for us */
+    struct _Client *transfor;
+    Transient *transients;
 
     /* internals */
     Monitor *monitor;

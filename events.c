@@ -315,7 +315,7 @@ OnMotionNotify(XMotionEvent *e)
 
     /* prevent moving fixed, maximized or fulscreen window
      * avoid to move to often as well */
-    if (!c || c->types & NetWMTypeFixed
+    if (!c || c->fixed
             || c->states & (NetWMStateMaximized | NetWMStateFullscreen)
             || (e->time - lastSeenPointerTime) <= (1000 / 60))
         return;

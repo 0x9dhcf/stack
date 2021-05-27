@@ -29,9 +29,9 @@ typedef enum _NetWMWindowType {
     NetWMTypeDropdownMenu   = (1<<11),
     NetWMTypePopupMenu      = (1<<12),
     NetWMTypeTooltip        = (1<<13),
-    NetWMTypeFixed          = NetWMTypeDesktop
-                            | NetWMTypeDock
-                            | NetWMTypeSplash,
+    //NetWMTypeFixed          = NetWMTypeDesktop
+    //                        | NetWMTypeDock
+    //                        | NetWMTypeSplash,
     NetWMTypeAny            = NetWMTypeNormal
                             | NetWMTypeDialog
                             | NetWMTypeDesktop
