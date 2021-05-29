@@ -4,12 +4,12 @@
 #include <X11/Xlib.h>
 
 #define RootEventMask (\
-          SubstructureRedirectMask      /* intercept request froem direct children  */\
-        | SubstructureNotifyMask)       /* get notified from direct children        */
+          SubstructureRedirectMask\
+        | SubstructureNotifyMask)\
 
 #define FrameEvenMask (\
-          ExposureMask                  /* refresh                                  */\
-        | ButtonPressMask               /* activate client                          */\
+          ExposureMask\
+        | ButtonPressMask\
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
 

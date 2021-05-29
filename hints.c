@@ -18,7 +18,8 @@ GetWMName(Window w, char **name)
 
     XTextProperty p;
 
-    if (!XGetTextProperty(stDisplay, w, &p, stAtoms[AtomNetWMName]) || !p.nitems)
+    if (!XGetTextProperty(stDisplay, w, &p, stAtoms[AtomNetWMName])
+            || !p.nitems)
         if (!XGetTextProperty(stDisplay, w, &p, XA_WM_NAME) || !p.nitems) {
             *name = strdup("Error");
             return;
@@ -26,25 +27,20 @@ GetWMName(Window w, char **name)
 
     if (p.encoding == XA_STRING) {
         *name = strdup((char*)p.value);
-        //DLog("XA_STRING: %s", *name);
     } else {
-        //DLog("NOT XA_STRING");
         char **list = NULL;
         int n;
         if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) == Success
                 && n > 0 && *list) {
-            //DLog("GET LIST");
             if (n > 1) {
                 XTextProperty p2;
                 if (XmbTextListToTextProperty(stDisplay, list, n,
                             XStringStyle, &p2) == Success) {
                     *name = strdup((char *)p2.value);
                     XFree(p2.value);
-                    //DLog("TEXT LIST > 1: %s", *name);
                 }
             } else {
                 *name = strdup((char*)*list);
-                //DLog("TEXT LIST =< 1: %s", *name);
             }
             XFreeStringList(list);
         }
@@ -156,9 +152,9 @@ GetWMStrut(Window w, WMStrut *strut)
 
     prop = NULL;
     strut->left = strut->right = strut->top = strut->bottom = 0;
-    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMStrutpartial], 0, 12,
-            False, XA_CARDINAL, &type, &format, &num_items, &bytes_after,
-            (unsigned char**)&prop);
+    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMStrutpartial],
+            0, 12, False, XA_CARDINAL, &type, &format, &num_items,
+            &bytes_after, (unsigned char**)&prop);
 
     if ((status == Success) && prop) {
         strut->left = prop[0];
@@ -343,7 +339,6 @@ SendMessage(Window w, Atom a)
 {
     XEvent e;
 
-    //(void)memset(&e, 0, sizeof(e));
     e.type = ClientMessage;
     e.xclient.window = w;
     e.xclient.message_type = stAtoms[AtomWMProtocols];

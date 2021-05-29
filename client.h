@@ -47,13 +47,6 @@ typedef struct _Client {
     int stx, sty, stw, sth; /* saved frame geometry post tiling         */
     int sbw;                /* saved border width                       */
 
-    /* properties */
-    //Bool activable;
-    //Bool moveable;
-    //Bool resizable;
-    //Bool decorable;
-    //Bool fixed;
-
     /* statuses */
     Bool active;
     Bool decorated;

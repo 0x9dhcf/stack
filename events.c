@@ -33,8 +33,6 @@ static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
 static void OnDestroyNotify(XDestroyWindowEvent *e);
 static void OnExpose(XExposeEvent *e);
-//static void OnFocusIn(XFocusInEvent *e);
-//static void OnFocusOut(XFocusOutEvent *e);
 static void OnEnter(XCrossingEvent *e);
 static void OnLeave(XCrossingEvent *e);
 static void OnPropertyNotify(XPropertyEvent *e);
@@ -76,12 +74,6 @@ DispatchEvent(XEvent *e)
         case MotionNotify:
             OnMotionNotify(&e->xmotion);
         break;
-        //case FocusIn:
-        //    OnFocusIn(&e->xfocus);
-        //break;
-        //case FocusOut:
-        //    OnFocusOut(&e->xfocus);
-        //break;
         case EnterNotify:
             OnEnter(&e->xcrossing);
         break;
@@ -100,7 +92,6 @@ DispatchEvent(XEvent *e)
 void
 OnConfigureRequest(XConfigureRequestEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
 
     if (!c) {
@@ -169,15 +160,12 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
-    //DLog();
     ManageWindow(e->window, False);
 }
 
 void
 OnUnmapNotify(XUnmapEvent *e)
 {
-    //DLog("window: %ld", e->event);
-
     /* ignore UnmapNotify from reparenting  */
     if (e->event != stRoot && e->event != None)
         ForgetWindow(e->window, False);
@@ -187,8 +175,6 @@ OnUnmapNotify(XUnmapEvent *e)
 void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
-    //DLog("window: %ld", e->window);
-
     Client *c = Lookup(e->window);
     if (c) { ELog("Found a client??"); }
 }
@@ -196,8 +182,6 @@ OnDestroyNotify(XDestroyWindowEvent *e)
 void
 OnExpose(XExposeEvent *e)
 {
-    //DLog("window: %ld", e->window);
-
     Client *c = Lookup(e->window);
     if (c && e->window == c->frame)
         RefreshClient(c);
@@ -206,8 +190,6 @@ OnExpose(XExposeEvent *e)
 void
 OnPropertyNotify(XPropertyEvent *e)
 {
-    //DLog("window: %ld", e->window);
-
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -237,7 +219,6 @@ OnPropertyNotify(XPropertyEvent *e)
 void
 OnButtonPress(XButtonEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -285,7 +266,6 @@ OnButtonPress(XButtonEvent *e)
 void
 OnButtonRelease(XButtonEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -310,7 +290,6 @@ OnButtonRelease(XButtonEvent *e)
 void
 OnMotionNotify(XMotionEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
 
     /* prevent moving type fixed, maximized or fulscreen window
@@ -367,8 +346,7 @@ OnMotionNotify(XMotionEvent *e)
 void
 OnMessage(XClientMessageEvent *e)
 {
-    //DLog();
-    // TODO: Root active window and Cureent desktop
+    /* TODO: root active window and Cureent desktop */
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -402,122 +380,37 @@ OnMessage(XClientMessageEvent *e)
             RefreshClient(c);
         }
 
-        //TODO: sticky
+        /* TODO: maximixed, minimized sticky (mainly for CSD) */
     }
 
     if (e->message_type == stAtoms[AtomNetActiveWindow])
         XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
 }
 
-//void
-//OnFocusIn(XFocusInEvent *e)
-//{
-//    DLog("window: %ld", e->window);
-//
-//    /* ignore focus changes due to keyboard grabs */
-//    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-//        return;
-//
-//    if (e->detail == NotifyPointer)
-//          return;
-//
-//    Client *c = Lookup(e->window);
-//    if (c && c != stActiveClient) {
-//        SetClientActive(c, True);
-//        stActiveClient = c;
-//    }
-//}
-//
-//void
-//OnFocusOut(XFocusOutEvent *e)
-//{
-//    DLog("window: %ld", e->window);
-//
-//    /* ignore focus changes due to keyboard grabs */
-//    if (e->mode == NotifyGrab || e->mode == NotifyUngrab)
-//        return;
-//
-//    if (e->detail == NotifyPointer)
-//          return;
-//
-//    Client *c = Lookup(e->window);
-//    if (c) {
-//        SetClientActive(c, False);
-//        if (c == stActiveClient)
-//            stActiveClient = NULL;
-//    }
-//}
-
 void
 OnEnter(XCrossingEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
 
-    // XXX: should be part of refresh 
-    // we should just keep track of button status here
-    // e.g a hovered state.
-    if (c) {
-        for (int i = 0; i < ButtonCount; ++i) {
-            if (e->window == c->buttons[i]) {
+    if (c)
+        for (int i = 0; i < ButtonCount; ++i)
+            if (e->window == c->buttons[i])
                 RefreshClientButton(c, i, True);
-                //int x, y, bg, fg;
-                ///* select the button colors */
-                //if (c->active) {
-                //    bg = stConfig.buttonStyles[i].activeHoveredBackground;
-                //    fg = stConfig.buttonStyles[i].activeHoveredForeground;
-                //} else {
-                //    bg = stConfig.buttonStyles[i].inactiveHoveredBackground;
-                //    fg = stConfig.buttonStyles[i].inactiveHoveredForeground;
-                //} 
-
-                //XSetWindowBackground(stDisplay, c->buttons[i], bg);
-                //XClearWindow(stDisplay, c->buttons[i]);
-                //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-                //        AlignCenter, AlignMiddle, stConfig.buttonSize,
-                //        stConfig.buttonSize, &x, &y);
-                //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
-                //        stIconFont, fg, x, y);
-            }
-        }
-    }
 }
 
 void OnLeave(XCrossingEvent *e)
 {
-    //DLog();
     Client *c = Lookup(e->window);
 
-    if (c) {
-        for (int i = 0; i < ButtonCount; ++i) {
-            if (e->window == c->buttons[i]) {
+    if (c)
+        for (int i = 0; i < ButtonCount; ++i)
+            if (e->window == c->buttons[i])
                 RefreshClientButton(c, i, False);
-                //int x, y, bg, fg;
-                ///* select the button colors */
-                //if (c->active) {
-                //    bg = stConfig.buttonStyles[i].activeBackground;
-                //    fg = stConfig.buttonStyles[i].activeForeground;
-                //} else {
-                //    bg = stConfig.buttonStyles[i].inactiveBackground;
-                //    fg = stConfig.buttonStyles[i].inactiveForeground;
-                //} 
-
-                //XSetWindowBackground(stDisplay, c->buttons[i], bg);
-                //XClearWindow(stDisplay, c->buttons[i]);
-                //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-                //        AlignCenter, AlignMiddle, stConfig.buttonSize,
-                //        stConfig.buttonSize, &x, &y);
-                //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
-                //        stIconFont, fg, x, y);
-            }
-        }
-    }
 }
 
 void
 OnKeyPress(XKeyPressedEvent *e)
 {
-    //DLog();
     KeySym keysym;
     /* keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0); */
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);

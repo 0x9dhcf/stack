@@ -424,28 +424,9 @@ RefreshClient(Client *c)
                 c->ww - 2 * stConfig.borderWidth, stConfig.topbarHeight, &x, &y);
         WriteText(c->topbar, c->name, stLabelFont, fg, x, y);
     }
-    for (int i = 0; i < ButtonCount; ++i) {
-        RefreshClientButton(c, i, False);
-        //int bbg, bfg;
-        ///* select the button colors */
-        //if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        //    bbg = stConfig.urgentBackground;
-        //    bfg = stConfig.urgentForeground;
-        //}  else if (c->active) {
-        //    bbg = stConfig.buttonStyles[i].activeBackground;
-        //    bfg = stConfig.buttonStyles[i].activeForeground;
-        //} else {
-        //    bbg = stConfig.buttonStyles[i].inactiveBackground;
-        //    bfg = stConfig.buttonStyles[i].inactiveForeground;
-        //} 
 
-        //XSetWindowBackground(stDisplay, c->buttons[i], bbg);
-        //XClearWindow(stDisplay, c->buttons[i]);
-        //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-        //        AlignCenter, AlignMiddle, stConfig.buttonSize,
-        //        stConfig.buttonSize, &x, &y);
-        //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon, stIconFont, bfg, x, y);
-    }
+    for (int i = 0; i < ButtonCount; ++i)
+        RefreshClientButton(c, i, False);
 }
 
 void
@@ -492,14 +473,11 @@ ApplyNormalHints(Client *c)
 void
 Configure(Client *c)
 {
-    //DLog("frame (absolute)\t: (%d, %d) [%d x %d]", c->fx, c->fy, c->fw, c->fh);
-    //DLog("window (absolute)\t: (%d, %d) [%d x %d]", c->wx, c->wy, c->ww, c->wh);
     int hw, wx, wy;
 
     /* compute the relative window position */
     wx = c->wx - c->fx;
     wy = c->wy - c->fy;
-    //DLog("window (relative)\t: (%d, %d) [%d x %d]", wx, wy, c->ww, c->wh);
 
     /* place frame and window */
     XMoveResizeWindow(stDisplay, c->frame, c->fx, c->fy, c->fw, c->fh);
@@ -512,7 +490,6 @@ Configure(Client *c)
                 stConfig.topbarHeight);
         for (int i = 0; i < ButtonCount; ++i) {
             XMoveResizeWindow(stDisplay, c->buttons[i],
-                    //c->fw - (i + 1) * (stConfig.buttonSize + stConfig.buttonGap),
                     c->fw - ((i+1) * (stConfig.buttonSize) + i * stConfig.buttonGap),
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);

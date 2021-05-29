@@ -9,8 +9,8 @@
 #define Modkey Mod1Mask
 #endif
 
-/* XXX: Find another way!!! */
-#define ShortcutCount 36
+/* XXX: find another way!!! */
+#define ShortcutCount 32
 
 typedef struct _Shortcut {
     unsigned long modifier;
@@ -24,7 +24,6 @@ typedef struct _Shortcut {
 } Shortcut;
 
 typedef struct _Config {
-    // TODO: window style structure
     /* window */
     int borderWidth;
     int topbarHeight;

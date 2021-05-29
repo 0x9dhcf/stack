@@ -129,23 +129,14 @@ typedef struct _WMStrut {
 } WMStrut;
 
 void GetWMName(Window w, char **name);
-
 void GetWMHints(Window w, WMHints *h);
-
 void GetWMProtocols(Window w, WMProtocols *h);
-
 void GetWMNormals(Window w, WMNormals *h);
-
 void GetWMClass(Window w, WMClass *klass);
-
 void GetWMStrut(Window w, WMStrut *strut);
-
 void GetNetWMWindowType(Window w, NetWMWindowType *h);
-
 void GetNetWMState(Window w, NetWMState *h);
-
 void SetNetWMState(Window w, NetWMState h);
-
 void SendMessage(Window w, Atom a);
 
 #endif
