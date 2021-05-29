@@ -113,7 +113,6 @@ static const Config defaultConfig = {
 
 Config stConfig;
 
-/* TODO */
 void
 LoadConfig()
 {

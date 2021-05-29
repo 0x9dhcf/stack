@@ -24,7 +24,6 @@ typedef struct _Shortcut {
 } Shortcut;
 
 typedef struct _Config {
-    /* window */
     int borderWidth;
     int topbarHeight;
     int handleWidth;
@@ -36,7 +35,6 @@ typedef struct _Config {
     int inactiveForeground;
     int urgentBackground;
     int urgentForeground;
-
     struct {
         char *icon;
         int activeBackground;
@@ -48,14 +46,10 @@ typedef struct _Config {
         int inactiveHoveredBackground;
         int inactiveHoveredForeground;
     } buttonStyles[ButtonCount];
-
     char *labelFontname;
     char *iconFontname;
-
-    /* dynamic desktop */
     int masters;
     float split;
-
     Shortcut shortcuts[ShortcutCount];
 } Config;
 

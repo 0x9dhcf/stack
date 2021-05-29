@@ -15,10 +15,7 @@
 #include "log.h"
 #include "x11.h"
 
-static char *terminal[] = {"uxterm", NULL};
-static char *dmenu[] = {"dmenu_run", "-h", "26", "-fn",
-    "Sans:antialias=true:size:size=11", "-nb", "#000000", "-nf", "#ffffff",
-    "-sb", "#5294E2", "-sf", "#000000", NULL };
+static char *terminal[] = {"xterm", NULL};
 
 static int  lastSeenPointerX;
 static int  lastSeenPointerY;
@@ -415,11 +412,10 @@ OnKeyPress(XKeyPressedEvent *e)
     /* keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0); */
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
 
-    /* TODO manage binding */
+    /* there is no key binding in stack (see xbindeys or such for that)
+     * , but might usefull to get a terminal */ 
     if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
         Spawn((char**)terminal);
-    if (keysym == (XK_p) && CleanMask(Modkey) == CleanMask(e->state))
-        Spawn((char**)dmenu);
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
