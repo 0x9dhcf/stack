@@ -109,10 +109,9 @@ void
 AttachClientToMonitor(Monitor *m, Client *c)
 {
     c->monitor = m;
-    c->desktop = m->activeDesktop;
     PushClientFront(m, c);
 
-    AddClientToDesktop(m, c, c->desktop);
+    AddClientToDesktop(m, c, m->activeDesktop);
 
     if ((c->strut.right 
                 || c->strut.left
@@ -223,7 +222,7 @@ AddClientToDesktop(Monitor *m, Client *c, int d)
     if (c->tiled && !m->desktops[d].dynamic)
         RestoreClient(c);
 
-    if (!c->fixed)
+    if (!(c->types & NetWMTypeFixed))
         MoveResizeClientFrame(c,
                 Max(c->fx, c->monitor->desktops[c->desktop].wx),
                 Max(c->fy, c->monitor->desktops[c->desktop].wy),
@@ -270,7 +269,7 @@ SetActiveDesktop(Monitor *m, int desktop)
 
     /* affect all stickies to this desktop */
     for (Client *c = m->chead; c; c = c->next) {
-        if (c->states & NetWMStateSticky || c->fixed) {
+        if ((c->states & NetWMStateSticky) || (c->types & NetWMTypeFixed)) {
             RemoveClientFromDesktop(m, c, c->desktop);
             c->desktop = desktop;
             AddClientToDesktop(m, c, c->desktop);
@@ -292,14 +291,13 @@ SetActiveDesktop(Monitor *m, int desktop)
 void
 Restack(Monitor *m)
 {
-    /* if dynamic mode is enable  we always
-     *  retile the desktop */
+    /* if dynamic mode is enable retile the desktop */
     if (m->desktops[m->activeDesktop].dynamic) {
         Client *c;
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
         for (c = m->chead; c; c = c->next)
-            if (c->desktop == m->activeDesktop && !c->fixed)
+            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed))
                 n++;
 
         Desktop *d =  &m->desktops[m->activeDesktop];
@@ -309,7 +307,7 @@ Restack(Monitor *m)
             mw = d->ww;
 
         for (c = m->chead; c; c = c->next) {
-            if (c->desktop == m->activeDesktop && !c->fixed) {
+            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed)) {
                 if (i < d->masters) {
                     int w = (mw - mx) / (Min(n, d->masters) - i);
                     TileClient(c, d->wx + mx, d->wy, w, d->wh);
@@ -322,7 +320,7 @@ Restack(Monitor *m)
                         ty += c->fh;
                 }
                 i++;
-            } else if (!c->fixed) {
+            } else if (!(c->types & NetWMTypeFixed)) {
                 HideClient(c);
             }
         }

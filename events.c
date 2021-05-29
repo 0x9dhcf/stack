@@ -290,7 +290,7 @@ OnButtonRelease(XButtonEvent *e)
     if (!c)
         return;
 
-    if (! c->tiled) {
+    if (!c->tiled) {
         for (int i = 0; i < HandleCount; ++i) {
             if (e->window == c->handles[i]) {
                 /* apply the size hints */
@@ -313,9 +313,9 @@ OnMotionNotify(XMotionEvent *e)
     //DLog();
     Client *c = Lookup(e->window);
 
-    /* prevent moving fixed, maximized or fulscreen window
+    /* prevent moving type fixed, maximized or fulscreen window
      * avoid to move to often as well */
-    if (!c || c->fixed
+    if (!c || c->types & NetWMTypeFixed
             || c->states & (NetWMStateMaximized | NetWMStateFullscreen)
             || (e->time - lastSeenPointerTime) <= (1000 / 60))
         return;
@@ -458,35 +458,26 @@ OnEnter(XCrossingEvent *e)
     // we should just keep track of button status here
     // e.g a hovered state.
     if (c) {
-        /* redraw button if hovered */
-        //int bg, fg;
-        //if (c->active) {
-        //    bg = stConfig.activeButtonHoveredBackground;
-        //    fg = stConfig.activeButtonHoveredForeground;
-        //} else {
-        //    bg = stConfig.inactiveButtonHoveredBackground;
-        //    fg = stConfig.inactiveButtonHoveredForeground;
-        //}
-
         for (int i = 0; i < ButtonCount; ++i) {
             if (e->window == c->buttons[i]) {
-                int x, y, bg, fg;
-                /* select the button colors */
-                if (c->active) {
-                    bg = stConfig.buttonStyles[i].activeHoveredBackground;
-                    fg = stConfig.buttonStyles[i].activeHoveredForeground;
-                } else {
-                    bg = stConfig.buttonStyles[i].inactiveHoveredBackground;
-                    fg = stConfig.buttonStyles[i].inactiveHoveredForeground;
-                } 
+                RefreshClientButton(c, i, True);
+                //int x, y, bg, fg;
+                ///* select the button colors */
+                //if (c->active) {
+                //    bg = stConfig.buttonStyles[i].activeHoveredBackground;
+                //    fg = stConfig.buttonStyles[i].activeHoveredForeground;
+                //} else {
+                //    bg = stConfig.buttonStyles[i].inactiveHoveredBackground;
+                //    fg = stConfig.buttonStyles[i].inactiveHoveredForeground;
+                //} 
 
-                XSetWindowBackground(stDisplay, c->buttons[i], bg);
-                XClearWindow(stDisplay, c->buttons[i]);
-                GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-                        AlignCenter, AlignMiddle, stConfig.buttonSize,
-                        stConfig.buttonSize, &x, &y);
-                WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
-                        stIconFont, fg, x, y);
+                //XSetWindowBackground(stDisplay, c->buttons[i], bg);
+                //XClearWindow(stDisplay, c->buttons[i]);
+                //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
+                //        AlignCenter, AlignMiddle, stConfig.buttonSize,
+                //        stConfig.buttonSize, &x, &y);
+                //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
+                //        stIconFont, fg, x, y);
             }
         }
     }
@@ -498,40 +489,30 @@ void OnLeave(XCrossingEvent *e)
     Client *c = Lookup(e->window);
 
     if (c) {
-        /* redraw button if hovered */
-        //int bg, fg;
-        //if (c->active) {
-        //    bg = stConfig.activeButtonBackground;
-        //    fg = stConfig.activeButtonForeground;
-        //} else {
-        //    bg = stConfig.inactiveButtonBackground;
-        //    fg = stConfig.inactiveButtonForeground;
-        //}
-
         for (int i = 0; i < ButtonCount; ++i) {
             if (e->window == c->buttons[i]) {
-                int x, y, bg, fg;
-                /* select the button colors */
-                if (c->active) {
-                    bg = stConfig.buttonStyles[i].activeBackground;
-                    fg = stConfig.buttonStyles[i].activeForeground;
-                } else {
-                    bg = stConfig.buttonStyles[i].inactiveBackground;
-                    fg = stConfig.buttonStyles[i].inactiveForeground;
-                } 
+                RefreshClientButton(c, i, False);
+                //int x, y, bg, fg;
+                ///* select the button colors */
+                //if (c->active) {
+                //    bg = stConfig.buttonStyles[i].activeBackground;
+                //    fg = stConfig.buttonStyles[i].activeForeground;
+                //} else {
+                //    bg = stConfig.buttonStyles[i].inactiveBackground;
+                //    fg = stConfig.buttonStyles[i].inactiveForeground;
+                //} 
 
-                XSetWindowBackground(stDisplay, c->buttons[i], bg);
-                XClearWindow(stDisplay, c->buttons[i]);
-                GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-                        AlignCenter, AlignMiddle, stConfig.buttonSize,
-                        stConfig.buttonSize, &x, &y);
-                WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
-                        stIconFont, fg, x, y);
+                //XSetWindowBackground(stDisplay, c->buttons[i], bg);
+                //XClearWindow(stDisplay, c->buttons[i]);
+                //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
+                //        AlignCenter, AlignMiddle, stConfig.buttonSize,
+                //        stConfig.buttonSize, &x, &y);
+                //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon,
+                //        stIconFont, fg, x, y);
             }
         }
     }
 }
-
 
 void
 OnKeyPress(XKeyPressedEvent *e)
@@ -572,5 +553,4 @@ Spawn(char **args)
         exit(EXIT_SUCCESS);
     }
 }
-
 

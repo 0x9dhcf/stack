@@ -28,7 +28,7 @@ HideClient(Client *c)
 {
     /* move all windows off screen without changing anything */
     XMoveWindow(stDisplay, c->frame, -c->fw, c->fy);
-    if (!c->fixed)
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
             XMoveWindow(stDisplay, c->handles[i], -c->fw, c->fy);
 }
@@ -36,7 +36,7 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
-    if (c->fixed)
+    if ((c->types & NetWMTypeFixed) || IsFixed(c->normals))
         MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
     else
         MoveResizeClientFrame(c,
@@ -143,7 +143,7 @@ TileClient(Client *c, int x, int y, int w, int h)
 void
 MaximizeClientHorizontally(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
@@ -155,7 +155,7 @@ MaximizeClientHorizontally(Client *c)
 void
 MaximizeClientVertically(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
@@ -174,7 +174,7 @@ MaximizeClient(Client *c)
 void
 MaximizeClientLeft(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
@@ -189,7 +189,7 @@ MaximizeClientLeft(Client *c)
 void
 MaximizeClientRight(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
@@ -206,7 +206,7 @@ MaximizeClientRight(Client *c)
 void
 MaximizeClientTop(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
@@ -221,7 +221,7 @@ MaximizeClientTop(Client *c)
 void
 MaximizeClientBottom(Client *c)
 {
-    if (c && !c->fixed && !c->tiled) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
@@ -238,7 +238,7 @@ MaximizeClientBottom(Client *c)
 void
 MinimizeClient(Client *c)
 {
-    if (c && !c->fixed) {
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
         SaveGeometries(c);
         c->states |= NetWMStateHidden;
         MoveResizeClientFrame(c, c->monitor->x, c->monitor->y + c->monitor->h,
@@ -250,7 +250,7 @@ MinimizeClient(Client *c)
 void
 FullscreenClient(Client *c)
 {
-    if (c && !c->fixed) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
 
         c->decorated = False;
@@ -294,7 +294,7 @@ RaiseClient(Client *c)
     c->states |= NetWMStateAbove;
     c->states &= ~NetWMStateBelow;
     XRaiseWindow(stDisplay, c->frame);
-    if (!c->fixed)
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
             XRaiseWindow(stDisplay, c->handles[i]);
 
@@ -310,7 +310,7 @@ LowerClient(Client *c)
     c->states |= NetWMStateBelow;
     c->states &= ~NetWMStateAbove;
     XLowerWindow(stDisplay, c->frame);
-    if (!c->fixed)
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
             XLowerWindow(stDisplay, c->handles[i]);
 
@@ -340,7 +340,7 @@ SetClientActive(Client *c, Bool b)
 
         RefreshClient(c);
 
-        if (!c->fixed)
+        if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; ++i)
                 XGrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window,
                         False, ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
@@ -352,10 +352,45 @@ SetClientActive(Client *c, Bool b)
         c->active = b;
         RefreshClient(c);
         XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow]);
-        if (!c->fixed)
+        if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; i++)
                 XUngrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window);
     }
+}
+
+void
+RefreshClientButton(Client *c, int button, Bool hovered)
+{
+    int bg, fg, x, y;
+    /* select the button colors */
+    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+        bg = stConfig.urgentBackground;
+        fg = stConfig.urgentForeground;
+    }  else if (c->active) {
+        if (hovered) {
+            bg = stConfig.buttonStyles[button].activeHoveredBackground;
+            fg = stConfig.buttonStyles[button].activeHoveredForeground;
+        } else {
+            bg = stConfig.buttonStyles[button].activeBackground;
+            fg = stConfig.buttonStyles[button].activeForeground;
+        }
+    } else {
+        if (hovered) {
+            bg = stConfig.buttonStyles[button].inactiveHoveredBackground;
+            fg = stConfig.buttonStyles[button].inactiveHoveredForeground;
+        } else {
+            bg = stConfig.buttonStyles[button].inactiveBackground;
+            fg = stConfig.buttonStyles[button].inactiveForeground;
+        }
+    } 
+    
+    XSetWindowBackground(stDisplay, c->buttons[button], bg);
+    XClearWindow(stDisplay, c->buttons[button]);
+    GetTextPosition(stConfig.buttonStyles[button].icon, stIconFont,
+            AlignCenter, AlignMiddle, stConfig.buttonSize,
+            stConfig.buttonSize, &x, &y);
+    WriteText(c->buttons[button], stConfig.buttonStyles[button].icon,
+            stIconFont, fg, x, y);
 }
 
 void
@@ -370,18 +405,14 @@ RefreshClient(Client *c)
 
     /* select the frame colors */
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = /*bbg =*/ stConfig.urgentBackground;
-        fg = /*bfg =*/ stConfig.urgentForeground;
+        bg = stConfig.urgentBackground;
+        fg = stConfig.urgentForeground;
     }  else if (c->active) {
         bg = stConfig.activeBackground;
         fg = stConfig.activeForeground;
-        //bbg = stConfig.activeButtonBackground;
-        //bfg = stConfig.activeButtonForeground;
     } else {
         bg = stConfig.inactiveBackground;
         fg = stConfig.inactiveForeground;
-        //bbg = stConfig.inactiveButtonBackground;
-        //bfg = stConfig.inactiveButtonForeground;
     } 
 
     XSetWindowBackground(stDisplay, c->frame, bg);
@@ -394,25 +425,26 @@ RefreshClient(Client *c)
         WriteText(c->topbar, c->name, stLabelFont, fg, x, y);
     }
     for (int i = 0; i < ButtonCount; ++i) {
-        int bbg, bfg;
-        /* select the button colors */
-        if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-            bbg = stConfig.urgentBackground;
-            bfg = stConfig.urgentForeground;
-        }  else if (c->active) {
-            bbg = stConfig.buttonStyles[i].activeBackground;
-            bfg = stConfig.buttonStyles[i].activeForeground;
-        } else {
-            bbg = stConfig.buttonStyles[i].inactiveBackground;
-            bfg = stConfig.buttonStyles[i].inactiveForeground;
-        } 
+        RefreshClientButton(c, i, False);
+        //int bbg, bfg;
+        ///* select the button colors */
+        //if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+        //    bbg = stConfig.urgentBackground;
+        //    bfg = stConfig.urgentForeground;
+        //}  else if (c->active) {
+        //    bbg = stConfig.buttonStyles[i].activeBackground;
+        //    bfg = stConfig.buttonStyles[i].activeForeground;
+        //} else {
+        //    bbg = stConfig.buttonStyles[i].inactiveBackground;
+        //    bfg = stConfig.buttonStyles[i].inactiveForeground;
+        //} 
 
-        XSetWindowBackground(stDisplay, c->buttons[i], bbg);
-        XClearWindow(stDisplay, c->buttons[i]);
-        GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
-                AlignCenter, AlignMiddle, stConfig.buttonSize,
-                stConfig.buttonSize, &x, &y);
-        WriteText(c->buttons[i], stConfig.buttonStyles[i].icon, stIconFont, bfg, x, y);
+        //XSetWindowBackground(stDisplay, c->buttons[i], bbg);
+        //XClearWindow(stDisplay, c->buttons[i]);
+        //GetTextPosition(stConfig.buttonStyles[i].icon, stIconFont,
+        //        AlignCenter, AlignMiddle, stConfig.buttonSize,
+        //        stConfig.buttonSize, &x, &y);
+        //WriteText(c->buttons[i], stConfig.buttonStyles[i].icon, stIconFont, bfg, x, y);
     }
 }
 
@@ -485,13 +517,13 @@ Configure(Client *c)
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);
         }
-    } else if (!c->fixed){ /* move the topbar outside the frame */
+    } else if (!(c->types & NetWMTypeFixed)){ /* move the topbar outside the frame */
         XMoveWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 -(stConfig.borderWidth + stConfig.topbarHeight));
     }
 
     /* suround frame by handles */
-    if (!c->fixed) {
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
         hw = stConfig.handleWidth;
         XMoveResizeWindow(stDisplay, c->handles[HandleNorth],
                 c->fx, c->fy - hw, c->fw, hw);

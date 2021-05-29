@@ -47,9 +47,15 @@ typedef struct _Client {
     int stx, sty, stw, sth; /* saved frame geometry post tiling         */
     int sbw;                /* saved border width                       */
 
+    /* properties */
+    //Bool activable;
+    //Bool moveable;
+    //Bool resizable;
+    //Bool decorable;
+    //Bool fixed;
+
     /* statuses */
     Bool active;
-    Bool fixed;
     Bool decorated;
     Bool tiled;
     int desktop;
@@ -76,17 +82,13 @@ typedef struct _Client {
 
 void HideClient(Client *c);
 void ShowClient(Client *c);
-
 void MoveClientWindow(Client *c, int x, int y);
 void ResizeClientWindow(Client *c, int w, int h, Bool sh);
 void MoveResizeClientWindow(Client *c, int x, int y, int w, int h, Bool sh);
-
 void MoveClientFrame(Client *c, int x, int y);
 void ResizeClientFrame(Client *c, int w, int h, Bool sh);
 void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
-
 void TileClient(Client *c, int x, int y, int w, int h);
-
 void MaximizeClientHorizontally(Client *c);
 void MaximizeClientVertically(Client *c);
 void MaximizeClient(Client *c);
@@ -99,7 +101,7 @@ void FullscreenClient(Client *c);
 void RestoreClient(Client *c);
 void RaiseClient(Client *c);
 void LowerClient(Client *c);
-
+void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
 

@@ -29,9 +29,9 @@ typedef enum _NetWMWindowType {
     NetWMTypeDropdownMenu   = (1<<11),
     NetWMTypePopupMenu      = (1<<12),
     NetWMTypeTooltip        = (1<<13),
-    //NetWMTypeFixed          = NetWMTypeDesktop
-    //                        | NetWMTypeDock
-    //                        | NetWMTypeSplash,
+    NetWMTypeFixed          = NetWMTypeDesktop
+                            | NetWMTypeDock
+                            | NetWMTypeSplash,
     NetWMTypeAny            = NetWMTypeNormal
                             | NetWMTypeDialog
                             | NetWMTypeDesktop
@@ -104,6 +104,14 @@ typedef struct _WMClass {
     char *cname;
     char *iname;
 } WMClass;
+
+#define IsFixed(n) (\
+        n.minw != 0 &&\
+        n.maxw != INT_MAX &&\
+        n.minh != 0 &&\
+        n.maxh != INT_MAX &&\
+        n.minw == n.maxw &&\
+        n.minh == n.maxh)
 
 typedef struct _WMNormals {
     int bw, bh;

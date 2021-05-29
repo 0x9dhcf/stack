@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,11 +47,17 @@ ManageWindow(Window w, Bool exists)
     GetWMClass(w, &c->wmclass);
     GetWMStrut(w, &c->strut);
 
+    //c->activable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
+    //c->moveable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
+    //c->resizable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash))
+    //    || (c->normals.minw == c->normals.maxw && c->normals.minh == c->normals.maxh);
+    //c->decorable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
+
     c->active = False;
-    c->fixed = c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash)
-        || (c->normals.minw == c->normals.maxw && c->normals.minh == c->normals.maxh);
-    c->decorated = !c->fixed;
-    //c->decorated = (c->types & NetWMTypeFixed) ? False : True;
+    c->decorated = !(c->types & NetWMTypeFixed);
+    c->tiled = False;
+    c->desktop = stActiveMonitor->activeDesktop;
+
     /* if transient for, register the client we are transient for
      * and regiter this new client as a transient of this
      * transient for client */
@@ -94,7 +101,7 @@ ManageWindow(Window w, Bool exists)
     XChangeWindowAttributes(stDisplay, w, CWEventMask | CWDontPropagate, &cattrs);
     XSetWindowBorderWidth(stDisplay, w, 0);
     XReparentWindow(stDisplay, w, c->frame, 0, 0);
-    if (c->hints & HintsFocusable && !c->fixed) {
+    if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
         XUngrabButton(stDisplay, AnyButton, AnyModifier, c->window);
         XGrabButton(stDisplay, Button1, AnyModifier, c->window, False,
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync,
@@ -103,9 +110,10 @@ ManageWindow(Window w, Bool exists)
     if (!exists)
         XMapWindow(stDisplay, w);
 
-    /* fixed windows are neither decorated nor resizable
-     * thus don't need this */
-    if (!c->fixed) {
+    /* windows with EWMH type fixed are neither moveable,
+     * resizable nor decorated.  While windows fixed by ICCCM normals 
+     * are decorated and moveable but not resizable) */
+    if (!(c->types & NetWMTypeFixed)) {
         /* topbar */
         XSetWindowAttributes tattrs = {0};
         tattrs.event_mask = HandleEventMask;
@@ -125,7 +133,9 @@ ManageWindow(Window w, Bool exists)
             XMapWindow(stDisplay, b);
             c->buttons[i] = b;
         }
+    }
 
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
         /* handles */
         XSetWindowAttributes hattrs = {0};
         hattrs.event_mask = HandleEventMask;
@@ -150,21 +160,11 @@ ManageWindow(Window w, Bool exists)
             MaximizeClientHorizontally(c);
         if (c->states & NetWMStateMaximizedVert)
             MaximizeClientVertically(c);
-
-        //if (c->states & NetWMStateHidden)
-        //    MinimizeClient(c);
-
         if (c->states & NetWMStateFullscreen)
             FullscreenClient(c);
-
-        //if (c->states & NetWMStateAbove)
-        //    RaiseClient(c);
-
-        //if (c->states & NetWMStateBelow)
-        //    LowerClient(c);
     }
 
-    if (!c->fixed)
+    if (!(c->types & NetWMTypeFixed))
         SetActiveClient(c);
 
     /* update the client list */
@@ -209,11 +209,15 @@ ForgetWindow(Window w, Bool survives)
             XSetWindowBorderWidth(stDisplay, c->window, c->sbw);
         }
 
-        if (!c->fixed) {
+        if (!(c->types & NetWMTypeFixed)) {
             for (int i = 0; i < ButtonCount; ++i)
                 XDestroyWindow(stDisplay, c->buttons[i]);
             XDestroyWindow(stDisplay, c->topbar);
+        }
 
+        if (!(c->types & NetWMTypeFixed) 
+                && (c->normals.minw != c->normals.maxw
+                    && c->normals.minh != c->normals.maxh)) {
             for (int i = 0; i < HandleCount; ++i)
                 XDestroyWindow(stDisplay, c->handles[i]);
         }
