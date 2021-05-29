@@ -9,12 +9,11 @@
 #include "client.h"
 #include "monitor.h"
 
-/* TODO
-static char *Trim(char *str);
-static char *FindConfigFile();
-*/
-
 static const Config defaultConfig = {
+    /* globals */
+    .labelFontname = "Sans:antialias=true:size=10",
+    .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=14",
+
     /* toplevel windows */
     .borderWidth    = 1,
     .topbarHeight   = 32,
@@ -67,9 +66,6 @@ static const Config defaultConfig = {
             .inactiveHoveredForeground  = 0x202020,
         },
     },
-
-    .labelFontname = "Sans:antialias=true:size=10",
-    .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=14",
 
     /* dynamic desktops */
     .masters = 1,

@@ -24,6 +24,8 @@ typedef struct _Shortcut {
 } Shortcut;
 
 typedef struct _Config {
+    char *labelFontname;
+    char *iconFontname;
     int borderWidth;
     int topbarHeight;
     int handleWidth;
@@ -46,8 +48,6 @@ typedef struct _Config {
         int inactiveHoveredBackground;
         int inactiveHoveredForeground;
     } buttonStyles[ButtonCount];
-    char *labelFontname;
-    char *iconFontname;
     int masters;
     float split;
     Shortcut shortcuts[ShortcutCount];
