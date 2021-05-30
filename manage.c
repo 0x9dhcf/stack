@@ -47,12 +47,6 @@ ManageWindow(Window w, Bool exists)
     GetWMClass(w, &c->wmclass);
     GetWMStrut(w, &c->strut);
 
-    //c->activable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
-    //c->moveable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
-    //c->resizable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash))
-    //    || (c->normals.minw == c->normals.maxw && c->normals.minh == c->normals.maxh);
-    //c->decorable = !(c->types & (NetWMTypeDesktop | NetWMTypeDock | NetWMTypeSplash));
-
     c->active = False;
     c->decorated = !(c->types & NetWMTypeFixed);
     c->tiled = False;
@@ -303,9 +297,12 @@ FindNextActiveClient()
                 nc = NextClient(stActiveMonitor, nc));
     }
 
-    if (nc && !(nc->states & NetWMStateHidden)) {
+    if (nc && nc->desktop == stActiveMonitor->activeDesktop
+            && nc->types & NetWMTypeNormal
+            && !(nc->states & NetWMStateHidden)) {
         SetActiveClient(nc);
     } else if (stActiveClient) {
+        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = NULL;
         SetClientActive(stActiveClient, False);
         stActiveClient = NULL;
     }
@@ -322,26 +319,30 @@ ActivateNext()
 {
     Client *head = stActiveClient ? stActiveClient : stActiveMonitor->chead;
     Client *nc = NULL;
-    for (nc = NextClient(stActiveMonitor, head);
-            nc && nc != head
-                && (nc->desktop != stActiveMonitor->activeDesktop
-                || !(nc->types & NetWMTypeNormal));
-            nc = NextClient(stActiveMonitor, nc));
+    if (head) {
+        for (nc = NextClient(stActiveMonitor, head);
+                nc && nc != head
+                    && (nc->desktop != stActiveMonitor->activeDesktop
+                    || !(nc->types & NetWMTypeNormal));
+                nc = NextClient(stActiveMonitor, nc));
 
-    if (nc)
-        SetActiveClient(nc);
+        if (nc)
+            SetActiveClient(nc);
+    }
 }
 
 void
 ActivatePrev()
 {
-    if (stActiveClient) {
-        Client *pc = NULL;
-        for (pc = PreviousClient(stActiveMonitor, stActiveClient);
-                pc && pc != stActiveClient
-                    && (pc->desktop != stActiveClient->desktop
+    Client *tail = stActiveClient ? stActiveClient : stActiveMonitor->ctail;
+    Client *pc = NULL;
+    if (tail) {
+        for (pc = PreviousClient(stActiveMonitor, tail);
+                pc && pc != tail
+                    && (pc->desktop != stActiveMonitor->activeDesktop
                     || !(pc->types & NetWMTypeNormal));
                 pc = PreviousClient(stActiveMonitor, pc));
+
         if (pc)
             SetActiveClient(pc);
     }
@@ -415,6 +416,7 @@ MoveBackward()
     }
 }
 
+// XXX useless call from shortcut
 void
 ShowDesktop(int desktop)
 {
@@ -427,7 +429,6 @@ MoveToDesktop(int desktop)
 {
     if (stActiveClient) {
         Client *toMove = stActiveClient;
-        //toMove->monitor->desktops[stActiveClient->desktop].activeOnLeave = NULL;
         RemoveClientFromDesktop(toMove->monitor, toMove, toMove->desktop);
         FindNextActiveClient();
         AddClientToDesktop(toMove->monitor, toMove, desktop);

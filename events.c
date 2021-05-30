@@ -15,7 +15,7 @@
 #include "log.h"
 #include "x11.h"
 
-static char *terminal[] = {"xterm", NULL};
+static char *terminal[] = {"uxterm", NULL};
 
 static int  lastSeenPointerX;
 static int  lastSeenPointerY;
