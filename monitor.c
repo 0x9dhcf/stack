@@ -1,16 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <X11/Xatom.h>
 #include <X11/extensions/Xrandr.h>
 
-#include "atoms.h"
-#include "client.h"
-#include "config.h"
-#include "log.h"
-#include "manage.h"
-#include "monitor.h"
 #include "stack.h"
-#include "x11.h"
 
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);

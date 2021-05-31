@@ -4,12 +4,9 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
-#include "config.h"
-#include "manage.h"
-#include "client.h"
-#include "monitor.h"
+#include "stack.h"
 
-static const Config defaultConfig = {
+Config stConfig = {
     /* globals */
     .labelFontname = "Sans:antialias=true:size=10",
     .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=14",
@@ -106,11 +103,3 @@ static const Config defaultConfig = {
         { Modkey | ControlMask,   XK_Left,      CV,     { .vcb={MoveBackward} } }
     },
 };
-
-Config stConfig;
-
-void
-LoadConfig()
-{
-    memcpy(&stConfig, &defaultConfig, sizeof(Config));
-}

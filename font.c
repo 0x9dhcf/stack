@@ -1,9 +1,6 @@
 #include "X11/Xft/Xft.h"
 
-#include "config.h"
-#include "font.h"
-#include "log.h"
-#include "x11.h"
+#include "stack.h"
 
 XftFont *stLabelFont = NULL;
 XftFont *stIconFont = NULL;

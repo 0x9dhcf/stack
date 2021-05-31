@@ -1,16 +1,6 @@
 #include <string.h>
-#include <limits.h>
 
-#include "atoms.h"
-#include "client.h"
-#include "config.h"
-#include "cursors.h"
-#include "font.h"
-#include "hints.h"
-#include "log.h"
-#include "monitor.h"
 #include "stack.h"
-#include "x11.h"
 
 #define WMin ( (c->decorated) ?  2 * stConfig.borderWidth +\
         ButtonCount * (stConfig.buttonSize + stConfig.buttonGap) + 1 : 1 )
@@ -148,7 +138,7 @@ MaximizeClientHorizontally(Client *c)
         c->states |= NetWMStateMaximizedHorz;
         MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
                 c->monitor->desktops[c->desktop].ww, c->fh, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -160,7 +150,7 @@ MaximizeClientVertically(Client *c)
         c->states |= NetWMStateMaximizedVert;
         MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
                 c->fw, c->monitor->desktops[c->desktop].wh, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -182,7 +172,7 @@ MaximizeClientLeft(Client *c)
                 c->monitor->desktops[c->desktop].wy,
                 c->monitor->desktops[c->desktop].ww / 2,
                 c->monitor->desktops[c->desktop].wh, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -199,7 +189,7 @@ MaximizeClientRight(Client *c)
                 c->monitor->desktops[c->desktop].wy,
                 c->monitor->desktops[c->desktop].ww / 2,
                 c->monitor->desktops[c->desktop].wh, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -214,7 +204,7 @@ MaximizeClientTop(Client *c)
                 c->monitor->desktops[c->desktop].wy,
                 c->monitor->desktops[c->desktop].ww,
                 c->monitor->desktops[c->desktop].wh / 2, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -231,7 +221,7 @@ MaximizeClientBottom(Client *c)
                 c->monitor->desktops[c->desktop].ww,
                 c->monitor->desktops[c->desktop].wh / 2,
                 False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -243,7 +233,7 @@ MinimizeClient(Client *c)
         c->states |= NetWMStateHidden;
         MoveResizeClientFrame(c, c->monitor->x, c->monitor->y + c->monitor->h,
                 c->fw, c->fw, False);
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -259,7 +249,7 @@ FullscreenClient(Client *c)
         MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
                 c->monitor->h, False);
 
-        SetNetWMState(c->window, c->states);
+        SetNetWMStates(c->window, c->states);
     }
 }
 
@@ -285,7 +275,7 @@ RestoreClient(Client *c)
         MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
 
-    SetNetWMState(c->window, c->states);
+    SetNetWMStates(c->window, c->states);
 } 
 
 void
@@ -301,7 +291,7 @@ RaiseClient(Client *c)
     for (Transient *tc = c->transients; tc; tc = tc->next)
         RaiseClient(tc->client);
 
-    SetNetWMState(c->window, c->states);
+    SetNetWMStates(c->window, c->states);
 }
 
 void
@@ -317,7 +307,7 @@ LowerClient(Client *c)
     for (Transient *tc = c->transients; tc; tc = tc->next)
         LowerClient(tc->client);
 
-    SetNetWMState(c->window, c->states);
+    SetNetWMStates(c->window, c->states);
 }
 
 void

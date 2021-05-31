@@ -1,7 +1,6 @@
 #include <X11/extensions/Xrandr.h>
 
-#include "log.h"
-#include "x11.h"
+#include "stack.h"
 
 Display        *stDisplay;
 int             stScreen;

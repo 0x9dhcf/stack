@@ -1,19 +1,9 @@
 #include <unistd.h>
 
+#include <X11/Xatom.h>
 #include <X11/XKBlib.h>
 
-#include "atoms.h"
-#include "client.h"
-#include "config.h"
-#include "cursors.h"
-#include "events.h"
-#include "font.h"
-#include "hints.h"
-#include "manage.h"
-#include "monitor.h"
 #include "stack.h"
-#include "log.h"
-#include "x11.h"
 
 static char *terminal[] = {"uxterm", NULL};
 
@@ -149,7 +139,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
                 RaiseClient(c);
             if (e->detail == Below || e->detail == BottomIf)
                 LowerClient(c);
-            SetNetWMState(c->window, c->states);
+            SetNetWMStates(c->window, c->states);
         }
     }
 }
