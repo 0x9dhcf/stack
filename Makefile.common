@@ -1,8 +1,8 @@
 TARGET = stack
 
 MAJOR = 1
-MINOR = 0
-PATCH = 1
+MINOR = 1
+PATCH = 0
 
 # paths
 PREFIX ?= /usr/local
@@ -28,18 +28,7 @@ SRC = atoms.c\
 	  manage.c\
 	  monitor.c\
 	  x11.c
-HDR = atoms.h\
-	  client.h\
-	  config.h\
-	  cursors.h\
-	  events.h\
-	  font.h\
-	  hints.h\
-	  log.h\
-	  manage.h\
-	  monitor.h\
-	  stack.h\
-	  x11.h
+HDR = stack.h
 OBJ = ${SRC:.c=.o}
 
 all: options ${TARGET}

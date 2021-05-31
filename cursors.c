@@ -1,7 +1,6 @@
 #include <X11/cursorfont.h>
 
-#include "cursors.h"
-#include "x11.h"
+#include "stack.h"
 
 static unsigned int xcursors[] = {
     XC_left_ptr,

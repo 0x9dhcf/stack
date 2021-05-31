@@ -3,11 +3,9 @@
 #include <string.h>
 
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 
-#include "atoms.h"
-#include "hints.h"
-#include "log.h"
-#include "x11.h"
+#include "stack.h"
 
 void
 GetWMName(Window w, char **name)
@@ -212,7 +210,7 @@ GetNetWMWindowType(Window w, NetWMWindowType *h)
 }
 
 void
-GetNetWMState(Window w, NetWMState *h)
+GetNetWMStates(Window w, NetWMStates *h)
 {
     Atom type;
     int format;
@@ -259,7 +257,7 @@ GetNetWMState(Window w, NetWMState *h)
 }
 
 void
-SetNetWMState(Window w, NetWMState h)
+SetNetWMStates(Window w, NetWMStates h)
 {
     Atom type;
     int format, count, n;

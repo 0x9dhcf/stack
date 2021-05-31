@@ -2,16 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "atoms.h"
-#include "client.h"
-#include "cursors.h"
-#include "events.h"
-#include "hints.h"
-#include "log.h"
-#include "manage.h"
-#include "monitor.h"
+#include <X11/Xatom.h>
+
 #include "stack.h"
-#include "x11.h"
 
 Client *lastActiveClient = NULL;
 
@@ -41,7 +34,7 @@ ManageWindow(Window w, Bool exists)
     GetWMProtocols(w, &c->protocols);
     GetNetWMWindowType(w, &c->types);
     GetWMHints(w, &c->hints);
-    GetNetWMState(w, &c->states);
+    GetNetWMStates(w, &c->states);
     GetWMNormals(w, &c->normals);
     GetWMName(w, &c->name);
     GetWMClass(w, &c->wmclass);
@@ -261,13 +254,13 @@ SetActiveClient(Client *c)
             lastActiveClient = stActiveClient;
             SetClientActive(stActiveClient, False);
             LowerClient(c);
-            SetNetWMState(c->window, c->states);
+            SetNetWMStates(c->window, c->states);
         }
 
         SetClientActive(c, True);
         stActiveClient = c;
         RaiseClient(stActiveClient);
-        SetNetWMState(stActiveClient->window, stActiveClient->states);
+        SetNetWMStates(stActiveClient->window, stActiveClient->states);
         c->monitor->desktops[c->desktop].activeOnLeave = c;
     }
 }

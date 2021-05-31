@@ -11,16 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "atoms.h"
-#include "client.h"
-#include "config.h"
-#include "cursors.h"
-#include "events.h"
-#include "font.h"
-#include "log.h"
-#include "manage.h"
-#include "monitor.h"
-#include "x11.h"
+#include "stack.h"
 
 static int WMDetectedErrorHandler(Display *d, XErrorEvent *e);
 static int EventLoopErrorHandler(Display *d, XErrorEvent *e);
@@ -213,8 +204,6 @@ main(int argc, char **argv)
     signal(SIGINT, TrapSignal);
     signal(SIGKILL, TrapSignal);
     signal(SIGTERM, TrapSignal);
-
-    LoadConfig();
 
     InitializeX11();
     InitializeAtoms();

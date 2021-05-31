@@ -1,5 +1,4 @@
-#include "atoms.h"
-#include "x11.h"
+#include "stack.h"
 
 static char* names[] =  {
     "WM_DELETE_WINDOW",
