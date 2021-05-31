@@ -7,6 +7,10 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
+#ifndef VERSION
+    #define VERSION "0.0.0"
+#endif
+
 #ifdef NDEBUG
 #define Modkey Mod4Mask
 #else

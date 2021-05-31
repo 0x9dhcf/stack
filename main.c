@@ -196,8 +196,14 @@ TeardownWindowManager()
 int
 main(int argc, char **argv)
 {
-    (void)argc;
-    (void)argv;
+    if (argc == 2 && !strcmp("-v", argv[1])) {
+        printf("stack-%s\n", VERSION);
+        exit(0);
+    } else if (argc != 1) {
+        fprintf(stderr, "usage: stack [-v]\n");
+        exit(2);
+    }
+
     int xConnection;
     fd_set fdSet;
 
