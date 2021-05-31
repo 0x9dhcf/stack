@@ -10,9 +10,6 @@ PKG_CONFIG = pkg-config
 
 DEPS = x11 xrandr xft
 
-INCS = `$(PKG_CONFIG) --cflags $(DEPS)`
-LIBS = `$(PKG_CONFIG) --libs $(DEPS)`
-
 CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
 CFLAGS 		+= `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}` 
