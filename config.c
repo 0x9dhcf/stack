@@ -9,7 +9,8 @@
 Config stConfig = {
     /* globals */
     .labelFontname = "Sans:antialias=true:size=10",
-    .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=14",
+    .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=16",
+    /*.iconFontname = "Sans:antialias=true:size=10",*/
 
     /* toplevel windows */
     .borderWidth    = 1,
@@ -28,6 +29,7 @@ Config stConfig = {
     .buttonStyles = {
         /* close */
         {
+            /*.icon                       = "C",*/
             .icon                       = "\ue5cd",
             .activeBackground           = 0xD8D8D8,
             .activeForeground           = 0x202020,
@@ -40,6 +42,7 @@ Config stConfig = {
         },
         /* maximize */
         {
+            /*.icon                       = "M",*/
             .icon                       = "\ue835",
             .activeBackground           = 0xD8D8D8,
             .activeForeground           = 0x202020,
@@ -52,6 +55,7 @@ Config stConfig = {
         },
         /* minimize */
         {
+            /*.icon                       = "H",*/
             .icon                       = "\ue931",
             .activeBackground           = 0xD8D8D8,
             .activeForeground           = 0x202020,

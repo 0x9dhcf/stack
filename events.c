@@ -415,6 +415,7 @@ OnKeyPress(XKeyPressedEvent *e)
             if (sc.type == CV) sc.cb.vcb.f();
             if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
             if (sc.type == CC) sc.cb.ccb.f(stActiveClient);
+            //if (sc.type == CM) sc.cb.mcb.f(stActiveMonitor);
             break;
         }
     }

@@ -1,4 +1,4 @@
-#include "X11/Xft/Xft.h"
+#include <X11/Xft/Xft.h>
 
 #include "stack.h"
 
@@ -62,9 +62,10 @@ WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y)
       
     char name[] = "#ffffff";
     snprintf(name, sizeof(name), "#%06X", color);
-    XftColorAllocName (stDisplay, DefaultVisual(stDisplay, DefaultScreen(stDisplay)),
-        DefaultColormap(stDisplay, DefaultScreen(stDisplay)), name, &xftc);
-      
+    XftColorAllocName(stDisplay, DefaultVisual(stDisplay,
+                DefaultScreen(stDisplay)),
+                DefaultColormap(stDisplay, DefaultScreen(stDisplay)),
+                name, &xftc);
     XftDrawStringUtf8(draw, &xftc, ft, x, y, (XftChar8 *)s, strlen(s));
     XftDrawDestroy(draw);
     XftColorFree(stDisplay,v, cm, &xftc);

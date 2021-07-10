@@ -141,7 +141,7 @@ ManageWindow(Window w, Bool exists)
     MoveResizeClientWindow(c, wx, wy, ww, wh, False);
     AttachClientToMonitor(stActiveMonitor, c);
 
-    ///* we can only apply structure states once attached in floating mode */
+    /* we can only apply structure states once attached in floating mode */
     if (! stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
         if (c->states & NetWMStateMaximizedHorz)
             MaximizeClientHorizontally(c);
@@ -409,12 +409,10 @@ MoveBackward()
     }
 }
 
-// XXX useless call from shortcut
 void
 ShowDesktop(int desktop)
 {
-    if (desktop >= 0 && desktop < DesktopCount)
-        SetActiveDesktop(stActiveMonitor, desktop);
+    SetActiveDesktop(stActiveMonitor, desktop);
 }
 
 void

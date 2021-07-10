@@ -1,15 +1,14 @@
-#include "X11/X.h"
-#include "X11/Xlib.h"
-#include <X11/Xatom.h>
-#include <X11/Xproto.h>
-#include <X11/cursorfont.h>
-#include <X11/extensions/Xrandr.h>
-
+#include <locale.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/select.h>
 #include <time.h>
 #include <unistd.h>
+
+#include <X11/Xatom.h>
+#include <X11/Xproto.h>
+#include <X11/cursorfont.h>
+#include <X11/extensions/Xrandr.h>
 
 #include "stack.h"
 
@@ -140,7 +139,6 @@ InitializeWindowManager()
                 /* reparenting does not set the e->event to root
                  * we discar events to prevent the unmap to be catched
                  * and wrongly interpreted */
-                // XXX: WRONG (see on map request)
                 XSync(stDisplay, True);
                 XSetInputFocus(stDisplay, wins[i], RevertToPointerRoot,
                         CurrentTime);
@@ -155,8 +153,6 @@ InitializeWindowManager()
     /* grab shortcuts */
     XUngrabKey(stDisplay, AnyKey, AnyModifier, stRoot);
 
-    // TODO manage binding
-    // For now just a way to launch a terminal and dmenu
     if ((code = XKeysymToKeycode(stDisplay, XK_Return)))
         for (int j = 0; j < 4; ++j)
             XGrabKey(stDisplay, code, Modkey | ShiftMask | modifiers[j],
@@ -206,6 +202,9 @@ main(int argc, char **argv)
 
     int xConnection;
     fd_set fdSet;
+
+    if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
+		ELog("no locale support");
 
     signal(SIGINT, TrapSignal);
     signal(SIGKILL, TrapSignal);

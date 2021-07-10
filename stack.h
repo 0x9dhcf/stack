@@ -11,11 +11,14 @@
     #define VERSION "0.0.0"
 #endif
 
+/*
 #ifdef NDEBUG
 #define Modkey Mod4Mask
 #else
 #define Modkey Mod1Mask
 #endif
+*/
+#define Modkey Mod1Mask
 
 #define Max(v1, v2) (v1 > v2 ? v1 : v2)
 #define Min(v1, v2) (v1 < v2 ? v1 : v2)
@@ -52,9 +55,7 @@
          | Mod4Mask\
          | Mod5Mask))
 
-/* XXX: find another way!!! */
 #define ShortcutCount 32
-
 #define DesktopCount 8
 
 #define RootEventMask (\
@@ -89,6 +90,14 @@
         | LeaveWindowMask)
 
 
+#define IsFixed(n) (\
+        n.minw != 0 &&\
+        n.maxw != INT_MAX &&\
+        n.minh != 0 &&\
+        n.maxh != INT_MAX &&\
+        n.minw == n.maxw &&\
+        n.minh == n.maxh)
+
 typedef enum HAlign HAlign;
 typedef enum VAlign VAlign;
 typedef enum WMHints WMHints;
@@ -104,7 +113,6 @@ typedef struct Transient Transient;
 typedef struct Client Client;
 typedef struct Shortcut Shortcut;
 typedef struct Config Config;
-
 
 /*
  * Atoms
@@ -198,6 +206,7 @@ enum AtomType {
     AtomCount
 };
 
+
 /* 
  * cursor types
  */
@@ -239,8 +248,8 @@ enum WMHints {
 };
 
 enum WMProtocols {
-    NetWMProtocolTakeFocus      = 1<<0,
-    NetWMProtocolDeleteWindow   = 1<<2
+    NetWMProtocolTakeFocus      = (1<<0),
+    NetWMProtocolDeleteWindow   = (1<<2)
 };
 
 enum NetWMWindowType {
@@ -308,43 +317,10 @@ enum NetWMStates {
                                 | NetWMStateDemandsAttention
 };
 
-/*
-typedef enum {
-    NetWMActionNone          = 0,
-    NetWMActionMove          = (1<<0),
-    NetWMActionResize        = (1<<1),
-    NetWMActionMinimize      = (1<<2),
-    NetWMActionShade         = (1<<3),
-    NetWMActionStick         = (1<<4),
-    NetWMActionMaximizeHorz  = (1<<5),
-    NetWMActionMaximizeVert  = (1<<6),
-    NetWMActionFullscreen    = (1<<7),
-    NetWMActionChangeDesktop = (1<<8),
-    NetWMActionClose         = (1<<9),
-    NetWMActionAll           = NetWMActionMove
-                             | NetWMActionResize
-                             | NetWMActionMinimize
-                             | NetWMActionStick
-                             | NetWMActionMaximizeHorz
-                             | NetWMActionMaximizeVert
-                             | NetWMActionFullscreen
-                             | NetWMActionClose
-} NetWMAllowedActions;
-*/
-
 struct WMClass {
     char *cname;
     char *iname;
 };
-
-// XXX MOVE!
-#define IsFixed(n) (\
-        n.minw != 0 &&\
-        n.maxw != INT_MAX &&\
-        n.minh != 0 &&\
-        n.maxh != INT_MAX &&\
-        n.minw == n.maxw &&\
-        n.minh == n.maxh)
 
 struct WMNormals {
     int bw, bh;
@@ -364,7 +340,6 @@ struct WMStrut {
 /*
  * monitor
  */
-
 struct Desktop {
     int wx, wy, ww, wh; /* the working area geometry    */
     Bool dynamic;

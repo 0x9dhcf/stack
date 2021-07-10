@@ -11,7 +11,7 @@ PKG_CONFIG = pkg-config
 DEPS = x11 xrandr xft
 
 CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
-CFLAGS 		+= `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
+CFLAGS 		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}` 
 
 SRC = atoms.c\
