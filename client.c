@@ -97,10 +97,13 @@ ResizeClientFrame(Client *c, int w, int h, Bool sh)
     c->fw = w;
     c->fh = h;
 
-    if (sh)
-        ApplyNormalHints(c);
-
     SynchronizeWindowGeometry(c);
+    if (sh) {
+        ApplyNormalHints(c);
+        SynchronizeFrameGeometry(c);
+    }
+
+    //SynchronizeWindowGeometry(c);
     Configure(c);
 }
 
@@ -115,10 +118,12 @@ MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
     c->fw = w;
     c->fh = h;
 
-    if (sh)
-        ApplyNormalHints(c);
-
     SynchronizeWindowGeometry(c);
+    if (sh) {
+        ApplyNormalHints(c);
+        SynchronizeFrameGeometry(c);
+    }
+
     Configure(c);
 }
 
@@ -445,9 +450,11 @@ ApplyNormalHints(Client *c)
             c->ww -= c->normals.bw;
             c->wh -= c->normals.bh;
         }
+
         /* adjust for increment value */
         c->ww -= c->ww % c->normals.incw;
-        c->wh -= c->wh % c->normals.incw;
+        c->wh -= c->wh % c->normals.inch;
+
         /* restore base dimensions */
         c->ww += c->normals.bw;
         c->wh += c->normals.bh;
