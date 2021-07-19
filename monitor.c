@@ -4,7 +4,11 @@
 #include <X11/Xatom.h>
 #include <X11/extensions/Xrandr.h>
 
-#include "stack.h"
+#include "client.h"
+#include "log.h"
+#include "monitor.h"
+#include "utils.h"
+#include "x11.h"
 
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);
@@ -53,9 +57,10 @@ InitializeMonitors()
         m->ctail= NULL;
         m->next = stMonitors;
         stMonitors = m;
-        /* first found is our *primary* */
-        if (!stActiveMonitor)
-            stActiveMonitor = m;
+        // XXX TO MOVE
+        // /* first found is our *primary* */
+        //if (!stActiveMonitor)
+        //    stActiveMonitor = m;
         XRRFreeCrtcInfo(ci);
     }
     XRRFreeScreenResources(sr);
@@ -91,9 +96,10 @@ TeardownMonitors()
     Monitor *m = stMonitors;
     while (m) {
         Monitor *p = m->next;
-        for (Client *c = m->chead, *d = c ? c->next : 0; c;
-                c = d, d = c ? c->next : 0)
-            RemoveClient(m, c); /* should not happen */
+        //XXX TO MOVE
+        //for (Client *c = m->chead, *d = c ? c->next : 0; c;
+        //        c = d, d = c ? c->next : 0)
+        //    RemoveClient(m, c); /* should not happen */
         free(m);
         m = p;
     }
@@ -253,12 +259,6 @@ SetActiveDesktop(Monitor *m, int desktop)
     if (desktop < 0 || desktop >= DesktopCount)
         return;
 
-    /* save the active client if any */
-    if (stActiveClient && stActiveClient->desktop == m->activeDesktop)
-        m->desktops[m->activeDesktop].activeOnLeave = stActiveClient;
-    else
-        m->desktops[m->activeDesktop].activeOnLeave = NULL;;
-
     m->activeDesktop = desktop;
 
     /* affect all stickies to this desktop */
@@ -269,14 +269,6 @@ SetActiveDesktop(Monitor *m, int desktop)
             AddClientToDesktop(m, c, c->desktop);
         }
     }
-
-    /* restore the active client if any */
-    if (m->desktops[m->activeDesktop].activeOnLeave)
-        SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
-    else 
-        FindNextActiveClient();
-
-    Restack(m);
 
     XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);

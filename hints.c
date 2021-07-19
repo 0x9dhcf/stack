@@ -5,7 +5,9 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 
-#include "stack.h"
+#include "log.h"
+#include "hints.h"
+#include "x11.h"
 
 void
 GetWMName(Window w, char **name)
@@ -255,6 +257,62 @@ GetNetWMStates(Window w, NetWMStates *h)
     }
     XFree(atoms);
 }
+
+void
+SetNetWMAllowedActions(Window w, NetWMActions a)
+{
+    int i, n, count;
+    Atom *atoms;
+
+    /* count the atoms we will set */
+    n = a;
+    count = 0;
+    while (n) {
+        n &= (n - 1);
+        count++;
+    }
+
+    /* now we can allocate a new set of atoms */
+    atoms = malloc(count * sizeof(Atom));
+    if (! atoms) {
+        ELog("can't alloc atoms");
+        XFree(atoms);
+        return;
+    }
+
+    i = 0;
+    if (a & NetWMActionMove)
+        atoms[i++] = stAtoms[AtomNetWMActionMove];
+    if (a & NetWMActionResize)
+        atoms[i++] = stAtoms[AtomNetWMActionResize];
+    if (a & NetWMActionMinimize)
+        atoms[i++] = stAtoms[AtomNetWMActionMinimize];
+    if (a & NetWMActionShade)
+        atoms[i++] = stAtoms[AtomNetWMActionShade];
+    if (a & NetWMActionStick)
+        atoms[i++] = stAtoms[AtomNetWMActionStick];
+    if (a & NetWMActionMaximizeHorz)
+        atoms[i++] = stAtoms[AtomNetWMActionMaximizeHorz];
+    if (a & NetWMActionMaximizeVert)
+        atoms[i++] = stAtoms[AtomNetWMActionMaximizeVert];
+    if (a & NetWMActionFullscreen)
+        atoms[i++] = stAtoms[AtomNetWMActionFullscreen];
+    if (a & NetWMActionChangeDesktop)
+        atoms[i++] = stAtoms[AtomNetWMActionChangeDesktop];
+    if (a & NetWMActionClose)
+        atoms[i++] = stAtoms[AtomNetWMActionClose];
+    if (a & NetWMActionAbove)
+        atoms[i++] = stAtoms[AtomNetWMActionAbove];
+    if (a & NetWMActionBelow)
+        atoms[i++] = stAtoms[AtomNetWMActionBelow];
+
+    /* finally set them */
+    XChangeProperty(stDisplay, w, stAtoms[AtomNetWMAllowedActions], XA_ATOM, 32,
+            PropModeReplace, (unsigned char*)atoms, count);
+
+    XFree(atoms);
+}
+
 
 void
 SetNetWMStates(Window w, NetWMStates h)

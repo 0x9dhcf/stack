@@ -1,6 +1,9 @@
 #include <string.h>
 
-#include "stack.h"
+#include "client.h"
+#include "monitor.h"
+#include "utils.h"
+#include "x11.h"
 
 #define WMin ( (c->decorated) ?  2 * stConfig.borderWidth +\
         ButtonCount * (stConfig.buttonSize + stConfig.buttonGap) + 1 : 1 )
@@ -132,6 +135,7 @@ TileClient(Client *c, int x, int y, int w, int h)
 {
     SaveGeometries(c);
     c->tiled = True;
+    //c->decorated = False;
     MoveResizeClientFrame(c, x, y, w, h, False);
 }
 

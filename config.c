@@ -4,11 +4,13 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
+#include "client.h"
+#include "config.h"
 #include "stack.h"
 
 Config stConfig = {
     /* globals */
-    .labelFontname = "Sans:antialias=true:size=10",
+    .labelFontname = "Sans-10",
     .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=16",
     /*.iconFontname = "Sans:antialias=true:size=10",*/
 
@@ -73,7 +75,7 @@ Config stConfig = {
     .split = .6,
 
     .shortcuts = {
-        { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Quit} } },
+        { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Stop} } },
         { Modkey | ShiftMask,     XK_h,         CC,     { .ccb={MaximizeClientHorizontally} } },
         { Modkey | ShiftMask,     XK_v,         CC,     { .ccb={MaximizeClientVertically} } },
         { Modkey | ShiftMask,     XK_Left,      CC,     { .ccb={MaximizeClientLeft} } },

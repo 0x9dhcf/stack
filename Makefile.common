@@ -14,16 +14,12 @@ CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
 CFLAGS 		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}` 
 
-SRC = atoms.c\
-	  client.c\
+SRC = client.c\
 	  config.c\
-	  cursors.c\
-	  events.c\
-	  font.c\
 	  hints.c\
 	  main.c\
-	  manage.c\
 	  monitor.c\
+	  stack.c\
 	  x11.c
 HDR = stack.h
 OBJ = ${SRC:.c=.o}
