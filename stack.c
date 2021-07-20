@@ -20,6 +20,7 @@
 #define FrameEvenMask (\
           ExposureMask\
         | ButtonPressMask\
+        | EnterWindowMask\
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
 
@@ -121,7 +122,6 @@ EventLoopErrorHandler(Display *d, XErrorEvent *e)
             e->request_code, e->error_code);
     return defaultErrorHandler(d, e); /* may call exit */
 }
-
 
 void
 Start()
@@ -240,7 +240,7 @@ Start()
         }
     }
 
-    /* main loop */
+    /* Main loop */
     XSync(stDisplay, False);
 
     xConnection = XConnectionNumber(stDisplay);
@@ -730,7 +730,7 @@ ShowDesktop(int desktop)
 
     SetActiveDesktop(stActiveMonitor, desktop);
 
-    /* restore the active client if any */
+    /* Restore the active client if any */
     if (stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave)
         SetActiveClient(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave);
     else 
@@ -757,7 +757,7 @@ ToggleDynamic()
     if (stActiveMonitor) {
         Bool current = stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic;
         stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic = !current;
-        /* untile, restore all windows */
+        /* Untile, restore all windows */
         if (current) {
             for (Client *c = stActiveMonitor->chead; c; c = c->next) {
                 if (c->desktop == stActiveMonitor->activeDesktop) {
@@ -1090,10 +1090,14 @@ OnEnter(XCrossingEvent *e)
 {
     Client *c = Lookup(e->window);
 
-    if (c)
+    if (c) {
+        /* TODO: should be configurable */ 
+        if (c->tiled && e->window == c->frame)
+            SetActiveClient(c);
         for (int i = 0; i < ButtonCount; ++i)
             if (e->window == c->buttons[i])
                 RefreshClientButton(c, i, True);
+    }
 }
 
 void OnLeave(XCrossingEvent *e)

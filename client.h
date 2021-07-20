@@ -32,22 +32,22 @@ struct Transient {
 };
 
 struct Client {
-    /* components */
+    /* Components */
     Window window;
     Window frame;
     Window topbar;
     Window buttons[ButtonCount];
     Window handles[HandleCount];
 
-    /* geometries */
-    int wx, wy, ww, wh;     /* window absolute geometry                 */
-    int fx, fy, fw, fh;     /* frame absolute geometry                  */
-    int sfx, sfy, sfw, sfh; /* saved frame geometry post fullscreen     */
-    int smx, smy, smw, smh; /* saved frame geometry post max/minimixed  */
-    int stx, sty, stw, sth; /* saved frame geometry post tiling         */
-    int sbw;                /* saved border width                       */
+    /* Geometries */
+    int wx, wy, ww, wh;     /* Window absolute geometry                 */
+    int fx, fy, fw, fh;     /* Frame absolute geometry                  */
+    int sfx, sfy, sfw, sfh; /* Saved frame geometry post fullscreen     */
+    int smx, smy, smw, smh; /* Saved frame geometry post max/minimixed  */
+    int stx, sty, stw, sth; /* Saved frame geometry post tiling         */
+    int sbw;                /* Saved border width                       */
 
-    /* statuses */
+    /* Statuses */
     Bool active;
     Bool decorated;
     Bool tiled;
@@ -65,7 +65,7 @@ struct Client {
     Client *transfor;
     Transient *transients;
 
-    /* internals */
+    /* Internals */
     Monitor *monitor;
 
     Client *prev;

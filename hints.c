@@ -21,7 +21,7 @@ GetWMName(Window w, char **name)
     if (!XGetTextProperty(stDisplay, w, &p, stAtoms[AtomNetWMName])
             || !p.nitems)
         if (!XGetTextProperty(stDisplay, w, &p, XA_WM_NAME) || !p.nitems) {
-            *name = strdup("Error");
+            *name = strdup("-_-");
             return;
         }
 

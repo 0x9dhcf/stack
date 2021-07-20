@@ -12,9 +12,9 @@ typedef struct Shortcut {
     unsigned long keysym;
     enum {CV, CI, CC} type;
     union {
-        struct { void (*f)(); } vcb;
-        struct { void (*f)(int); int i; } icb;
-        struct { void (*f)(Client *); } ccb;
+        struct { void (*f)(); } vcb;            /* Void callback        */
+        struct { void (*f)(int); int i; } icb;  /* Integer callback     */
+        struct { void (*f)(Client *); } ccb;    /* Client callback      */
     } cb;
 } Shortcut;
 
@@ -26,6 +26,7 @@ typedef struct Config {
     int handleWidth;
     int buttonSize;
     int buttonGap;
+    int activeTileBackground;
     int activeBackground;
     int activeForeground;
     int inactiveBackground;

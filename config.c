@@ -9,44 +9,50 @@
 #include "stack.h"
 
 Config stConfig = {
-    /* globals */
-    .labelFontname = "Sans-10",
-    .iconFontname = " Material Icons Sharp:style=Regular:antialias=true:pixelsize=16",
+    /* Globals */
+    .labelFontname  = "Sans-10",
+    .iconFontname   = "Material Icons Sharp:style=Regular:antialias=true:pixelsize=16",
     /*.iconFontname = "Sans:antialias=true:size=10",*/
 
-    /* toplevel windows */
-    .borderWidth    = 1,
-    .topbarHeight   = 32,
+    /* Toplevel windows */
+    .borderWidth    = 2,
+    .topbarHeight   = 30,
     .handleWidth    = 6,
-    .buttonSize     = 32,
+    .buttonSize     = 30,
     .buttonGap      = 4,
-    .activeBackground                   = 0xD8D8D8,
+    .activeTileBackground               = 0X2869D1,
+    //.activeBackground                   = 0xD8D8D8,
+    .activeBackground                   = 0xC8C8C8,
     .activeForeground                   = 0x202020,
     .inactiveBackground                 = 0xE8E8E8,
     .inactiveForeground                 = 0x808080,
     .urgentBackground                   = 0xFF0000,
     .urgentForeground                   = 0x202020,
 
-    /* buttons */
+    /* Buttons */
     .buttonStyles = {
-        /* close */
+        /* Close */
         {
             /*.icon                       = "C",*/
             .icon                       = "\ue5cd",
-            .activeBackground           = 0xD8D8D8,
+            //.activeBackground           = 0xD8D8D8,
+            .activeBackground           = 0xC8C8C8,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xE8E8E8,
             .inactiveForeground         = 0x808080,
             .activeHoveredBackground    = 0xFC4138,
+            //.activeHoveredBackground    = 0x2869D1,
             .activeHoveredForeground    = 0xFFFFFF,
             .inactiveHoveredBackground  = 0xFC4138,
+            //.inactiveHoveredBackground  = 0x2869D1,
             .inactiveHoveredForeground  = 0xFFFFFF
         },
-        /* maximize */
+        /* Maximize */
         {
             /*.icon                       = "M",*/
             .icon                       = "\ue835",
-            .activeBackground           = 0xD8D8D8,
+            //.activeBackground           = 0xD8D8D8,
+            .activeBackground           = 0xC8C8C8,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xE8E8E8,
             .inactiveForeground         = 0x808080,
@@ -55,11 +61,12 @@ Config stConfig = {
             .inactiveHoveredBackground  = 0xF8F8F8,
             .inactiveHoveredForeground  = 0x202020
         },
-        /* minimize */
+        /* Minimize */
         {
             /*.icon                       = "H",*/
             .icon                       = "\ue931",
-            .activeBackground           = 0xD8D8D8,
+            //.activeBackground           = 0xD8D8D8,
+            .activeBackground           = 0xC8C8C8,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xE8E8E8,
             .inactiveForeground         = 0x808080,
@@ -70,9 +77,9 @@ Config stConfig = {
         },
     },
 
-    /* dynamic desktops */
-    .masters = 1,
-    .split = .6,
+    /* Dynamic desktops */
+    .masters    = 1,
+    .split      = .6,
 
     .shortcuts = {
         { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Stop} } },

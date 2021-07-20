@@ -8,7 +8,7 @@
 typedef struct Client Client;
 
 typedef struct Desktop {
-    int wx, wy, ww, wh; /* the working area geometry    */
+    int wx, wy, ww, wh; /* The working area geometry    */
     Bool dynamic;
     int masters;
     float split;
@@ -16,13 +16,13 @@ typedef struct Desktop {
 } Desktop;
 
 typedef struct Monitor {
-    int x, y, w, h;     /* the geometry of the monitor  */
+    int x, y, w, h;     /* The geometry of the monitor  */
 
     Desktop desktops[DesktopCount];
     int activeDesktop;
 
-    Client *chead;      /* clients list head            */
-    Client *ctail;      /* clients list tail            */
+    Client *chead;      /* Clients list head            */
+    Client *ctail;      /* Clients list tail            */
     struct Monitor *next;
 } Monitor;
 
@@ -30,6 +30,7 @@ extern Monitor *stMonitors;
 
 void InitializeMonitors();
 void TeardownMonitors();
+
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
 Client *NextClient(Monitor *m, Client *c);

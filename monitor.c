@@ -12,7 +12,6 @@
 
 static void PushClientFront(Monitor *m, Client *c);
 static void PushClientBack(Monitor *m, Client *c);
-static void RemoveClient(Monitor *m, Client *c);
 
 Monitor *stMonitors = NULL;
 
@@ -96,10 +95,6 @@ TeardownMonitors()
     Monitor *m = stMonitors;
     while (m) {
         Monitor *p = m->next;
-        //XXX TO MOVE
-        //for (Client *c = m->chead, *d = c ? c->next : 0; c;
-        //        c = d, d = c ? c->next : 0)
-        //    RemoveClient(m, c); /* should not happen */
         free(m);
         m = p;
     }
@@ -125,7 +120,23 @@ void
 DetachClientFromMonitor(Monitor *m, Client *c)
 {
     int desktop = c->desktop;
-    RemoveClient(m, c);
+
+    if (c->monitor != m)
+        return;
+
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        m->chead = c->next;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        m->ctail = c->prev;
+
+    c->next = NULL;
+    c->prev = NULL;
+
     RemoveClientFromDesktop(m, c, c->desktop);
     c->monitor = NULL;
     if ((c->strut.right 
@@ -283,7 +294,9 @@ Restack(Monitor *m)
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
         for (c = m->chead; c; c = c->next)
-            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed))
+            if (c->desktop == m->activeDesktop
+                    && !(c->types & NetWMTypeFixed)
+                    && !c->transfor)
                 n++;
 
         Desktop *d =  &m->desktops[m->activeDesktop];
@@ -293,7 +306,9 @@ Restack(Monitor *m)
             mw = d->ww;
 
         for (c = m->chead; c; c = c->next) {
-            if (c->desktop == m->activeDesktop && !(c->types & NetWMTypeFixed)) {
+            if (c->desktop == m->activeDesktop
+                    && !(c->types & NetWMTypeFixed)
+                    && !c->transfor) {
                 if (i < d->masters) {
                     int w = (mw - mx) / (Min(n, d->masters) - i);
                     TileClient(c, d->wx + mx, d->wy, w, d->wh);
@@ -317,26 +332,6 @@ Restack(Monitor *m)
             else
                 HideClient(c);
     }
-}
-
-void
-RemoveClient(Monitor *m, Client *c)
-{
-    if (c->monitor != m)
-        return;
-
-    if (c->prev)
-          c->prev->next = c->next;
-    else
-        m->chead = c->next;
-
-    if (c->next)
-        c->next->prev = c->prev;
-    else
-        m->ctail = c->prev;
-
-    c->next = NULL;
-    c->prev = NULL;
 }
 
 void
