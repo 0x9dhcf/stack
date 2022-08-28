@@ -387,7 +387,6 @@ SetClientActive(Client *c, Bool b)
     if (!b && c->active) {
         c->active = b;
         RefreshClient(c);
-        XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow]);
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; i++)
                 XUngrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window);

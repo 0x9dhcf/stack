@@ -21,7 +21,7 @@ GetWMName(Window w, char **name)
     if (!XGetTextProperty(stDisplay, w, &p, stAtoms[AtomNetWMName])
             || !p.nitems)
         if (!XGetTextProperty(stDisplay, w, &p, XA_WM_NAME) || !p.nitems) {
-            *name = strdup("-_-");
+            *name = strdup("Error");
             return;
         }
 
@@ -30,7 +30,7 @@ GetWMName(Window w, char **name)
     } else {
         char **list = NULL;
         int n;
-        if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) == Success
+        if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) >= Success
                 && n > 0 && *list) {
             if (n > 1) {
                 XTextProperty p2;

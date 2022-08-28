@@ -45,7 +45,7 @@
         | LeaveWindowMask)
 
 #define CleanMask(mask)\
-    (mask & ~(stNumLockMask|LockMask) &\
+    ((mask) & ~(stNumLockMask|LockMask) &\
          ( ShiftMask\
          | ControlMask\
          | Mod1Mask\
@@ -54,7 +54,7 @@
          | Mod4Mask\
          | Mod5Mask))
 
-static char    *terminal[] = {"uxterm", NULL};
+static char    *terminal[] = {"st", NULL};
 static int      lastSeenPointerX;
 static int      lastSeenPointerY;
 static Time     lastSeenPointerTime;
@@ -411,7 +411,7 @@ ManageWindow(Window w, Bool exists)
         XMapWindow(stDisplay, w);
 
     /* windows with EWMH type fixed are neither moveable,
-     * resizable nor decorated.  While windows fixed by ICCCM normals 
+     * resizable nor decorated.  While windows fixed by ICCCM normals
      * are decorated and moveable but not resizable) */
     if (!(c->types & NetWMTypeFixed)) {
         /* topbar */
@@ -518,7 +518,7 @@ ForgetWindow(Window w, Bool survives)
             XDestroyWindow(stDisplay, c->topbar);
         }
 
-        if (!(c->types & NetWMTypeFixed) 
+        if (!(c->types & NetWMTypeFixed)
                 && (c->normals.minw != c->normals.maxw
                     && c->normals.minh != c->normals.maxh)) {
             for (int i = 0; i < HandleCount; ++i)
@@ -578,6 +578,9 @@ SetActiveClient(Client *c)
         RaiseClient(stActiveClient);
         SetNetWMStates(stActiveClient->window, stActiveClient->states);
         c->monitor->desktops[c->desktop].activeOnLeave = c;
+        XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow],
+                XA_WINDOW, 32, PropModeReplace, (unsigned char *) &c->window,
+                1);
     }
 }
 
@@ -589,11 +592,11 @@ FindNextActiveClient()
 
     if (stActiveClient)
         head = stActiveClient;
-    else 
+    else
         head = stActiveMonitor->chead;
 
     /* use the last active client if valid */
-    if (lastActiveClient 
+    if (lastActiveClient
             && lastActiveClient->desktop == stActiveMonitor->activeDesktop
             && !(lastActiveClient->states & NetWMStateHidden)) {
         nc = lastActiveClient;
@@ -610,10 +613,13 @@ FindNextActiveClient()
             && nc->types & NetWMTypeNormal
             && !(nc->states & NetWMStateHidden)) {
         SetActiveClient(nc);
-    } else if (stActiveClient) {
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = NULL;
-        SetClientActive(stActiveClient, False);
-        stActiveClient = NULL;
+    } else {
+        XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow]);
+        if (stActiveClient) {
+            stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = NULL;
+            SetClientActive(stActiveClient, False);
+            stActiveClient = NULL;
+        }
     }
 }
 
@@ -733,7 +739,7 @@ ShowDesktop(int desktop)
     /* Restore the active client if any */
     if (stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave)
         SetActiveClient(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave);
-    else 
+    else
         FindNextActiveClient();
 
     Restack(stActiveMonitor);
@@ -775,7 +781,7 @@ AddMaster(int nb)
 {
     if (stActiveMonitor
             && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters = 
+        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters =
             Max(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters + nb, 1);
         Restack(stActiveMonitor);
     }
@@ -833,7 +839,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
             xce.border_width = 0;
             xce.above = None;
             xce.override_redirect = 0;
-            XSendEvent(stDisplay, e->window, False, SubstructureNotifyMask, (XEvent*)&e);
+            XSendEvent(stDisplay, e->window, False, SubstructureNotifyMask, (XEvent*)&xce);
             XSync(stDisplay, False);
         }
 
@@ -999,7 +1005,7 @@ OnMotionNotify(XMotionEvent *e)
     if (c->tiled) {
         if (e->window == c->handles[HandleWest]
                 || e->window == c->handles[HandleEast]) {
-            c->monitor->desktops[c->desktop].split = 
+            c->monitor->desktops[c->desktop].split =
                 (e->x_root - c->monitor->x) / (float)c->monitor->w;
             Restack(c->monitor);
         }
@@ -1038,10 +1044,10 @@ OnMotionNotify(XMotionEvent *e)
 void
 OnMessage(XClientMessageEvent *e)
 {
-    /* TODO: root active window and Curent desktop 
+    /* TODO: root active window and Curent desktop
      * Especially since we have advertised supported actions
      * _NET_CLOSE_WINDOW
-     * _NET_MOVERESIZE_WINDOW 
+     * _NET_MOVERESIZE_WINDOW
      * _NET_WM_MOVERESIZE
      * _NET_RESTACK_WINDOW */
 
@@ -1091,7 +1097,7 @@ OnEnter(XCrossingEvent *e)
     Client *c = Lookup(e->window);
 
     if (c) {
-        /* TODO: should be configurable */ 
+        /* TODO: should be configurable */
         if (c->tiled && e->window == c->frame)
             SetActiveClient(c);
         for (int i = 0; i < ButtonCount; ++i)
@@ -1118,7 +1124,7 @@ OnKeyPress(XKeyPressedEvent *e)
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
 
     /* there is no key binding in stack (see xbindeys or such for that)
-     * , but might usefull to get a terminal */ 
+     * , but might usefull to get a terminal */
     if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
         Spawn((char**)terminal);
 

@@ -12,7 +12,7 @@ DEPS = x11 xrandr xft
 
 CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
 CFLAGS 		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
-LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}` 
+LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}`
 
 SRC = client.c\
 	  config.c\
