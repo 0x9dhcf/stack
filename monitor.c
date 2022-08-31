@@ -104,15 +104,23 @@ void
 AttachClientToMonitor(Monitor *m, Client *c)
 {
     c->monitor = m;
-    PushClientFront(m, c);
+    
+    if (c->transfor && c->transfor != m->chead) {
+        c->next = c->transfor;
+        c->prev = c->transfor->prev;
+        c->transfor->prev->next = c;
+        c->transfor->prev = c;
+    } else {
+        PushClientFront(m, c);
+    }
 
     AddClientToDesktop(m, c, m->activeDesktop);
 
     if ((c->strut.right
-                || c->strut.left
-                || c->strut.top
-                || c->strut.bottom
-                || m->desktops[m->activeDesktop].dynamic))
+            || c->strut.left
+            || c->strut.top
+            || c->strut.bottom
+            || m->desktops[m->activeDesktop].dynamic))
         Restack(m);
 }
 
@@ -337,12 +345,6 @@ Restack(Monitor *m)
                 ShowClient(c);
             else 
                 HideClient(c);
-
-        /* Make sure fullscreens are on top */
-        for (Client *c = m->chead; c; c = c->next)
-            if (c->desktop == m->activeDesktop
-                    && (c->states & NetWMStateFullscreen))
-                RaiseClient(c);
     }
 }
 

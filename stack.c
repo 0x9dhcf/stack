@@ -605,14 +605,14 @@ SetActiveClient(Client *c)
         if (stActiveClient && stActiveClient != c) {
             lastActiveClient = stActiveClient;
             SetClientActive(stActiveClient, False);
-            LowerClient(stActiveClient);
+            stActiveClient->states |= NetWMStateBelow;
+            stActiveClient->states &= ~NetWMStateAbove;
             SetNetWMStates(stActiveClient->window, stActiveClient->states);
         }
 
         SetClientActive(c, True);
         stActiveClient = c;
         RaiseClient(stActiveClient);
-        SetNetWMStates(stActiveClient->window, stActiveClient->states);
         c->monitor->desktops[c->desktop].activeOnLeave = c;
         XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow],
                 XA_WINDOW, 32, PropModeReplace, (unsigned char *) &c->window,
@@ -696,6 +696,9 @@ ActivatePrev()
 void
 MoveForward()
 {
+    if (stActiveClient && stActiveClient->transfor)
+        return;
+
     if (stActiveMonitor
             && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
 
@@ -729,6 +732,9 @@ MoveForward()
 void
 MoveBackward()
 {
+    if (stActiveClient && stActiveClient->transfor)
+        return;
+
     if (stActiveMonitor
             && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
 
@@ -880,7 +886,6 @@ OnConfigureRequest(XConfigureRequestEvent *e)
                 RaiseClient(c);
             if (e->detail == Below || e->detail == BottomIf)
                 LowerClient(c);
-            SetNetWMStates(c->window, c->states);
         }
     }
 }
