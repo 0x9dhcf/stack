@@ -7,9 +7,11 @@
 #include "x11.h"
 
 static char* xatoms[] =  {
+    "WM_STATE",
     "WM_DELETE_WINDOW",
     "WM_TAKE_FOCUS",
     "WM_PROTOCOLS",
+    "_MOTIF_WM_HINTS",
     "_NET_SUPPORTED",
     "_NET_CLIENT_LIST",
     "_NET_CLIENT_LIST_STACKING",
@@ -192,7 +194,7 @@ WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y)
     Colormap cm = DefaultColormap(stDisplay, 0);
 
     draw = XftDrawCreate(stDisplay, d, v, cm);
-      
+
     char name[] = "#ffffff";
     snprintf(name, sizeof(name), "#%06X", color);
     XftColorAllocName(stDisplay, DefaultVisual(stDisplay,

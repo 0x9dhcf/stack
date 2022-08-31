@@ -16,7 +16,7 @@ typedef struct Desktop {
 } Desktop;
 
 typedef struct Monitor {
-    int x, y, w, h;     /* The geometry of the monitor  */
+    int x, y, w, h; /* The geometry of the monitor  */
 
     Desktop desktops[DesktopCount];
     int activeDesktop;

@@ -40,12 +40,13 @@ struct Client {
     Window handles[HandleCount];
 
     /* Geometries */
-    int wx, wy, ww, wh;     /* Window absolute geometry                 */
-    int fx, fy, fw, fh;     /* Frame absolute geometry                  */
-    int sfx, sfy, sfw, sfh; /* Saved frame geometry post fullscreen     */
-    int smx, smy, smw, smh; /* Saved frame geometry post max/minimixed  */
-    int stx, sty, stw, sth; /* Saved frame geometry post tiling         */
-    int sbw;                /* Saved border width                       */
+    int wx, wy, ww, wh;     /* Window absolute geometry                     */
+    int fx, fy, fw, fh;     /* Frame absolute geometry                      */
+    int sfx, sfy, sfw, sfh; /* Saved frame geometry before fullscreen       */
+    int smx, smy, smw, smh; /* Saved frame geometry before max/minimixed    */
+    int shx, shy, shw, shh; /* saved frame geometry before minimixed        */
+    int stx, sty, stw, sth; /* Saved frame geometry before tiling           */
+    int sbw;                /* Saved border width                           */
 
     /* Statuses */
     Bool active;
@@ -64,6 +65,7 @@ struct Client {
     NetWMStates states;
     Client *transfor;
     Transient *transients;
+    MotifHints motifs;
 
     /* Internals */
     Monitor *monitor;

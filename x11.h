@@ -6,9 +6,13 @@
 
 enum AtomType {
     /* icccm */
+    AtomWMState,
     AtomWMDeleteWindow,
     AtomWMTakeFocus,
     AtomWMProtocols,
+
+    /* motif */
+    AtomMotifWMHints,
 
     /* ewmh */
     AtomNetSupported,

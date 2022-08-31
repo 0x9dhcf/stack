@@ -15,64 +15,55 @@ Config stConfig = {
     /*.iconFontname = "Sans:antialias=true:size=10",*/
 
     /* Toplevel windows */
-    .borderWidth    = 2,
-    .topbarHeight   = 30,
+    .borderWidth    = 1,
+    .topbarHeight   = 28,
     .handleWidth    = 6,
-    .buttonSize     = 30,
+    .buttonSize     = 28,
     .buttonGap      = 4,
-    .activeTileBackground               = 0X2869D1,
-    //.activeBackground                   = 0xD8D8D8,
-    .activeBackground                   = 0xC8C8C8,
+    .activeTileBackground               = 0x005077,
+    .inactiveTileBackground             = 0x444444,
+    .activeBackground                   = 0xE0E0E0,
     .activeForeground                   = 0x202020,
-    .inactiveBackground                 = 0xE8E8E8,
-    .inactiveForeground                 = 0x808080,
+    .inactiveBackground                 = 0xA0A0A0,
+    .inactiveForeground                 = 0x202020,
     .urgentBackground                   = 0xFF0000,
     .urgentForeground                   = 0x202020,
-
     /* Buttons */
     .buttonStyles = {
-        /* Close */
+        /* close */
         {
-            /*.icon                       = "C",*/
             .icon                       = "\ue5cd",
-            //.activeBackground           = 0xD8D8D8,
-            .activeBackground           = 0xC8C8C8,
+            .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
-            .inactiveBackground         = 0xE8E8E8,
-            .inactiveForeground         = 0x808080,
+            .inactiveBackground         = 0xA0A0A0,
+            .inactiveForeground         = 0x202020,
             .activeHoveredBackground    = 0xFC4138,
-            //.activeHoveredBackground    = 0x2869D1,
-            .activeHoveredForeground    = 0xFFFFFF,
+            .activeHoveredForeground    = 0xE0E0E0,
             .inactiveHoveredBackground  = 0xFC4138,
-            //.inactiveHoveredBackground  = 0x2869D1,
-            .inactiveHoveredForeground  = 0xFFFFFF
+            .inactiveHoveredForeground  = 0xE0E0E0
         },
-        /* Maximize */
+        /* maximize */
         {
-            /*.icon                       = "M",*/
             .icon                       = "\ue835",
-            //.activeBackground           = 0xD8D8D8,
-            .activeBackground           = 0xC8C8C8,
+            .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
-            .inactiveBackground         = 0xE8E8E8,
-            .inactiveForeground         = 0x808080,
-            .activeHoveredBackground    = 0xF8F8F8,
+            .inactiveBackground         = 0xA0A0A0,
+            .inactiveForeground         = 0x202020,
+            .activeHoveredBackground    = 0xF0F0F0,
             .activeHoveredForeground    = 0x202020,
-            .inactiveHoveredBackground  = 0xF8F8F8,
+            .inactiveHoveredBackground  = 0xB0B0B0,
             .inactiveHoveredForeground  = 0x202020
         },
-        /* Minimize */
+        /* minimize */
         {
-            /*.icon                       = "H",*/
             .icon                       = "\ue931",
-            //.activeBackground           = 0xD8D8D8,
-            .activeBackground           = 0xC8C8C8,
+            .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
-            .inactiveBackground         = 0xE8E8E8,
-            .inactiveForeground         = 0x808080,
-            .activeHoveredBackground    = 0xF8F8F8,
+            .inactiveBackground         = 0xA0A0A0,
+            .inactiveForeground         = 0x202020,
+            .activeHoveredBackground    = 0xF0F0F0,
             .activeHoveredForeground    = 0x202020,
-            .inactiveHoveredBackground  = 0xF8F8F8,
+            .inactiveHoveredBackground  = 0xB0B0B0,
             .inactiveHoveredForeground  = 0x202020,
         },
     },
@@ -92,7 +83,9 @@ Config stConfig = {
         { Modkey,                 XK_Up,        CC,     { .ccb={MaximizeClient} } },
         { Modkey,                 XK_Down,      CC,     { .ccb={RestoreClient} } },
         { Modkey,                 XK_Tab,       CV,     { .vcb={ActivateNext} } },
+        { Modkey,                 XK_Right,     CV,     { .vcb={ActivateNext} } },
         { Modkey | ShiftMask,     XK_Tab,       CV,     { .vcb={ActivatePrev} } },
+        { Modkey,                 XK_Left,      CV,     { .vcb={ActivatePrev} } },
         { Modkey,                 XK_1,         CI,     { .icb={ShowDesktop, 0} } },
         { Modkey,                 XK_2,         CI,     { .icb={ShowDesktop, 1} } },
         { Modkey,                 XK_3,         CI,     { .icb={ShowDesktop, 2} } },

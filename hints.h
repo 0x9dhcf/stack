@@ -133,6 +133,14 @@ typedef struct WMStrut {
     int bottom;
 } WMStrut;
 
+typedef struct MotifHints {
+    long flags;
+    long functions;
+    long decorations;
+    long input_mode;
+    long state;
+} MotifHints;
+
 void GetWMName(Window w, char **name);
 void GetWMHints(Window w, WMHints *h);
 void GetWMProtocols(Window w, WMProtocols *h);
@@ -143,6 +151,7 @@ void GetNetWMWindowType(Window w, NetWMWindowType *h);
 void GetNetWMStates(Window w, NetWMStates *h);
 void SetNetWMAllowedActions(Window w, NetWMActions a);
 void SetNetWMStates(Window w, NetWMStates h);
+void GetMotifHints(Window w, MotifHints *h);
 void SendMessage(Window w, Atom a);
 
 #endif

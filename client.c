@@ -31,7 +31,7 @@ ShowClient(Client *c)
 {
     if ((c->types & NetWMTypeFixed) || IsFixed(c->normals))
         MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
-    else 
+    else
         MoveResizeClientFrame(c,
                 Max(c->fx, c->monitor->desktops[c->desktop].wx),
                 Max(c->fy, c->monitor->desktops[c->desktop].wy),
@@ -171,7 +171,6 @@ TileClient(Client *c, int x, int y, int w, int h)
 {
     SaveGeometries(c);
     c->tiled = True;
-    //c->decorated = False;
     MoveResizeClientFrame(c, x, y, w, h, False);
 }
 
@@ -301,28 +300,29 @@ FullscreenClient(Client *c)
 void
 RestoreClient(Client *c)
 {
+    SetNetWMStates(c->window, c->states);
+
     if (c->states & NetWMStateFullscreen) {
         c->decorated = True;
         c->states &= ~NetWMStateFullscreen;
-        if (c->tiled)
-            Restack(c->monitor);
-        else 
+        if (!c->tiled)
             MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
-    } else if (c->states & (NetWMStateMaximized | NetWMStateHidden)) {
-        c->states &= ~NetWMStateMaximized;
+    } else if (c->states & NetWMStateHidden) {
         c->states &= ~NetWMStateHidden;
-        if (c->tiled)
-            Restack(c->monitor);
-        else
+        if (!c->tiled)
+            MoveResizeClientFrame(c, c->shx, c->shy, c->shw, c->shh, False);
+    } else if (c->states & NetWMStateMaximized) {
+        c->states &= ~NetWMStateMaximized;
+        if (!c->tiled)
             MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     } else if (c->tiled) {
-        //c->decorated = True;
+        c->decorated = True;
         c->tiled = False;
         MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
 
     SetNetWMStates(c->window, c->states);
-} 
+}
 
 void
 RaiseClient(Client *c)
@@ -417,8 +417,8 @@ RefreshClientButton(Client *c, int button, Bool hovered)
             bg = stConfig.buttonStyles[button].inactiveBackground;
             fg = stConfig.buttonStyles[button].inactiveForeground;
         }
-    } 
-    
+    }
+
     XSetWindowBackground(stDisplay, c->buttons[button], bg);
     XClearWindow(stDisplay, c->buttons[button]);
     GetTextPosition(stConfig.buttonStyles[button].icon, stIconFont,
@@ -446,9 +446,9 @@ RefreshClient(Client *c)
         bg = c->tiled ?  stConfig.activeTileBackground : stConfig.activeBackground;
         fg = stConfig.activeForeground;
     } else {
-        bg = stConfig.inactiveBackground;
+        bg = c->tiled ?  stConfig.inactiveTileBackground : stConfig.inactiveBackground;
         fg = stConfig.inactiveForeground;
-    } 
+    }
 
     XSetWindowBackground(stDisplay, c->frame, bg);
     XClearWindow(stDisplay, c->frame);
@@ -527,7 +527,8 @@ Configure(Client *c)
                 stConfig.topbarHeight);
         for (int i = 0; i < ButtonCount; ++i) {
             XMoveResizeWindow(stDisplay, c->buttons[i],
-                    c->fw - ((i+1) * (stConfig.buttonSize) + i * stConfig.buttonGap),
+                    c->fw - 2 * stConfig.borderWidth
+                    - ((i+1) * (stConfig.buttonSize) + i * stConfig.buttonGap),
                     (stConfig.topbarHeight - stConfig.buttonSize) / 2,
                     stConfig.buttonSize, stConfig.buttonSize);
         }
@@ -574,11 +575,18 @@ SaveGeometries(Client *c)
         c->sfw = c->fw;
         c->sfh = c->fh;
     }
-    if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized | NetWMStateHidden))) {
+    //if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized | NetWMStateHidden))) {
+    if (!(c->states & NetWMStateMaximized)) {
         c->smx = c->fx;
         c->smy = c->fy;
         c->smw = c->fw;
         c->smh = c->fh;
+    }
+    if (!(c->states & NetWMStateHidden)) {
+        c->shx = c->fx;
+        c->shy = c->fy;
+        c->shw = c->fw;
+        c->shh = c->fh;
     }
 }
 

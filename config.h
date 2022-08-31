@@ -3,7 +3,7 @@
 
 #define Modkey Mod1Mask
 #define DesktopCount 8
-#define ShortcutCount 32
+#define ShortcutCount 34
 
 typedef struct Client Client;
 
@@ -27,6 +27,7 @@ typedef struct Config {
     int buttonSize;
     int buttonGap;
     int activeTileBackground;
+    int inactiveTileBackground;
     int activeBackground;
     int activeForeground;
     int inactiveBackground;

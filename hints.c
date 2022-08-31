@@ -391,6 +391,30 @@ SetNetWMStates(Window w, NetWMStates h)
 }
 
 void
+GetMotifHints(Window w, MotifHints *h)
+{
+    Atom type;
+    int format, status;
+    unsigned long num_items, bytes_after;
+    Atom *prop;
+
+    memset(h, 0, sizeof(MotifHints));
+    prop = NULL;
+    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomMotifWMHints], 0, 5,
+            False, stAtoms[AtomMotifWMHints], &type, &format, &num_items, &bytes_after,
+            (unsigned char**)&prop);
+
+    if ((status == Success) && prop && num_items > 4) {
+        h->flags = prop[0];
+        h->functions = prop[1];
+        h->decorations = prop[2];
+        h->input_mode = prop[3];
+        h->state = prop[4];
+        XFree(prop);
+    }
+}
+
+void
 SendMessage(Window w, Atom a)
 {
     XEvent e;

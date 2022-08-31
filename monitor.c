@@ -108,10 +108,10 @@ AttachClientToMonitor(Monitor *m, Client *c)
 
     AddClientToDesktop(m, c, m->activeDesktop);
 
-    if ((c->strut.right 
+    if ((c->strut.right
                 || c->strut.left
                 || c->strut.top
-                || c->strut.bottom 
+                || c->strut.bottom
                 || m->desktops[m->activeDesktop].dynamic))
         Restack(m);
 }
@@ -139,11 +139,11 @@ DetachClientFromMonitor(Monitor *m, Client *c)
 
     RemoveClientFromDesktop(m, c, c->desktop);
     c->monitor = NULL;
-    if ((c->strut.right 
+    if ((c->strut.right
                 || c->strut.left
                 || c->strut.top
-                || c->strut.bottom 
-                || (desktop == m->activeDesktop 
+                || c->strut.bottom
+                || (desktop == m->activeDesktop
                     && m->desktops[m->activeDesktop].dynamic)))
         Restack(m);
 }
@@ -230,8 +230,10 @@ AddClientToDesktop(Monitor *m, Client *c, int d)
     }
 
     c->desktop = d;
-    if (c->tiled && !m->desktops[d].dynamic)
+    if (c->tiled && !m->desktops[d].dynamic) {
         RestoreClient(c);
+        Restack(c->monitor);
+    }
 
     if (!(c->types & NetWMTypeFixed))
         MoveResizeClientFrame(c,
@@ -288,8 +290,9 @@ SetActiveDesktop(Monitor *m, int desktop)
 void
 Restack(Monitor *m)
 {
-    /* if dynamic mode is enable retile the desktop */
+    /* if dynamic mode is enabled re tile the desktop */
     if (m->desktops[m->activeDesktop].dynamic) {
+        XEvent e;
         Client *c;
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
@@ -325,12 +328,21 @@ Restack(Monitor *m)
                 HideClient(c);
             }
         }
+        /* Avoid having enter notify event changing active client */
+        XSync(stDisplay, False);
+        while (XCheckMaskEvent(stDisplay, EnterWindowMask, &e));
     } else {
         for (Client *c = m->chead; c; c = c->next)
             if (c->desktop == m->activeDesktop)
                 ShowClient(c);
-            else
+            else 
                 HideClient(c);
+
+        /* Make sure fullscreens are on top */
+        for (Client *c = m->chead; c; c = c->next)
+            if (c->desktop == m->activeDesktop
+                    && (c->states & NetWMStateFullscreen))
+                RaiseClient(c);
     }
 }
 
