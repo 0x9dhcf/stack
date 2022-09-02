@@ -695,7 +695,10 @@ ActivateNext()
                 nc = NextClient(activeMonitor, nc));
 
         if (nc) {
-            cycling = True;
+            if (! nc->tiled)
+                cycling = True;
+            else
+                cycling = True;
             SetActiveClient(nc);
         }
     }
@@ -714,7 +717,10 @@ ActivatePrev()
                 pc = PreviousClient(activeMonitor, pc));
 
         if (pc) {
-            cycling = True;
+            if (! pc->tiled)
+                cycling = True;
+            else
+                cycling = True;
             SetActiveClient(pc);
         }
     }
@@ -1217,7 +1223,10 @@ OnKeyRelease(XKeyReleasedEvent *e)
     KeySym keysym;
     
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
-    if (keysym == (ModkeySym) && activeClient && cycling) {
+    if (keysym == (ModkeySym) 
+            && activeClient
+            && cycling
+            && !activeClient->tiled) {
         MoveClientBefore(activeClient->monitor, activeClient,
                 activeClient->monitor->chead);
         cycling = False;
