@@ -177,6 +177,9 @@ PreviousClient(Monitor *m, Client *c)
 void
 MoveClientAfter(Monitor *m, Client *c, Client *after)
 {
+    if (c == after)
+        return;
+
     /* remove c */
     if (c->prev)
           c->prev->next = c->next;
@@ -201,6 +204,9 @@ MoveClientAfter(Monitor *m, Client *c, Client *after)
 void
 MoveClientBefore(Monitor *m, Client *c, Client *before)
 {
+    if (c == before)
+        return;
+
     /* remove c */
     if (c->prev)
           c->prev->next = c->next;

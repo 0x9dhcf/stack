@@ -62,9 +62,11 @@ static int      motionStartX;
 static int      motionStartY;
 static int      motionStartW;
 static int      motionStartH;
-static Monitor *stActiveMonitor;
-static Client  *stActiveClient;
-static Bool     stRunning;
+static Bool     cycling;
+
+static Monitor *activeMonitor;
+static Client  *activeClient;
+static Bool     running;
 
 static int      WMDetectedErrorHandler(Display *d, XErrorEvent *e);
 static int      EventLoopErrorHandler(Display *d, XErrorEvent *e);
@@ -87,11 +89,12 @@ static void     OnButtonRelease(XButtonEvent *e);
 static void     OnMotionNotify(XMotionEvent *e);
 static void     OnMessage(XClientMessageEvent *e);
 static void     OnKeyPress(XKeyPressedEvent *e);
+static void     OnKeyRelease(XKeyReleasedEvent *e);
 static void     Spawn(char **args);
 
 static XErrorHandler defaultErrorHandler;
 static Window supportingWindow;
-static Client *lastActiveClient = NULL;
+static Client *laactiveClient = NULL;
 
 int
 WMDetectedErrorHandler(Display *d, XErrorEvent *e)
@@ -156,7 +159,7 @@ Start()
     if (! stMonitors)
         FLog("no monitor detected.");
 
-    stActiveMonitor = stMonitors;
+    activeMonitor = stMonitors;
 
     defaultErrorHandler = XSetErrorHandler(EventLoopErrorHandler);
 
@@ -234,10 +237,17 @@ Start()
         for (int j = 0; j < 4; ++j)
             XGrabKey(stDisplay, code, Modkey | ShiftMask | modifiers[j],
                     stRoot, True, GrabModeSync, GrabModeAsync);
-    if ((code = XKeysymToKeycode(stDisplay, XK_p)))
+
+    if ((code = XKeysymToKeycode(stDisplay, ModkeySym)))
         for (int j = 0; j < 4; ++j)
-            XGrabKey(stDisplay, code, Modkey | modifiers[j],
+            XGrabKey(stDisplay, code, modifiers[j],
                     stRoot, True, GrabModeSync, GrabModeAsync);
+    
+    // No dmenu launcher anymore
+    // if ((code = XKeysymToKeycode(stDisplay, XK_p)))
+    //     for (int j = 0; j < 4; ++j)
+    //         XGrabKey(stDisplay, code, Modkey | modifiers[j],
+    //                 stRoot, True, GrabModeSync, GrabModeAsync);
 
     for (int i = 0; i < ShortcutCount; ++i) {
         Shortcut sc = stConfig.shortcuts[i];
@@ -253,8 +263,8 @@ Start()
     XSync(stDisplay, False);
 
     xConnection = XConnectionNumber(stDisplay);
-    stRunning = True;
-    while (stRunning) {
+    running = True;
+    while (running) {
         struct timeval timeout = { 0, 2500 };
         FD_ZERO(&fdSet);
         FD_SET(xConnection, &fdSet);
@@ -304,6 +314,9 @@ Start()
                     case KeyPress:
                         OnKeyPress(&e.xkey);
                     break;
+                    case KeyRelease:
+                        OnKeyRelease(&e.xkey);
+                    break;
                 }
 
                 XFlush(stDisplay);
@@ -328,7 +341,7 @@ Start()
 void
 Stop()
 {
-    stRunning = False;
+    running = False;
 }
 
 void
@@ -385,7 +398,7 @@ ManageWindow(Window w, Bool exists)
             || (c->motifs.flags == 0x2 && c->motifs.decorations == 0)) ?
         False : True;
     c->tiled = False;
-    c->desktop = stActiveMonitor->activeDesktop;
+    c->desktop = activeMonitor->activeDesktop;
 
     /* If transient for, register the client we are transient for
      * and regiter this new client as a transient of this
@@ -489,10 +502,10 @@ ManageWindow(Window w, Bool exists)
     /* we need a first Move resize to sync the geometries before attaching */
     c->sbw = b;
     MoveResizeClientWindow(c, wx, wy, ww, wh, False);
-    AttachClientToMonitor(stActiveMonitor, c);
+    AttachClientToMonitor(activeMonitor, c);
 
     /* we can only apply structure states once attached in floating mode */
-    if (! stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
+    if (! activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
         if (c->states & NetWMStateMaximizedHorz)
             MaximizeClientHorizontally(c);
         if (c->states & NetWMStateMaximizedVert)
@@ -527,11 +540,11 @@ ForgetWindow(Window w, Bool survives)
             *tc = (*tc)->next;
         }
 
-        if (c == lastActiveClient)
-            lastActiveClient = NULL;
+        if (c == laactiveClient)
+            laactiveClient = NULL;
 
-        if (c == stActiveClient) {
-            stActiveClient = NULL;
+        if (c == activeClient) {
+            activeClient = NULL;
             FindNextActiveClient();
         }
 
@@ -612,17 +625,17 @@ void
 SetActiveClient(Client *c)
 {
     if (c) {
-        if (stActiveClient && stActiveClient != c) {
-            lastActiveClient = stActiveClient;
-            SetClientActive(stActiveClient, False);
-            stActiveClient->states |= NetWMStateBelow;
-            stActiveClient->states &= ~NetWMStateAbove;
-            SetNetWMStates(stActiveClient->window, stActiveClient->states);
+        if (activeClient && activeClient != c) {
+            laactiveClient = activeClient;
+            SetClientActive(activeClient, False);
+            activeClient->states |= NetWMStateBelow;
+            activeClient->states &= ~NetWMStateAbove;
+            SetNetWMStates(activeClient->window, activeClient->states);
         }
 
         SetClientActive(c, True);
-        stActiveClient = c;
-        RaiseClient(stActiveClient);
+        activeClient = c;
+        RaiseClient(activeClient);
         c->monitor->desktops[c->desktop].activeOnLeave = c;
         XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow],
                 XA_WINDOW, 32, PropModeReplace, (unsigned char *) &c->window,
@@ -636,35 +649,35 @@ FindNextActiveClient()
     Client *head = NULL;
     Client *nc = NULL;
 
-    if (stActiveClient)
-        head = stActiveClient;
+    if (activeClient)
+        head = activeClient;
     else
-        head = stActiveMonitor->chead;
+        head = activeMonitor->chead;
 
     /* use the last active client if valid */
-    if (lastActiveClient
-            && lastActiveClient->desktop == stActiveMonitor->activeDesktop
-            && !(lastActiveClient->states & NetWMStateHidden)) {
-        nc = lastActiveClient;
+    if (laactiveClient
+            && laactiveClient->desktop == activeMonitor->activeDesktop
+            && !(laactiveClient->states & NetWMStateHidden)) {
+        nc = laactiveClient;
     } else if (head) { /* try to find a new one */
-        for (nc = NextClient(stActiveMonitor, head);
+        for (nc = NextClient(activeMonitor, head);
                 nc != head
-                    && (nc->desktop != stActiveMonitor->activeDesktop
+                    && (nc->desktop != activeMonitor->activeDesktop
                     || !(nc->types & NetWMTypeNormal)
                     || nc->states & NetWMStateHidden);
-                nc = NextClient(stActiveMonitor, nc));
+                nc = NextClient(activeMonitor, nc));
     }
 
-    if (nc && nc->desktop == stActiveMonitor->activeDesktop
+    if (nc && nc->desktop == activeMonitor->activeDesktop
             && nc->types & NetWMTypeNormal
             && !(nc->states & NetWMStateHidden)) {
         SetActiveClient(nc);
     } else {
         XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetActiveWindow]);
-        if (stActiveClient) {
-            stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = NULL;
-            SetClientActive(stActiveClient, False);
-            stActiveClient = NULL;
+        if (activeClient) {
+            activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave = NULL;
+            SetClientActive(activeClient, False);
+            activeClient = NULL;
         }
     }
 }
@@ -672,69 +685,73 @@ FindNextActiveClient()
 void
 ActivateNext()
 {
-    Client *head = stActiveClient ? stActiveClient : stActiveMonitor->chead;
+    Client *head = activeClient ? activeClient : activeMonitor->chead;
     Client *nc = NULL;
     if (head) {
-        for (nc = NextClient(stActiveMonitor, head);
+        for (nc = NextClient(activeMonitor, head);
                 nc && nc != head
-                    && (nc->desktop != stActiveMonitor->activeDesktop
+                    && (nc->desktop != activeMonitor->activeDesktop
                     || !(nc->types & NetWMTypeNormal));
-                nc = NextClient(stActiveMonitor, nc));
+                nc = NextClient(activeMonitor, nc));
 
-        if (nc)
+        if (nc) {
+            cycling = True;
             SetActiveClient(nc);
+        }
     }
 }
 
 void
 ActivatePrev()
 {
-    Client *tail = stActiveClient ? stActiveClient : stActiveMonitor->ctail;
+    Client *tail = activeClient ? activeClient : activeMonitor->ctail;
     Client *pc = NULL;
     if (tail) {
-        for (pc = PreviousClient(stActiveMonitor, tail);
+        for (pc = PreviousClient(activeMonitor, tail);
                 pc && pc != tail
-                    && (pc->desktop != stActiveMonitor->activeDesktop
+                    && (pc->desktop != activeMonitor->activeDesktop
                     || !(pc->types & NetWMTypeNormal));
-                pc = PreviousClient(stActiveMonitor, pc));
+                pc = PreviousClient(activeMonitor, pc));
 
-        if (pc)
+        if (pc) {
+            cycling = True;
             SetActiveClient(pc);
+        }
     }
 }
 
 void
 MoveForward()
 {
-    if (stActiveClient && stActiveClient->transfor)
+    if (activeClient && activeClient->transfor)
         return;
 
-    if (stActiveMonitor
-            && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
+    if (activeMonitor
+            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
 
         Client *after = NULL;
-        for (after = stActiveClient->next;
-                        after && (after->desktop != stActiveClient->desktop
+        for (after = activeClient->next;
+                        after && (after->desktop != activeClient->desktop
                         || !(after->types & NetWMTypeNormal)
                         ||  after->states & NetWMStateHidden);
                 after = after->next);
 
         if (after) {
-            MoveClientAfter(stActiveMonitor, stActiveClient, after);
-            Restack(stActiveMonitor);
+            MoveClientAfter(activeMonitor, activeClient, after);
+            Restack(activeMonitor);
             return;
         }
 
         Client *before = NULL;
-        for (before = stActiveClient->monitor->chead;
-                        before && (before->desktop != stActiveClient->desktop
+        for (before = activeClient->monitor->chead;
+                        before && (before->desktop != activeClient->desktop
                         || !(before->types & NetWMTypeNormal)
                         ||  before->states & NetWMStateHidden);
                 before = before->next);
 
         if (before) {
-            MoveClientBefore(stActiveMonitor, stActiveClient, before);
-            Restack(stActiveMonitor);
+            MoveClientBefore(activeMonitor, activeClient, before);
+            Restack(activeMonitor);
         }
     }
 }
@@ -742,35 +759,35 @@ MoveForward()
 void
 MoveBackward()
 {
-    if (stActiveClient && stActiveClient->transfor)
+    if (activeClient && activeClient->transfor)
         return;
 
-    if (stActiveMonitor
-            && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
+    if (activeMonitor
+            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
 
         Client *before = NULL;
-        for (before = stActiveClient->prev;
-                        before && (before->desktop != stActiveClient->desktop
+        for (before = activeClient->prev;
+                        before && (before->desktop != activeClient->desktop
                         || !(before->types & NetWMTypeNormal)
                         ||  before->states & NetWMStateHidden);
                 before = before->prev);
 
         if (before) {
-            MoveClientBefore(stActiveMonitor, stActiveClient, before);
-            Restack(stActiveMonitor);
+            MoveClientBefore(activeMonitor, activeClient, before);
+            Restack(activeMonitor);
             return;
         }
 
         Client *after = NULL;
-        for (after = stActiveClient->monitor->ctail;
-                        after && (after->desktop != stActiveClient->desktop
+        for (after = activeClient->monitor->ctail;
+                        after && (after->desktop != activeClient->desktop
                         || !(after->types & NetWMTypeNormal)
                         ||  after->states & NetWMStateHidden);
                 after = after->prev);
 
         if (after) {
-            MoveClientAfter(stActiveMonitor, stActiveClient, after);
-            Restack(stActiveMonitor);
+            MoveClientAfter(activeMonitor, activeClient, after);
+            Restack(activeMonitor);
         }
     }
 }
@@ -779,27 +796,27 @@ void
 ShowDesktop(int desktop)
 {
     /* save the active client if any */
-    if (stActiveClient && stActiveClient->desktop == stActiveMonitor->activeDesktop)
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = stActiveClient;
+    if (activeClient && activeClient->desktop == activeMonitor->activeDesktop)
+        activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave = activeClient;
     else
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave = NULL;;
+        activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave = NULL;;
 
-    SetActiveDesktop(stActiveMonitor, desktop);
+    SetActiveDesktop(activeMonitor, desktop);
 
     /* Restore the active client if any */
-    if (stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave)
-        SetActiveClient(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].activeOnLeave);
+    if (activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave)
+        SetActiveClient(activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave);
     else
         FindNextActiveClient();
 
-    Restack(stActiveMonitor);
+    Restack(activeMonitor);
 }
 
 void
 MoveToDesktop(int desktop)
 {
-    if (stActiveClient) {
-        Client *toMove = stActiveClient;
+    if (activeClient) {
+        Client *toMove = activeClient;
         RemoveClientFromDesktop(toMove->monitor, toMove, toMove->desktop);
         FindNextActiveClient();
         AddClientToDesktop(toMove->monitor, toMove, desktop);
@@ -810,26 +827,26 @@ MoveToDesktop(int desktop)
 void
 ToggleDynamic()
 {
-    if (stActiveMonitor) {
-        Bool b = stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic;
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic = ! b;
+    if (activeMonitor) {
+        Bool b = activeMonitor->desktops[activeMonitor->activeDesktop].dynamic;
+        activeMonitor->desktops[activeMonitor->activeDesktop].dynamic = ! b;
         /* Untile, restore all windows */
         if (b)
-            for (Client *c = stActiveMonitor->chead; c; c = c->next)
-                if (c->desktop == stActiveMonitor->activeDesktop)
+            for (Client *c = activeMonitor->chead; c; c = c->next)
+                if (c->desktop == activeMonitor->activeDesktop)
                     RestoreClient(c);
-        Restack(stActiveMonitor);
+        Restack(activeMonitor);
     }
 }
 
 void
 AddMaster(int nb)
 {
-    if (stActiveMonitor
-            && stActiveMonitor->desktops[stActiveMonitor->activeDesktop].dynamic) {
-        stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters =
-            Max(stActiveMonitor->desktops[stActiveMonitor->activeDesktop].masters + nb, 1);
-        Restack(stActiveMonitor);
+    if (activeMonitor
+            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
+        activeMonitor->desktops[activeMonitor->activeDesktop].masters =
+            Max(activeMonitor->desktops[activeMonitor->activeDesktop].masters + nb, 1);
+        Restack(activeMonitor);
     }
 }
 
@@ -1172,11 +1189,12 @@ void
 OnKeyPress(XKeyPressedEvent *e)
 {
     KeySym keysym;
+    
     /* keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, e->state & ShiftMask ? 1 : 0); */
     keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
 
     /* there is no key binding in stack (see xbindeys or such for that)
-     * , but might usefull to get a terminal */
+     * but it might usefull to get a terminal */
     if (keysym == (XK_Return) && CleanMask(Modkey|ShiftMask) == CleanMask(e->state))
         Spawn((char**)terminal);
 
@@ -1187,9 +1205,22 @@ OnKeyPress(XKeyPressedEvent *e)
                 CleanMask(sc.modifier) == CleanMask(e->state)) {
             if (sc.type == CV) sc.cb.vcb.f();
             if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
-            if (sc.type == CC) sc.cb.ccb.f(stActiveClient);
+            if (sc.type == CC) sc.cb.ccb.f(activeClient);
             break;
         }
+    }
+}
+
+void
+OnKeyRelease(XKeyReleasedEvent *e)
+{
+    KeySym keysym;
+    
+    keysym = XkbKeycodeToKeysym(stDisplay, e->keycode, 0, 0);
+    if (keysym == (ModkeySym) && activeClient && cycling) {
+        MoveClientBefore(activeClient->monitor, activeClient,
+                activeClient->monitor->chead);
+        cycling = False;
     }
 }
 

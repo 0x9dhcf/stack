@@ -2,6 +2,7 @@
 #define __CONFIG_H__
 
 #define Modkey Mod1Mask
+#define ModkeySym XK_Alt_L
 #define DesktopCount 8
 #define ShortcutCount 35
 
