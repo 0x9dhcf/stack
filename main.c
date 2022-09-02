@@ -30,7 +30,8 @@ int
 main(int argc, char **argv)
 {
     if (argc == 2 && !strcmp("-v", argv[1])) {
-        printf("stack-%s\n", VERSION);
+        //printf("stack-%s\n", \"VERSION);
+        printf("stack-" VERSION "\n");
         exit(0);
     } else if (argc != 1) {
         fprintf(stderr, "usage: stack [-v]\n");
@@ -44,6 +45,8 @@ main(int argc, char **argv)
     signal(SIGKILL, TrapSignal);
     signal(SIGTERM, TrapSignal);
 
+    FindConfigFile();
+    LoadConfigFile();
     InitializeX11();
     InitializeMonitors();
     Start();

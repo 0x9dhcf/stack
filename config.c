@@ -1,18 +1,28 @@
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <unistd.h>
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
 #include "client.h"
 #include "config.h"
+#include "log.h"
 #include "stack.h"
+
+static void SplitLine(char *str, char **key, char **val);
+static void SetIntValue(const char *val, void *to);
+static void SetStrValue(const char *val, void *to);
+static void SetColValue(const char *val, void *to);
+
+char stConfigFile[256];
 
 Config stConfig = {
     /* Globals */
     .labelFontname  = "Sans-10",
-    .iconFontname   = "Material Icons Sharp:style=Regular:antialias=true:pixelsize=16",
-    /*.iconFontname = "Sans:antialias=true:size=10",*/
+    .iconFontname   = "Sans-10",
 
     /* Toplevel windows */
     .borderWidth    = 1,
@@ -32,7 +42,8 @@ Config stConfig = {
     .buttonStyles = {
         /* close */
         {
-            .icon                       = "\ue5cd",
+            //.icon                       = "\ue5cd",
+            .icon                       = "C",
             .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xA0A0A0,
@@ -44,7 +55,8 @@ Config stConfig = {
         },
         /* maximize */
         {
-            .icon                       = "\ue835",
+            //.icon                       = "\ue835",
+            .icon                       = "M",
             .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xA0A0A0,
@@ -56,7 +68,8 @@ Config stConfig = {
         },
         /* minimize */
         {
-            .icon                       = "\ue931",
+            //.icon                       = "\ue931",
+            .icon                       = "H",
             .activeBackground           = 0xE0E0E0,
             .activeForeground           = 0x202020,
             .inactiveBackground         = 0xA0A0A0,
@@ -74,6 +87,7 @@ Config stConfig = {
 
     .shortcuts = {
         { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Stop} } },
+        { Modkey | ShiftMask,     XK_r,         CV,     { .vcb={Reload} } },
         { Modkey | ShiftMask,     XK_h,         CC,     { .ccb={MaximizeClientHorizontally} } },
         { Modkey | ShiftMask,     XK_v,         CC,     { .ccb={MaximizeClientVertically} } },
         { Modkey | ShiftMask,     XK_Left,      CC,     { .ccb={MaximizeClientLeft} } },
@@ -109,3 +123,172 @@ Config stConfig = {
         { Modkey | ControlMask,   XK_Left,      CV,     { .vcb={MoveBackward} } }
     },
 };
+
+static struct {
+    char *key;
+    void *to;
+    void (*set)(const char *, void *);
+} callbacks[] = {
+    {"LabelFont",                           (void*)&stConfig.labelFontname,                             SetStrValue},
+    {"IconFont",                            (void*)&stConfig.iconFontname,                              SetStrValue},
+    {"BorderWidth",                         (void*)&stConfig.borderWidth,                               SetIntValue},
+    {"TopbarHeight",                        (void*)&stConfig.topbarHeight,                              SetIntValue},
+    {"HandleWidth",                         (void*)&stConfig.handleWidth,                               SetIntValue},
+    {"ButtonSize",                          (void*)&stConfig.buttonSize,                                SetIntValue},
+    {"ButtonGap",                           (void*)&stConfig.buttonGap,                                 SetIntValue},
+    {"ActiveBackground",                    (void*)&stConfig.activeBackground,                          SetColValue},
+    {"ActiveForeground",                    (void*)&stConfig.activeForeground,                          SetColValue},
+    {"InactiveBackground",                  (void*)&stConfig.inactiveBackground,                        SetColValue},
+    {"InactiveForeground",                  (void*)&stConfig.inactiveForeground,                        SetColValue},
+    {"UrgentBackground",                    (void*)&stConfig.urgentBackground,                          SetColValue},
+    {"UrgentForeground",                    (void*)&stConfig.urgentForeground,                          SetColValue},
+    {"ActiveTileBackground",                (void*)&stConfig.activeTileBackground,                      SetColValue},
+    {"InactiveTileBackground",              (void*)&stConfig.inactiveTileBackground,                    SetColValue},
+    {"CloseIcon",                           (void*)&stConfig.buttonStyles[0].icon,                      SetStrValue},
+    {"CloseActiveBackground",               (void*)&stConfig.buttonStyles[0].activeBackground,          SetColValue},
+    {"CloseActiveForeground",               (void*)&stConfig.buttonStyles[0].activeForeground,          SetColValue},
+    {"CloseInactiveBackground",             (void*)&stConfig.buttonStyles[0].inactiveBackground,        SetColValue},
+    {"CloseInactiveForeground",             (void*)&stConfig.buttonStyles[0].inactiveForeground,        SetColValue},
+    {"CloseActiveHoveredBackground",        (void*)&stConfig.buttonStyles[0].activeHoveredBackground,   SetColValue},
+    {"CloseActiveHoveredForeground",        (void*)&stConfig.buttonStyles[0].activeHoveredForeground,   SetColValue},
+    {"CloseInactiveHoveredBackground",      (void*)&stConfig.buttonStyles[0].inactiveHoveredBackground, SetColValue},
+    {"CloseInactiveHoveredForeground",      (void*)&stConfig.buttonStyles[0].inactiveHoveredForeground, SetColValue},
+    {"MaximizeIcon",                        (void*)&stConfig.buttonStyles[1].icon,                      SetStrValue},
+    {"MaximizeActiveBackground",            (void*)&stConfig.buttonStyles[1].activeBackground,          SetColValue},
+    {"MaximizeActiveForeground",            (void*)&stConfig.buttonStyles[1].activeForeground,          SetColValue},
+    {"MaximizeInactiveBackground",          (void*)&stConfig.buttonStyles[1].inactiveBackground,        SetColValue},
+    {"MaximizeInactiveForeground",          (void*)&stConfig.buttonStyles[1].inactiveForeground,        SetColValue},
+    {"MaximizeActiveHoveredBackground",     (void*)&stConfig.buttonStyles[1].activeHoveredBackground,   SetColValue},
+    {"MaximizeActiveHoveredForeground",     (void*)&stConfig.buttonStyles[1].activeHoveredForeground,   SetColValue},
+    {"MaximizeInactiveHoveredBackground",   (void*)&stConfig.buttonStyles[1].inactiveHoveredBackground, SetColValue},
+    {"MaximizeInactiveHoveredForeground",   (void*)&stConfig.buttonStyles[1].inactiveHoveredForeground, SetColValue},
+    {"MinimizeIcon",                        (void*)&stConfig.buttonStyles[2].icon,                      SetStrValue},
+    {"MinimizeActiveBackground",            (void*)&stConfig.buttonStyles[2].activeBackground,          SetColValue},
+    {"MinimizeActiveForeground",            (void*)&stConfig.buttonStyles[2].activeForeground,          SetColValue},
+    {"MinimizeInactiveBackground",          (void*)&stConfig.buttonStyles[2].inactiveBackground,        SetColValue},
+    {"MinimizeInactiveForeground",          (void*)&stConfig.buttonStyles[2].inactiveForeground,        SetColValue},
+    {"MinimizeActiveHoveredBackground",     (void*)&stConfig.buttonStyles[2].activeHoveredBackground,   SetColValue},
+    {"MinimizeActiveHoveredForeground",     (void*)&stConfig.buttonStyles[2].activeHoveredForeground,   SetColValue},
+    {"MinimizeInactiveHoveredBackground",   (void*)&stConfig.buttonStyles[2].inactiveHoveredBackground, SetColValue},
+    {"MinimizeInactiveHoveredForeground",   (void*)&stConfig.buttonStyles[2].inactiveHoveredForeground, SetColValue}
+};
+
+void
+SplitLine(char *str, char **key, char **val) {
+    char *end;
+    *key = *val = NULL;
+
+    while (isspace((unsigned char)*str)) str++;
+    if (*str == 0 || *str == '#')
+        return;
+
+    *key = str;
+    while (! isspace((unsigned char)*str)) str++;
+    if (*str == 0)
+        return;
+    *str++ = '\0';
+
+    while (isspace((unsigned char)*str)) str++;
+    if (*str == 0)
+        return;
+
+    *val = str;
+    end = str + strlen(str) - 1;
+    while(end > str && isspace((unsigned char)*end)) end--;
+    end[1] = '\0';
+}
+
+void
+SetIntValue(const char *val, void *to) {
+    *(int*)to = atoi(val);
+}
+
+void
+SetStrValue(const char *val, void *to) {
+    strcpy(to, val);
+}
+
+void
+SetColValue(const char *val, void *to) {
+    *(int*)to = (int)strtol(val, NULL, 16);
+}
+
+void
+FindConfigFile()
+{
+    char *home;
+    char *format = 
+        "./stack.conf:"
+        "%s/.stack.conf:"
+        "%s/.config/stack/stack.conf:"
+        "/usr/local/etc/stack.conf:"
+        "/etc/stack.conf";
+    char *paths = NULL;
+    char *token = NULL;
+
+    stConfigFile[0] = '\0';
+
+    paths = malloc(1024);
+    if (!paths) {
+        ELog("Can't allocate config path.");
+        return;
+    }
+
+    if (!(home = getenv("HOME"))) {
+        ELog("Can't get HOME directory.");
+        return;
+    }
+
+    if (sprintf(paths, format, home, home) < 0) {
+         ELog("Can't format path.");
+        return;
+    }
+
+    DLog("%s", paths);
+
+    token = strtok(paths, ":");
+    while(token) {
+        if (access(token, F_OK) == 0) {
+            strcpy(stConfigFile, token);
+            break;
+        }
+        token = strtok(NULL, ":");
+    }
+    free(paths);        
+}
+
+void
+LoadConfigFile()
+{
+    DLog();
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t nread;
+    FILE *stream;
+    
+    if (stConfigFile[0] == '\0') {
+        ILog("No configuration file defined.");
+        return;
+    }
+
+    ILog("Using %s configuration file", stConfigFile);
+
+    stream = fopen(stConfigFile, "r");
+    if (stream == NULL) {
+        ELog("Can't open config file, %s", strerror(errno));
+        return;
+    }
+
+    while ((nread = getline(&line, &len, stream)) != -1) {
+        char *key, * val;
+        SplitLine(line, &key, &val);
+        if (key && val)
+            for (long unsigned int i = 0; i < sizeof(callbacks)/sizeof(callbacks[0]); i++)
+                if (!strcmp(callbacks[i].key, key))
+                    callbacks[i].set(val, callbacks[i].to);
+    }
+
+    free(line);
+    fclose(stream);
+    return;
+}

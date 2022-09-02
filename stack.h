@@ -9,7 +9,7 @@
 
 void Start();
 void Stop();
-
+void Reload();
 void ActivateNext();
 void ActivatePrev();
 void MoveForward();

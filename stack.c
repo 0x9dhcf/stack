@@ -325,9 +325,19 @@ Start()
     XSelectInput(stDisplay, stRoot, NoEventMask);
 }
 
-void Stop()
+void
+Stop()
 {
     stRunning = False;
+}
+
+void
+Reload()
+{
+    LoadConfigFile();
+    for (Monitor *m = stMonitors; m; m = m->next)
+        for (Client *c = m->chead; c; c = c->next)
+            RefreshClient(c);
 }
 
 void

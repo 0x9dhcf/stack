@@ -3,7 +3,7 @@
 
 #define Modkey Mod1Mask
 #define DesktopCount 8
-#define ShortcutCount 34
+#define ShortcutCount 35
 
 typedef struct Client Client;
 
@@ -19,8 +19,8 @@ typedef struct Shortcut {
 } Shortcut;
 
 typedef struct Config {
-    char *labelFontname;
-    char *iconFontname;
+    char labelFontname[128];
+    char iconFontname[128];
     int borderWidth;
     int topbarHeight;
     int handleWidth;
@@ -35,7 +35,7 @@ typedef struct Config {
     int urgentBackground;
     int urgentForeground;
     struct {
-        char *icon;
+        char icon[8];
         int activeBackground;
         int activeForeground;
         int inactiveBackground;
@@ -50,6 +50,10 @@ typedef struct Config {
     Shortcut shortcuts[ShortcutCount];
 } Config;
 
-extern Config  stConfig;
+extern char     stConfigFile[256];
+extern Config   stConfig;
+
+void FindConfigFile();
+void LoadConfigFile();
 
 #endif

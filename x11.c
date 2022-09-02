@@ -206,8 +206,6 @@ WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y)
     XftColorFree(stDisplay,v, cm, &xftc);
 }
 
-
-
 void
 TeardownX11()
 {
