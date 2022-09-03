@@ -426,7 +426,7 @@ ManageWindow(Window w, Bool exists)
     c->window = w;
     XSetWindowAttributes cattrs = {0};
     cattrs.event_mask = NoEventMask;
-    cattrs.do_not_propagate_mask = WindowDoNotPropagateMask;
+    cattrs.do_not_propagate_mask = NoEventMask;
     XChangeWindowAttributes(stDisplay, w, CWEventMask | CWDontPropagate, &cattrs);
     XSetWindowBorderWidth(stDisplay, w, 0);
     XReparentWindow(stDisplay, w, c->frame, 0, 0);
@@ -661,7 +661,8 @@ SetActiveClient(Client *c)
         activeClient = NULL;
     }
 
-    if (toActivate && toActivate->desktop == activeMonitor->activeDesktop) {
+    if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
+            && toActivate->types & NetWMTypeNormal) {
         /* if someone is to be activated do it */
         SetClientActive(toActivate, True);
         activeClient = toActivate;
