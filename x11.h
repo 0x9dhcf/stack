@@ -135,7 +135,7 @@ extern XftFont         *stIconFont;
 
 void InitializeX11();
 void GetTextPosition(const char *s, XftFont *ft, HAlign ha, VAlign va, int w, int h, int *x, int *y);
-void WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y); 
+void WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y);
 void TeardownX11();
 
 #endif

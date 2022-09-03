@@ -1,3 +1,4 @@
+#include <X11/Xlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -66,7 +67,7 @@ static int      EventLoopErrorHandler(Display *d, XErrorEvent *e);
 static int      DummyErrorHandler(Display *d, XErrorEvent *e);
 static void     ManageWindow(Window w, Bool exists);
 static Client  *Lookup(Window w);
-static void     ForgetWindow(Window w, Bool survives);
+static void     ForgetWindow(Window w, Bool destroyed);
 static void     SetActiveClient(Client *c);
 static void     OnConfigureRequest(XConfigureRequestEvent *e);
 static void     OnMapRequest(XMapRequestEvent *e);
@@ -116,6 +117,7 @@ EventLoopErrorHandler(Display *d, XErrorEvent *e)
     }
     ELog("error: request code=%d, error code=%d",
             e->request_code, e->error_code);
+
     return defaultErrorHandler(d, e); /* may call exit */
 }
 
@@ -314,7 +316,7 @@ Start()
     for (Monitor *m = stMonitors; m; m = m->next) {
         Client *c, *d;
         for (c = m->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
-            ForgetWindow(c->window, True);
+            ForgetWindow(c->window, False);
     }
 
     XDestroyWindow(stDisplay, supportingWindow);
@@ -380,11 +382,9 @@ ManageWindow(Window w, Bool exists)
 
     c->active = False;
     c->decorated = (c->types & NetWMTypeFixed
-            || t != None
             || (c->motifs.flags == 0x2 && c->motifs.decorations == 0)) ?
         False : True;
     c->tiled = False;
-    //c->desktop = activeMonitor->activeDesktop;
     c->desktop = -1;
 
     /* If transient for, register the client we are transient for
@@ -395,7 +395,7 @@ ManageWindow(Window w, Bool exists)
         if (tc) {
             c->transfor = Lookup(t);
             if (c->transfor) {
-                /* attache tc to the transient for client */
+                /* attach tc to the transient for client */
                 tc->client = c;
                 tc->next = c->transfor->transients;
                 c->transfor->transients = tc;
@@ -486,8 +486,14 @@ ManageWindow(Window w, Bool exists)
         }
     }
 
-    /* we need a first Move resize to sync the geometries before attaching */
     c->sbw = b;
+    /* we need a first Move resize to sync the geometries before attaching */
+    /* make sure we're in the working area */
+    Desktop *dp = &activeMonitor->desktops[activeMonitor->activeDesktop];
+    ww = Min(dp->ww, (int)ww);
+    wh = Min(dp->wh, (int)wh);
+    wx = Min(Max(dp->wx, wx), dp->wx + dp->ww - (int)ww);
+    wy = Min(Max(dp->wy, wy), dp->wy + dp->wh - (int)wh);
     MoveResizeClientWindow(c, wx, wy, ww, wh, False);
     AttachClientToMonitor(activeMonitor, c);
 
@@ -513,81 +519,94 @@ ManageWindow(Window w, Bool exists)
 }
 
 void
-ForgetWindow(Window w, Bool survives)
+ForgetWindow(Window w, Bool destroyed)
 {
     Client *c = Lookup(w);
-    if (c) {
+    Transient *t;
 
-        /* if transient for someone unregister this client */
-        if (c->transfor) {
-            Transient **tc;
-            for (tc = &c->transfor->transients;
-                    *tc && (*tc)->client != c; tc = &(*tc)->next);
-            *tc = (*tc)->next;
-        }
+    if (!c)
+        return;
 
-        if (c == lastActiveClient)
-            lastActiveClient = NULL;
-
-        if (c == activeClient)
-            activeClient = NULL;
-
-        if (c->monitor->desktops[c->desktop].activeOnLeave == c)
-            c->monitor->desktops[c->desktop].activeOnLeave = NULL;
-
-        DetachClientFromMonitor(c->monitor, c);
-
-        if (c->name)
-            free(c->name);
-
-        if (c->wmclass.cname)
-            free(c->wmclass.cname);
-
-        if (c->wmclass.iname)
-            free(c->wmclass.iname);
-
-        if (survives) {
-            long state[] = {WithdrawnState, None};
-            XGrabServer(stDisplay);
-            XSetErrorHandler(DummyErrorHandler);
-            XUngrabButton(stDisplay, AnyButton, AnyModifier, c->window);
-            XChangeProperty(stDisplay, c->window, stAtoms[AtomWMState],
-                stAtoms[AtomWMState], 32, PropModeReplace,
-                (unsigned char *)state, 2);
-            XSync(stDisplay, False);
-            XSetErrorHandler(EventLoopErrorHandler);
-            XUngrabServer(stDisplay);
-
-            XReparentWindow(stDisplay, c->window, stRoot, c->wx, c->wy);
-            XSetWindowBorderWidth(stDisplay, c->window, c->sbw);
-        }
-
-        if (!(c->types & NetWMTypeFixed)) {
-            for (int i = 0; i < ButtonCount; ++i)
-                XDestroyWindow(stDisplay, c->buttons[i]);
-            XDestroyWindow(stDisplay, c->topbar);
-        }
-
-        if (!(c->types & NetWMTypeFixed) && ! IsFixed(c->normals)) {
-            for (int i = 0; i < HandleCount; ++i)
-                XDestroyWindow(stDisplay, c->handles[i]);
-        }
-
-        XDestroyWindow(stDisplay, c->frame);
-
-        if (survives)
-            XRemoveFromSaveSet(stDisplay, c->window);
-
-        free(c);
-
-        /* update the client list */
-        XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetClientList]);
-        for (Monitor *m = stMonitors; m; m = m->next)
-            for (Client *c2 = m->chead; c2; c2 = c2->next)
-                XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetClientList],
-                        XA_WINDOW, 32, PropModeAppend,
-                        (unsigned char *) &c2->window, 1);
+    /* if some transient release them */
+    t = c->transients;
+    while (t) {
+        Transient *p = t->next;
+        free(t);
+        t = p;
     }
+
+    /* if transient for someone unregister this client */
+    if (c->transfor) {
+        Transient **tc;
+        for (tc = &c->transfor->transients;
+                *tc && (*tc)->client != c; tc = &(*tc)->next);
+        *tc = (*tc)->next;
+
+        /* we want the next active to be the transient for */
+        lastActiveClient = c->transfor;
+    }
+
+    if (c == lastActiveClient)
+        lastActiveClient = NULL;
+
+    if (c == activeClient)
+        activeClient = NULL;
+
+    if (c->monitor->desktops[c->desktop].activeOnLeave == c)
+        c->monitor->desktops[c->desktop].activeOnLeave = NULL;
+
+    DetachClientFromMonitor(c->monitor, c);
+
+    if (c->name)
+        free(c->name);
+
+    if (c->wmclass.cname)
+        free(c->wmclass.cname);
+
+    if (c->wmclass.iname)
+        free(c->wmclass.iname);
+
+    if (! destroyed) {
+        long state[] = {WithdrawnState, None};
+        XGrabServer(stDisplay);
+        XSetErrorHandler(DummyErrorHandler);
+        XUngrabButton(stDisplay, AnyButton, AnyModifier, c->window);
+        XChangeProperty(stDisplay, c->window, stAtoms[AtomWMState],
+            stAtoms[AtomWMState], 32, PropModeReplace,
+            (unsigned char *)state, 2);
+        XSetWindowBorderWidth(stDisplay, c->window, c->sbw);
+        XReparentWindow(stDisplay, c->window, stRoot, c->wx, c->wy);
+        XSync(stDisplay, False);
+        XSetErrorHandler(EventLoopErrorHandler);
+        XUngrabServer(stDisplay);
+
+    }
+
+    if (!(c->types & NetWMTypeFixed)) {
+        for (int i = 0; i < ButtonCount; ++i)
+            XDestroyWindow(stDisplay, c->buttons[i]);
+        XDestroyWindow(stDisplay, c->topbar);
+    }
+
+    if (!(c->types & NetWMTypeFixed) && ! IsFixed(c->normals)) {
+        for (int i = 0; i < HandleCount; ++i)
+            XDestroyWindow(stDisplay, c->handles[i]);
+    }
+
+    XDestroyWindow(stDisplay, c->frame);
+
+    if (! destroyed)
+        XRemoveFromSaveSet(stDisplay, c->window);
+
+    free(c);
+
+    /* update the client list */
+    XDeleteProperty(stDisplay, stRoot, stAtoms[AtomNetClientList]);
+    for (Monitor *m = stMonitors; m; m = m->next)
+        for (Client *c2 = m->chead; c2; c2 = c2->next)
+            XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetClientList],
+                    XA_WINDOW, 32, PropModeAppend,
+                    (unsigned char *) &c2->window, 1);
 
     if (! activeClient)
         SetActiveClient(NULL);
@@ -662,7 +681,7 @@ SetActiveClient(Client *c)
     }
 
     if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
-            && toActivate->types & NetWMTypeNormal) {
+            && (toActivate->types & NetWMTypeNormal || c->transfor)) {
         /* if someone is to be activated do it */
         SetClientActive(toActivate, True);
         activeClient = toActivate;
@@ -915,8 +934,16 @@ void
 OnUnmapNotify(XUnmapEvent *e)
 {
     /* ignore UnmapNotify from reparenting  */
-    if (e->event != stRoot && e->event != None)
-        ForgetWindow(e->window, False);
+    if (e->event != stRoot && e->event != None) {
+        if (e->send_event) {
+            long state[] = {WithdrawnState, None};
+            XChangeProperty(stDisplay, e->window, stAtoms[AtomWMState],
+                    stAtoms[AtomWMState], 32, PropModeReplace,
+                    (unsigned char *)state, 2);
+        } else {
+            ForgetWindow(e->window, False);
+        }
+    }
 }
 
 /* XXX: useless */
@@ -924,7 +951,10 @@ void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
     Client *c = Lookup(e->window);
-    if (c) { ELog("Found a client??"); }
+    if (c) {
+        ELog("Found a client??");
+        ForgetWindow(e->window, True);
+    }
 }
 
 void
@@ -998,10 +1028,17 @@ OnButtonPress(XButtonEvent *e)
     }
 
     if (e->window == c->buttons[ButtonClose]) {
-        if (c->protocols & NetWMProtocolDeleteWindow)
+        if (c->protocols & NetWMProtocolDeleteWindow) {
             SendMessage(c->window, stAtoms[AtomWMDeleteWindow]);
-        else
+        } else {
+            XGrabServer(stDisplay);
+            XSetErrorHandler(DummyErrorHandler);
+            XSetCloseDownMode(stDisplay, DestroyAll);
             XKillClient(stDisplay, c->window);
+            XSync(stDisplay, False);
+            XSetErrorHandler(EventLoopErrorHandler);
+            XUngrabServer(stDisplay);
+        }
     }
 
     if (e->window != c->buttons[ButtonClose] && e->window != c->buttons[ButtonMinimize])

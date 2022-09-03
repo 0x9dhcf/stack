@@ -6,16 +6,18 @@
 #include "utils.h"
 #include "x11.h"
 
-#define WMin ( (c->decorated) ?  2 * stConfig.borderWidth +\
-        ButtonCount * (stConfig.buttonSize + stConfig.buttonGap) + 1 : 1 )
-#define HMin ( (c->decorated) ?  2 * stConfig.borderWidth +\
-        stConfig.topbarHeight + 1 : 1 )
+
+#define DecorationWidth (2 * stConfig.borderWidth\
+    + ButtonCount * (stConfig.buttonSize + stConfig.buttonGap) + 1)
+#define DecorationHeight (2 * stConfig.borderWidth +\
+        stConfig.topbarHeight + 1)
 
 static void ApplyNormalHints(Client *c);
 static void Configure(Client *c);
 static void SaveGeometries(Client *c);
 static void SynchronizeFrameGeometry(Client *c);
 static void SynchronizeWindowGeometry(Client *c);
+//static void SynchronizeTransients(Client *c);
 
 void
 HideClient(Client *c)
@@ -47,12 +49,6 @@ MoveClientWindow(Client *c, int x, int y)
     c->wy = y;
     SynchronizeFrameGeometry(c);
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
@@ -69,12 +65,6 @@ ResizeClientWindow(Client *c, int w, int h, Bool sh)
 
     SynchronizeFrameGeometry(c);
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
@@ -93,12 +83,6 @@ MoveResizeClientWindow(Client *c, int x, int y, int w, int h, Bool sh)
 
     SynchronizeFrameGeometry(c);
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
@@ -108,18 +92,14 @@ MoveClientFrame(Client *c, int x, int y)
     c->fy = y;
     SynchronizeWindowGeometry(c);
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
 ResizeClientFrame(Client *c, int w, int h, Bool sh)
 {
-    if (w < WMin || h < HMin)
+    int mw = (c->decorated) ? DecorationWidth : 1;
+    int mh = (c->decorated) ? DecorationHeight : 1;
+    if (w < mw || h < mh)
         return;
 
     c->fw = w;
@@ -130,21 +110,16 @@ ResizeClientFrame(Client *c, int w, int h, Bool sh)
         ApplyNormalHints(c);
         SynchronizeFrameGeometry(c);
     }
-
-    //SynchronizeWindowGeometry(c);
+    SynchronizeWindowGeometry(c);
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
 MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
 {
-    if (w < WMin || h < HMin)
+    int mw = (c->decorated) ? DecorationWidth : 1;
+    int mh = (c->decorated) ? DecorationHeight : 1;
+    if (w < mw || h < mh)
         return;
 
     c->fx = x;
@@ -159,12 +134,6 @@ MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
     }
 
     Configure(c);
-
-    for (Transient *t = c->transients; t; t = t->next)
-        MoveResizeClientFrame(t->client,
-            c->fx + (c->fw - t->client->fw) / 2,
-            c->fy + (c->fh - t->client->fh) / 2,
-            t->client->fw, t->client->fh, False);
 }
 
 void
@@ -317,7 +286,7 @@ RestoreClient(Client *c)
         if (!c->tiled)
             MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     } else if (c->tiled) {
-        c->decorated = True;
+        //c->decorated = True;
         c->tiled = False;
         MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
@@ -594,8 +563,8 @@ RefreshClient(Client *c)
     int bg, fg, /*bbg, bfg,*/ x, y;
 
     /* Do not attempt to refresh non decorated or hidden clients */
-    if (!c->decorated || (c->desktop != c->monitor->activeDesktop &&
-                !(c->states & NetWMStateSticky)))
+    if (!c->decorated || (c->desktop != c->monitor->activeDesktop
+                && !(c->states & NetWMStateSticky)))
         return;
 
     /* Select the frame colors */
@@ -672,16 +641,16 @@ Configure(Client *c)
 {
     int hw, wx, wy;
 
-    /* Compute the relative window position */
+    /* compute the relative window position */
     wx = c->wx - c->fx;
     wy = c->wy - c->fy;
 
-    /* Place frame and window */
+    /* place frame and window */
     XMoveResizeWindow(stDisplay, c->frame, c->fx, c->fy, c->fw, c->fh);
     XMoveResizeWindow(stDisplay, c->window, wx, wy, c->ww, c->wh);
 
-    /* Place decoration windows */
-    if (c->decorated && !c->tiled) {
+    /* place decoration windows */
+    if (c->decorated && !c->tiled && !c->transfor) {
         XMoveResizeWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 stConfig.borderWidth, c->fw - 2 * stConfig.borderWidth,
                 stConfig.topbarHeight);
@@ -693,12 +662,12 @@ Configure(Client *c)
                     stConfig.buttonSize, stConfig.buttonSize);
         }
     } else if (!(c->types & NetWMTypeFixed)) {
-        /* Move the topbar outside the frame */
+        /* move the topbar outside the frame */
         XMoveWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 -(stConfig.borderWidth + stConfig.topbarHeight));
     }
 
-    /* Suround frame by handles */
+    /* suround frame by handles */
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
         hw = stConfig.handleWidth;
         XMoveResizeWindow(stDisplay, c->handles[HandleNorth],
@@ -717,6 +686,17 @@ Configure(Client *c)
                 c->fx - hw, c->fy, hw, c->fh);
         XMoveResizeWindow(stDisplay, c->handles[HandleNorthEast],
                 c->fx - hw, c->fy - hw, hw, hw);
+    }
+
+    /* synchronize transients */
+    Desktop *d = &c->monitor->desktops[c->desktop];
+    for (Transient *t = c->transients; t; t = t->next) {
+        int x, y, w, h;
+        w = Min(d->ww, t->client->fw);
+        h = Min(d->wh, t->client->fh);
+        x = Min(Max(d->wx, c->fx + (c->fw - t->client->fw) / 2), d->wx + d->ww - w);
+        y = Min(Max(d->wy, c->fy + (c->fh - t->client->fh) / 2), d->wy + d->wh - h);
+        MoveResizeClientFrame(t->client, x, y, w, h, False);
     }
 }
 
@@ -758,7 +738,7 @@ SaveGeometries(Client *c)
 void
 SynchronizeFrameGeometry(Client *c)
 {
-    if (c->tiled) {
+    if (c->tiled || c->transfor) {
         c->fx = c->wx - stConfig.borderWidth;
         c->fy = c->wy - stConfig.borderWidth;
         c->fw = c->ww + 2 * stConfig.borderWidth;
@@ -774,7 +754,7 @@ SynchronizeFrameGeometry(Client *c)
 void
 SynchronizeWindowGeometry(Client *c)
 {
-    if (c->tiled) {
+    if (c->tiled || c->transfor) {
         c->wx = c->fx + stConfig.borderWidth;
         c->wy = c->fy + stConfig.borderWidth;
         c->ww = c->fw - 2 * stConfig.borderWidth;
@@ -786,4 +766,3 @@ SynchronizeWindowGeometry(Client *c)
         c->wh = c->fh - WHOffset(c);
     }
 }
-
