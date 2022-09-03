@@ -26,13 +26,6 @@
 
 #define WindowEventMask (PropertyChangeMask)
 
-#define WindowDoNotPropagateMask (\
-          ButtonPressMask\
-        | ButtonReleaseMask\
-        | ButtonMotionMask\
-        | KeyPressMask\
-        | KeyReleaseMask)
-
 #define HandleEventMask (\
           ButtonPressMask\
         | ButtonReleaseMask\
@@ -432,7 +425,7 @@ ManageWindow(Window w, Bool exists)
     /* client */
     c->window = w;
     XSetWindowAttributes cattrs = {0};
-    cattrs.event_mask = WindowEventMask;
+    cattrs.event_mask = NoEventMask;
     cattrs.do_not_propagate_mask = WindowDoNotPropagateMask;
     XChangeWindowAttributes(stDisplay, w, CWEventMask | CWDontPropagate, &cattrs);
     XSetWindowBorderWidth(stDisplay, w, 0);
