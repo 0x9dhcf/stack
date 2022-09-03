@@ -240,7 +240,7 @@ Start()
     if ((code = XKeysymToKeycode(stDisplay, ModkeySym)))
         for (int j = 0; j < 4; ++j)
             XGrabKey(stDisplay, code, modifiers[j],
-                    stRoot, True, GrabModeSync, GrabModeAsync);
+                    stRoot, True, GrabModeAsync, GrabModeAsync);
 
     for (int i = 0; i < ShortcutCount; ++i) {
         Shortcut sc = stConfig.shortcuts[i];
