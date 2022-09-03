@@ -30,15 +30,8 @@ extern Monitor *stMonitors;
 
 void InitializeMonitors();
 void TeardownMonitors();
-
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
-Client *NextClient(Monitor *m, Client *c);
-Client *PreviousClient(Monitor *m, Client *c);
-void MoveClientAfter(Monitor *m, Client *c, Client *after);
-void MoveClientBefore(Monitor *m, Client *c, Client *before);
-void AddClientToDesktop(Monitor *m, Client *c, int d);
-void RemoveClientFromDesktop(Monitor *m, Client *c, int d);
 void SetActiveDesktop(Monitor *m, int desktop);
 void Restack(Monitor *m);
 

@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "client.h"
+#include "log.h"
 #include "monitor.h"
 #include "utils.h"
 #include "x11.h"
@@ -391,6 +392,165 @@ SetClientActive(Client *c, Bool b)
             for (int i = 0; i < 4; i++)
                 XUngrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window);
     }
+}
+
+Client *
+NextClient(Client *c)
+{
+    return c->next ? c->next : c->monitor->chead;
+}
+
+Client *
+PreviousClient(Client *c)
+{
+    return c->prev ? c->prev : c->monitor->ctail;
+}
+
+void
+MoveClientAfter(Client *c, Client *after)
+{
+    if (c == after)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->chead = c->next;
+
+    /* change monitor is needed */
+    c->monitor = after->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->ctail = c->prev;
+
+    if (after == c->monitor->ctail) {
+        PushClientBack(c);
+    } else {
+        c->next = after->next;
+        c->prev = after;
+        after->next->prev = c;
+        after->next = c;
+    }
+}
+
+void
+MoveClientBefore(Client *c, Client *before)
+{
+    if (c == before)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->chead = c->next;
+
+    /* change monitor is needed */
+    c->monitor = before->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->ctail = c->prev;
+
+    if (before == c->monitor->chead) {
+        PushClientFront(c);
+    } else {
+        c->next = before;
+        c->prev = before->prev;
+        before->prev->next = c;
+        before->prev = c;
+    }
+}
+
+void
+PushClientFront(Client *c)
+{
+    if (c->monitor->chead) {
+        c->next = c->monitor->chead;
+        c->monitor->chead->prev = c;
+    }
+
+    if (! c->monitor->ctail)
+        c->monitor->ctail = c;
+
+    c->monitor->chead = c;
+    c->prev = NULL;
+}
+
+void
+PushClientBack(Client *c)
+{
+    if (c->monitor->ctail) {
+        c->prev = c->monitor->ctail;
+        c->monitor->ctail->next = c;
+    }
+
+    if (! c->monitor->chead)
+        c->monitor->chead = c;
+
+    c->monitor->ctail = c;
+    c->next = NULL;
+}
+
+void
+AssignClientToDesktop(Client *c, int desktop)
+{
+    Monitor *m = c->monitor;
+    Desktop *d = &(m->desktops[desktop]);
+
+    if (desktop < 0 || desktop >= DesktopCount || c->desktop == desktop)
+        return;
+
+    /* remove ourself from previous desktop if any */
+    if (c->desktop >= 0) {
+        Desktop *pd = &m->desktops[c->desktop];
+        if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+            pd->wx = m->x;
+            pd->wy = m->y;
+            pd->ww = m->w;
+            pd->wh = m->h;
+            for (Client *mc = m->chead; mc; mc = mc->next) {
+                if (mc != c && mc->desktop == c->desktop) {
+                    pd->wx = Max(pd->wx, m->x + mc->strut.left);
+                    pd->wy = Max(pd->wy, m->y + mc->strut.top);
+                    pd->ww = Min(pd->ww, m->w - (mc->strut.right + mc->strut.left));
+                    pd->wh = Min(pd->wh, m->h - (mc->strut.top + mc->strut.bottom));
+                }
+            }
+        }
+    }
+
+    /* now set the new one */
+    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        d->wx = Max(d->wx, m->x + c->strut.left);
+        d->wy = Max(d->wy, m->y + c->strut.top);
+        d->ww = Min(d->ww, m->w - (c->strut.right + c->strut.left));
+        d->wh = Min(d->wh, m->h - (c->strut.top + c->strut.bottom));
+    }
+
+    c->desktop = desktop;
+    if (c->tiled && !d->dynamic) {
+        RestoreClient(c);
+        //Restack(c->monitor);
+    }
+
+    if (!(c->types & NetWMTypeFixed))
+        MoveResizeClientFrame(c,
+                Max(c->fx, c->monitor->desktops[c->desktop].wx),
+                Max(c->fy, c->monitor->desktops[c->desktop].wy),
+                Min(c->fw, c->monitor->desktops[c->desktop].ww),
+                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+
+    if ((c->strut.right
+            || c->strut.left
+            || c->strut.top
+            || c->strut.bottom
+            || d->dynamic))
+        Restack(m);
 }
 
 void

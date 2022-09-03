@@ -1,8 +1,7 @@
 TARGET = stack
 
-MAJOR = 2
-MINOR = 1
-PATCH = 1
+MAJOR = 3
+MINOR = 0
 
 # paths
 PREFIX ?= /usr/local
@@ -10,7 +9,7 @@ PKG_CONFIG = pkg-config
 
 DEPS = x11 xrandr xft
 
-CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
+CPPFLAGS 	+= -DVERSION=\"$(MAJOR).$(MINOR)\"
 CFLAGS 		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS 	+= `$(PKG_CONFIG) --libs ${DEPS}`
 

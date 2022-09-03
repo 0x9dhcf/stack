@@ -98,5 +98,12 @@ void LowerClient(Client *c);
 void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
+Client *NextClient(Client *c);
+Client *PreviousClient(Client *c);
+void MoveClientAfter(Client *c, Client *after);
+void MoveClientBefore(Client *c, Client *before);
+void PushClientFront(Client *c);
+void PushClientBack(Client *c);
+void AssignClientToDesktop(Client *c, int d);
 
 #endif

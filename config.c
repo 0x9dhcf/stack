@@ -217,7 +217,7 @@ void
 FindConfigFile()
 {
     char *home;
-    char *format = 
+    char *format =
         "./stack.conf:"
         "%s/.stack.conf:"
         "%s/.config/stack/stack.conf:"
@@ -244,8 +244,6 @@ FindConfigFile()
         return;
     }
 
-    DLog("%s", paths);
-
     token = strtok(paths, ":");
     while(token) {
         if (access(token, F_OK) == 0) {
@@ -254,18 +252,17 @@ FindConfigFile()
         }
         token = strtok(NULL, ":");
     }
-    free(paths);        
+    free(paths);
 }
 
 void
 LoadConfigFile()
 {
-    DLog();
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
     FILE *stream;
-    
+
     if (stConfigFile[0] == '\0') {
         ILog("No configuration file defined.");
         return;
