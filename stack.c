@@ -65,9 +65,9 @@ static Bool     running;
 static int      WMDetectedErrorHandler(Display *d, XErrorEvent *e);
 static int      EventLoopErrorHandler(Display *d, XErrorEvent *e);
 static int      DummyErrorHandler(Display *d, XErrorEvent *e);
-static void     ManageWindow(Window w, Bool exists);
+static void     ManageWindow(Window w, Bool mapped);
 static Client  *Lookup(Window w);
-static void     ForgetWindow(Window w, Bool destroyed);
+static void     UnmanageWindow(Window w, Bool destroyed);
 static void     SetActiveClient(Client *c);
 static void     OnConfigureRequest(XConfigureRequestEvent *e);
 static void     OnMapRequest(XMapRequestEvent *e);
@@ -316,7 +316,7 @@ Start()
     for (Monitor *m = stMonitors; m; m = m->next) {
         Client *c, *d;
         for (c = m->chead, d = c ? c->next : 0; c; c = d, d = c ? c->next : 0)
-            ForgetWindow(c->window, False);
+            UnmanageWindow(c->window, False);
     }
 
     XDestroyWindow(stDisplay, supportingWindow);
@@ -342,21 +342,11 @@ Reload()
 }
 
 void
-ManageWindow(Window w, Bool exists)
+ManageWindow(Window w, Bool mapped)
 {
-    XWindowAttributes wa;
     Window r = None, t = None;
     int wx = 0, wy = 0 ;
     unsigned int ww, wh, d, b;
-
-    if (!XGetWindowAttributes(stDisplay, w, &wa))
-        return;
-
-    if (wa.override_redirect)
-        return;
-
-    if (Lookup(w))
-        return;
 
     Client *c = malloc(sizeof(Client));
     if (!c) {
@@ -436,10 +426,12 @@ ManageWindow(Window w, Bool exists)
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync,
                 GrabModeSync, None, None);
     }
-    if (!exists)
+
+    if (! mapped)
         XMapWindow(stDisplay, w);
 
-    /* windows with EWMH type fixed are neither moveable,
+    /*
+     * windows with EWMH type fixed are neither moveable,
      * resizable nor decorated. While windows fixed by ICCCM normals
      * are decorated and moveable but not resizable)
      */
@@ -453,12 +445,12 @@ ManageWindow(Window w, Bool exists)
         c->topbar = XCreateWindow(stDisplay, c->frame, 0, 0, 1, 1, 0,
                 CopyFromParent, InputOutput, CopyFromParent,
                 CWEventMask | CWCursor, &tattrs);
+        XMapWindow(stDisplay, c->topbar);
 
+        // XXX: WHY HERE!!!
         XChangeProperty(stDisplay, w, stAtoms[AtomWMState],
                 stAtoms[AtomWMState], 32, PropModeReplace,
                 (unsigned char *)state, 2);
-
-        XMapWindow(stDisplay, c->topbar);
 
         /* buttons */
         XSetWindowAttributes battrs = {0};
@@ -467,8 +459,8 @@ ManageWindow(Window w, Bool exists)
             Window b = XCreateWindow(stDisplay, c->topbar, 0, 0, 1, 1, 0,
                     CopyFromParent, InputOutput, CopyFromParent,
                     CWEventMask | CWCursor, &battrs);
-            XMapWindow(stDisplay, b);
             c->buttons[i] = b;
+            XMapWindow(stDisplay, b);
         }
     }
 
@@ -481,8 +473,8 @@ ManageWindow(Window w, Bool exists)
             Window h = XCreateWindow(stDisplay, stRoot, 0, 0, 1, 1, 0,
                     CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &hattrs);
-            XMapWindow(stDisplay, h);
             c->handles[i] = h;
+            XMapWindow(stDisplay, h);
         }
     }
 
@@ -519,7 +511,7 @@ ManageWindow(Window w, Bool exists)
 }
 
 void
-ForgetWindow(Window w, Bool destroyed)
+UnmanageWindow(Window w, Bool destroyed)
 {
     Client *c = Lookup(w);
     Transient *t;
@@ -527,7 +519,7 @@ ForgetWindow(Window w, Bool destroyed)
     if (!c)
         return;
 
-    /* if some transient release them */
+    /* if some transients release them */
     t = c->transients;
     while (t) {
         Transient *p = t->next;
@@ -567,19 +559,18 @@ ForgetWindow(Window w, Bool destroyed)
         free(c->wmclass.iname);
 
     if (! destroyed) {
-        long state[] = {WithdrawnState, None};
+        //long state[] = {WithdrawnState, None};
         XGrabServer(stDisplay);
         XSetErrorHandler(DummyErrorHandler);
         XUngrabButton(stDisplay, AnyButton, AnyModifier, c->window);
-        XChangeProperty(stDisplay, c->window, stAtoms[AtomWMState],
-            stAtoms[AtomWMState], 32, PropModeReplace,
-            (unsigned char *)state, 2);
         XSetWindowBorderWidth(stDisplay, c->window, c->sbw);
         XReparentWindow(stDisplay, c->window, stRoot, c->wx, c->wy);
+        //XChangeProperty(stDisplay, c->window, stAtoms[AtomWMState],
+        //    stAtoms[AtomWMState], 32, PropModeReplace,
+        //    (unsigned char *)state, 2);
         XSync(stDisplay, False);
         XSetErrorHandler(EventLoopErrorHandler);
         XUngrabServer(stDisplay);
-
     }
 
     if (!(c->types & NetWMTypeFixed)) {
@@ -588,14 +579,13 @@ ForgetWindow(Window w, Bool destroyed)
         XDestroyWindow(stDisplay, c->topbar);
     }
 
-    if (!(c->types & NetWMTypeFixed) && ! IsFixed(c->normals)) {
+    if (!(c->types & NetWMTypeFixed) && ! IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
             XDestroyWindow(stDisplay, c->handles[i]);
-    }
 
     XDestroyWindow(stDisplay, c->frame);
 
-    if (! destroyed)
+    if (destroyed)
         XRemoveFromSaveSet(stDisplay, c->window);
 
     free(c);
@@ -681,7 +671,8 @@ SetActiveClient(Client *c)
     }
 
     if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
-            && (toActivate->types & NetWMTypeNormal || c->transfor)) {
+            && toActivate->types & NetWMTypeNormal
+            && !(toActivate->states & NetWMStateHidden)) {
         /* if someone is to be activated do it */
         SetClientActive(toActivate, True);
         activeClient = toActivate;
@@ -712,6 +703,10 @@ ActivateNext()
                 cycling = True;
             else
                 cycling = True;
+
+            if (nc->states & NetWMStateHidden)
+                RestoreClient(nc);
+
             SetActiveClient(nc);
         }
     }
@@ -734,6 +729,10 @@ ActivatePrev()
                 cycling = True;
             else
                 cycling = True;
+
+            if (pc->states & NetWMStateHidden)
+                RestoreClient(pc);
+
             SetActiveClient(pc);
         }
     }
@@ -827,7 +826,7 @@ MoveToDesktop(int desktop)
         AssignClientToDesktop(activeClient, desktop);
         SetActiveClient(NULL);
         activeMonitor->desktops[activeMonitor->activeDesktop].activeOnLeave = activeClient;
-        Restack(activeMonitor); /* XXX: might be useless if not dynamic */
+        Restack(activeMonitor);
     }
 }
 
@@ -927,6 +926,14 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
+    XWindowAttributes wa;
+
+    if (!XGetWindowAttributes(stDisplay, e->window, &wa))
+        return;
+
+    if (wa.override_redirect)
+        return;
+
     ManageWindow(e->window, False);
 }
 
@@ -941,20 +948,15 @@ OnUnmapNotify(XUnmapEvent *e)
                     stAtoms[AtomWMState], 32, PropModeReplace,
                     (unsigned char *)state, 2);
         } else {
-            ForgetWindow(e->window, False);
+            UnmanageWindow(e->window, False);
         }
     }
 }
 
-/* XXX: useless */
 void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
-    Client *c = Lookup(e->window);
-    if (c) {
-        ELog("Found a client??");
-        ForgetWindow(e->window, True);
-    }
+    UnmanageWindow(e->window, True);
 }
 
 void
@@ -1024,7 +1026,6 @@ OnButtonPress(XButtonEvent *e)
             MinimizeClient(c);
             SetActiveClient(NULL);
         }
-
     }
 
     if (e->window == c->buttons[ButtonClose]) {

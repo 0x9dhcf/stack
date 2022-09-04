@@ -41,6 +41,12 @@ typedef enum {
     NetWMTypeFixed              = NetWMTypeDesktop
                                 | NetWMTypeDock
                                 | NetWMTypeSplash,
+    NetWMTypeNoTopbar           = NetWMTypeFixed
+                                | NetWMTypeMenu
+                                | NetWMTypeNotification
+                                | NetWMTypeDropdownMenu
+                                | NetWMTypePopupMenu
+                                | NetWMTypeTooltip,
     NetWMTypeAny                = NetWMTypeNormal
                                 | NetWMTypeDialog
                                 | NetWMTypeDesktop

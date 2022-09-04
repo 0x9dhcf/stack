@@ -1,6 +1,8 @@
+#include <X11/Xlib.h>
 #include <string.h>
 
 #include "client.h"
+#include "hints.h"
 #include "log.h"
 #include "monitor.h"
 #include "utils.h"
@@ -17,7 +19,6 @@ static void Configure(Client *c);
 static void SaveGeometries(Client *c);
 static void SynchronizeFrameGeometry(Client *c);
 static void SynchronizeWindowGeometry(Client *c);
-//static void SynchronizeTransients(Client *c);
 
 void
 HideClient(Client *c)
@@ -260,6 +261,8 @@ FullscreenClient(Client *c)
         c->decorated = False;
         c->states |= NetWMStateFullscreen;
 
+        PushClientBack(c);
+
         MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
                 c->monitor->h, False);
 
@@ -286,7 +289,6 @@ RestoreClient(Client *c)
         if (!c->tiled)
             MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     } else if (c->tiled) {
-        //c->decorated = True;
         c->tiled = False;
         MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
     }
@@ -340,9 +342,6 @@ SetClientActive(Client *c, Bool b)
         c->states &= ~NetWMStateDemandsAttention;
         c->hints &= ~HintsUrgent;
         c->active = b;
-
-        if (c->states & NetWMStateHidden)
-            RestoreClient(c);
 
         RefreshClient(c);
 
@@ -504,7 +503,7 @@ AssignClientToDesktop(Client *c, int desktop)
     c->desktop = desktop;
     if (c->tiled && !d->dynamic) {
         RestoreClient(c);
-        //Restack(c->monitor);
+        Restack(c->monitor);
     }
 
     if (!(c->types & NetWMTypeFixed))
@@ -650,7 +649,7 @@ Configure(Client *c)
     XMoveResizeWindow(stDisplay, c->window, wx, wy, c->ww, c->wh);
 
     /* place decoration windows */
-    if (c->decorated && !c->tiled && !c->transfor) {
+    if (c->decorated && !c->tiled && ! (c->types & NetWMTypeNoTopbar)) {
         XMoveResizeWindow(stDisplay, c->topbar, stConfig.borderWidth,
                 stConfig.borderWidth, c->fw - 2 * stConfig.borderWidth,
                 stConfig.topbarHeight);
@@ -715,7 +714,6 @@ SaveGeometries(Client *c)
         c->sfw = c->fw;
         c->sfh = c->fh;
     }
-    //if (!(c->states & (NetWMStateFullscreen | NetWMStateMaximized | NetWMStateHidden))) {
     if (!(c->states & NetWMStateMaximized)) {
         c->smx = c->fx;
         c->smy = c->fy;
@@ -738,7 +736,7 @@ SaveGeometries(Client *c)
 void
 SynchronizeFrameGeometry(Client *c)
 {
-    if (c->tiled || c->transfor) {
+    if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
         c->fx = c->wx - stConfig.borderWidth;
         c->fy = c->wy - stConfig.borderWidth;
         c->fw = c->ww + 2 * stConfig.borderWidth;
@@ -754,7 +752,7 @@ SynchronizeFrameGeometry(Client *c)
 void
 SynchronizeWindowGeometry(Client *c)
 {
-    if (c->tiled || c->transfor) {
+    if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
         c->wx = c->fx + stConfig.borderWidth;
         c->wy = c->fy + stConfig.borderWidth;
         c->ww = c->fw - 2 * stConfig.borderWidth;
