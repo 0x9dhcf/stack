@@ -41,6 +41,9 @@ ShowClient(Client *c)
                 Max(c->fy, c->monitor->desktops[c->desktop].wy),
                 Min(c->fw, c->monitor->desktops[c->desktop].ww),
                 Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+
+    if (c->states & NetWMStateFullscreen)
+        RaiseClient(c);
 }
 
 void
@@ -261,12 +264,11 @@ FullscreenClient(Client *c)
         c->decorated = False;
         c->states |= NetWMStateFullscreen;
 
-        PushClientBack(c);
-
         MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
                 c->monitor->h, False);
 
         SetNetWMStates(c->window, c->states);
+        RaiseClient(c);
     }
 }
 

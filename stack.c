@@ -929,7 +929,6 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
-    DLog("%ld", e->window);
     XWindowAttributes wa;
 
     if (!XGetWindowAttributes(stDisplay, e->window, &wa))
@@ -945,7 +944,6 @@ OnMapRequest(XMapRequestEvent *e)
 void
 OnUnmapNotify(XUnmapEvent *e)
 {
-    DLog("%ld", e->window);
     /* ignore UnmapNotify from reparenting  */
     if (e->event != stRoot && e->event != None) {
         if (e->send_event) {
@@ -1163,6 +1161,7 @@ OnMessage(XClientMessageEvent *e)
                     FullscreenClient(c);
             }
         }
+
         if (e->data.l[1] == (long)stAtoms[AtomNetWMStateDemandsAttention]
                 || e->data.l[2] == (long)stAtoms[AtomNetWMStateDemandsAttention]) {
             if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
@@ -1178,8 +1177,61 @@ OnMessage(XClientMessageEvent *e)
             RefreshClient(c);
         }
 
+        if (e->data.l[1] == (long)stAtoms[AtomNetWMStateMaximizedHorz]
+                || e->data.l[2] == (long)stAtoms[AtomNetWMStateMaximizedHorz]) {
+            if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
+                RestoreClient(c);
+            if (e->data.l[0] == 1) /* _NET_WM_STATE_ADD */
+                MaximizeClientHorizontally(c);
+            if (e->data.l[0] == 2) { /* _NET_WM_STATE_TOGGLE */
+                if (c->states & NetWMStateMaximizedHorz)
+                    RestoreClient(c);
+                else
+                    MaximizeClientHorizontally(c);
+            }
+        }
+
+        if (e->data.l[1] == (long)stAtoms[AtomNetWMStateMaximizedVert]
+                || e->data.l[2] == (long)stAtoms[AtomNetWMStateMaximizedVert]) {
+            if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
+                RestoreClient(c);
+            if (e->data.l[0] == 1) /* _NET_WM_STATE_ADD */
+                MaximizeClientVertically(c);
+            if (e->data.l[0] == 2) { /* _NET_WM_STATE_TOGGLE */
+                if (c->states & NetWMStateMaximizedVert)
+                    RestoreClient(c);
+                else
+                    MaximizeClientVertically(c);
+            }
+        }
+
+        if (e->data.l[1] == (long)stAtoms[AtomNetWMStateHidden]
+                || e->data.l[2] == (long)stAtoms[AtomNetWMStateHidden]) {
+            if (e->data.l[0] == 0) /* _NET_WM_STATE_REMOVE */
+                RestoreClient(c);
+            if (e->data.l[0] == 1) /* _NET_WM_STATE_ADD */
+                MinimizeClient(c);
+            if (e->data.l[0] == 2) { /* _NET_WM_STATE_TOGGLE */
+                if (c->states & NetWMStateHidden)
+                    RestoreClient(c);
+                else
+                    MinimizeClient(c);
+            }
+        }
         /* TODO: maximixed, minimized sticky (mainly for CSD) */
     }
+
+    // TODO: does not work like this obviously!
+    //if (e->message_type == stAtoms[AtomWMProtocols]
+    //        && e->data.l[0] == (long)stAtoms[AtomWMDeleteWindow]) {
+    //    XGrabServer(stDisplay);
+    //    XSetErrorHandler(DummyErrorHandler);
+    //    XSetCloseDownMode(stDisplay, DestroyAll);
+    //    XKillClient(stDisplay, c->window);
+    //    XSync(stDisplay, False);
+    //    XSetErrorHandler(EventLoopErrorHandler);
+    //    XUngrabServer(stDisplay);
+    //}
 
     if (e->message_type == stAtoms[AtomNetActiveWindow])
         XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);

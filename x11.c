@@ -148,6 +148,11 @@ InitializeX11()
 
     XInternAtoms(stDisplay, xatoms, AtomCount, False, stAtoms);
 
+//#ifndef NDEBUG
+//    for (int i = 0; i < AtomCount; i++)
+//        DLog("%s\t\t:%ld", xatoms[i], stAtoms[i]);
+//#endif
+
     for (int i = 0; i < CursorCount; ++i)
         stCursors[i] = XCreateFontCursor(stDisplay, xcursors[i]);
 
