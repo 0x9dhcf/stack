@@ -1237,7 +1237,7 @@ OnKeyPress(XKeyPressedEvent *e)
                 CleanMask(sc.modifier) == CleanMask(e->state)) {
             if (sc.type == CV) sc.cb.vcb.f();
             if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
-            if (sc.type == CC) sc.cb.ccb.f(activeClient);
+            if (sc.type == CC && activeClient) sc.cb.ccb.f(activeClient);
             break;
         }
     }
