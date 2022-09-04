@@ -344,6 +344,7 @@ Reload()
 void
 ManageWindow(Window w, Bool mapped)
 {
+    DLog("%ld mapped: %d", w, mapped);
     Window r = None, t = None;
     int wx = 0, wy = 0 ;
     unsigned int ww, wh, d, b;
@@ -518,6 +519,8 @@ UnmanageWindow(Window w, Bool destroyed)
 
     if (!c)
         return;
+
+    DLog("%ld destroyed: %d", w, destroyed);
 
     /* if some transients release them */
     t = c->transients;
@@ -926,6 +929,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
 void
 OnMapRequest(XMapRequestEvent *e)
 {
+    DLog("%ld", e->window);
     XWindowAttributes wa;
 
     if (!XGetWindowAttributes(stDisplay, e->window, &wa))
@@ -934,12 +938,14 @@ OnMapRequest(XMapRequestEvent *e)
     if (wa.override_redirect)
         return;
 
-    ManageWindow(e->window, False);
+    if (!Lookup(e->window))
+        ManageWindow(e->window, False);
 }
 
 void
 OnUnmapNotify(XUnmapEvent *e)
 {
+    DLog("%ld", e->window);
     /* ignore UnmapNotify from reparenting  */
     if (e->event != stRoot && e->event != None) {
         if (e->send_event) {
