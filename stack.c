@@ -356,8 +356,7 @@ MoveForward()
     if (activeClient && activeClient->transfor)
         return;
 
-    if (activeMonitor
-            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
+    if (activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
 
         Client *after = NULL;
         for (after = activeClient->next;
@@ -392,8 +391,7 @@ MoveBackward()
     if (activeClient && activeClient->transfor)
         return;
 
-    if (activeMonitor
-            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
+    if (activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
 
         Client *before = NULL;
         for (before = activeClient->prev;
@@ -445,23 +443,20 @@ MoveToDesktop(int desktop)
 void
 ToggleDynamic()
 {
-    if (activeMonitor) {
-        Bool b = activeMonitor->desktops[activeMonitor->activeDesktop].dynamic;
-        activeMonitor->desktops[activeMonitor->activeDesktop].dynamic = ! b;
-        /* Untile, restore all windows */
-        if (b)
-            for (Client *c = activeMonitor->chead; c; c = c->next)
-                if (c->desktop == activeMonitor->activeDesktop)
-                    UntileClient(c);
-        Restack(activeMonitor);
-    }
+    Bool b = activeMonitor->desktops[activeMonitor->activeDesktop].dynamic;
+    activeMonitor->desktops[activeMonitor->activeDesktop].dynamic = ! b;
+    /* Untile, restore all windows */
+    if (b)
+        for (Client *c = activeMonitor->chead; c; c = c->next)
+            if (c->desktop == activeMonitor->activeDesktop)
+                UntileClient(c);
+    Restack(activeMonitor);
 }
 
 void
 AddMaster(int nb)
 {
-    if (activeMonitor
-            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
+    if (activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
         activeMonitor->desktops[activeMonitor->activeDesktop].masters =
             Max(activeMonitor->desktops[activeMonitor->activeDesktop].masters + nb, 1);
         Restack(activeMonitor);
