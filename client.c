@@ -1,5 +1,6 @@
 #include <X11/Xlib.h>
 #include <string.h>
+#include <X11/Xatom.h>
 
 #include "client.h"
 #include "hints.h"
@@ -521,6 +522,10 @@ AssignClientToDesktop(Client *c, int desktop)
             || c->strut.bottom
             || d->dynamic))
         Restack(m);
+
+    /* finally let the pager know where we are */
+    XChangeProperty(stDisplay, c->window, stAtoms[AtomNetWMDesktop], XA_CARDINAL, 32,
+            PropModeReplace, (unsigned char*)&c->desktop, 1);
 }
 
 void

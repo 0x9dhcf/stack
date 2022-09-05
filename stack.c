@@ -1143,6 +1143,27 @@ OnMessage(XClientMessageEvent *e)
      * _NET_WM_MOVERESIZE
      * _NET_RESTACK_WINDOW */
 
+    if (e->window == stRoot) {
+        DLog("Root received: %ld",e->message_type);
+        if (e->message_type == stAtoms[AtomNetCurrentDesktop])
+            ShowDesktop(e->data.l[0]);
+
+        /*
+         * specs say message MUST be send to root but it seems
+         * most pagers send to the client
+         */
+        if (e->message_type == stAtoms[AtomNetActiveWindow]) {
+            Client *toActivate = Lookup(e->window);
+            if (toActivate) {
+                // TODO: not on the same monitor!
+                if (activeMonitor->activeDesktop != toActivate->desktop)
+                    ShowDesktop(toActivate->desktop);
+                SetActiveClient(toActivate);
+            }
+        }
+        return;
+    }
+
     Client *c = Lookup(e->window);
     if (!c)
         return;
@@ -1233,8 +1254,16 @@ OnMessage(XClientMessageEvent *e)
     //    XUngrabServer(stDisplay);
     //}
 
-    if (e->message_type == stAtoms[AtomNetActiveWindow])
-        XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
+    if (e->message_type == stAtoms[AtomNetActiveWindow]) {
+        // TODO: not on the same monitor!
+        if (activeMonitor->activeDesktop != c->desktop)
+                ShowDesktop(c->desktop);
+        if (c->states & NetWMStateHidden)
+            RestoreClient(c);
+        SetActiveClient(c);
+    }
+    //if (e->message_type == stAtoms[AtomNetActiveWindow])
+    //    XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
 }
 
 void
