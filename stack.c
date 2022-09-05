@@ -452,7 +452,7 @@ ToggleDynamic()
         if (b)
             for (Client *c = activeMonitor->chead; c; c = c->next)
                 if (c->desktop == activeMonitor->activeDesktop)
-                    RestoreClient(c);
+                    UntileClient(c);
         Restack(activeMonitor);
     }
 }

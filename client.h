@@ -83,6 +83,7 @@ void MoveClientFrame(Client *c, int x, int y);
 void ResizeClientFrame(Client *c, int w, int h, Bool sh);
 void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
 void TileClient(Client *c, int x, int y, int w, int h);
+void UntileClient(Client *c);
 void MaximizeClientHorizontally(Client *c);
 void MaximizeClientVertically(Client *c);
 void MaximizeClient(Client *c);

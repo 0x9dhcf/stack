@@ -150,6 +150,14 @@ TileClient(Client *c, int x, int y, int w, int h)
 }
 
 void
+UntileClient(Client *c)
+{
+    c->tiled = False;
+    MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
+    RestoreClient(c);
+}
+
+void
 MaximizeClientHorizontally(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
@@ -276,24 +284,20 @@ FullscreenClient(Client *c)
 void
 RestoreClient(Client *c)
 {
-    SetNetWMStates(c->window, c->states);
+    /* do not restore any tiled window */
+    if (c->tiled)
+        return;
 
     if (c->states & NetWMStateFullscreen) {
         c->decorated = True;
         c->states &= ~NetWMStateFullscreen;
-        if (!c->tiled)
-            MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
+        MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
     } else if (c->states & NetWMStateHidden) {
         c->states &= ~NetWMStateHidden;
-        if (!c->tiled)
-            MoveResizeClientFrame(c, c->shx, c->shy, c->shw, c->shh, False);
+        MoveResizeClientFrame(c, c->shx, c->shy, c->shw, c->shh, False);
     } else if (c->states & NetWMStateMaximized) {
         c->states &= ~NetWMStateMaximized;
-        if (!c->tiled)
-            MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
-    } else if (c->tiled) {
-        c->tiled = False;
-        MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
+        MoveResizeClientFrame(c, c->smx, c->smy, c->smw, c->smh, False);
     }
 
     SetNetWMStates(c->window, c->states);
@@ -505,7 +509,7 @@ AssignClientToDesktop(Client *c, int desktop)
 
     c->desktop = desktop;
     if (c->tiled && !d->dynamic) {
-        RestoreClient(c);
+        UntileClient(c);
         Restack(c->monitor);
     }
 
