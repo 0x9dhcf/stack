@@ -529,6 +529,23 @@ AssignClientToDesktop(Client *c, int desktop)
 }
 
 void
+KillClient(Client *c)
+{
+    if (c->protocols & NetWMProtocolDeleteWindow) {
+        SendMessage(c->window, stAtoms[AtomWMDeleteWindow]);
+    } else {
+        XGrabServer(stDisplay);
+        XSetErrorHandler(DummyErrorHandler);
+        XSetCloseDownMode(stDisplay, DestroyAll);
+        XKillClient(stDisplay, c->window);
+        XSync(stDisplay, False);
+        XSetErrorHandler(EventLoopErrorHandler);
+        XUngrabServer(stDisplay);
+    }
+}
+
+
+void
 RefreshClientButton(Client *c, int button, Bool hovered)
 {
     int bg, fg, x, y;

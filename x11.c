@@ -1,3 +1,5 @@
+#include <X11/Xlib.h>
+#include <X11/Xproto.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/cursorfont.h>
 #include <X11/Xft/Xft.h>
@@ -106,16 +108,16 @@ static unsigned int xcursors[] = {
     XC_top_left_corner
 };
 
-
-Display         *stDisplay = NULL;
-int              stScreen;
-Window           stRoot;
-unsigned long    stNumLockMask;
-int              stXRandREventBase;
-Atom             stAtoms[AtomCount];
-Cursor           stCursors[CursorCount];
-XftFont         *stLabelFont = NULL;
-XftFont         *stIconFont = NULL;
+Display *stDisplay = NULL;
+int stScreen;
+Window stRoot;
+unsigned long stNumLockMask;
+int stXRandREventBase;
+Atom stAtoms[AtomCount];
+Cursor stCursors[CursorCount];
+XftFont *stLabelFont = NULL;
+XftFont *stIconFont = NULL;
+XErrorHandler stDefaultErrorHandler;
 
 void
 InitializeX11()
@@ -223,4 +225,46 @@ TeardownX11()
     XSync(stDisplay, False);
     XCloseDisplay(stDisplay);
 }
+
+
+int
+WMDetectedErrorHandler(Display *d, XErrorEvent *e)
+{
+    (void)d;
+    (void)e;
+    FLog("A windows manager is already running!");
+    return 1; /* never reached */
+}
+
+int
+EventLoopErrorHandler(Display *d, XErrorEvent *e)
+{
+    /* ignore some error */
+    if (e->error_code == BadWindow
+            || (e->request_code == X_SetInputFocus && e->error_code == BadMatch)
+            || (e->request_code == X_PolyText8 && e->error_code == BadDrawable)
+            || (e->request_code == X_PolyFillRectangle && e->error_code == BadDrawable)
+            || (e->request_code == X_PolySegment && e->error_code == BadDrawable)
+            || (e->request_code == X_ConfigureWindow && e->error_code == BadMatch)
+            || (e->request_code == X_GrabButton && e->error_code == BadAccess)
+            || (e->request_code == X_GrabKey && e->error_code == BadAccess)
+            || (e->request_code == X_CopyArea && e->error_code == BadDrawable)) {
+        DLog("ignored error: request code=%d, error code=%d",
+            e->request_code, e->error_code);
+        return 0;
+    }
+    ELog("error: request code=%d, error code=%d",
+            e->request_code, e->error_code);
+
+    return stDefaultErrorHandler(d, e); /* may call exit */
+}
+
+int
+DummyErrorHandler(Display *d, XErrorEvent *e)
+{
+    (void)d;
+    (void)e;
+    return 0;
+}
+
 

@@ -123,19 +123,23 @@ typedef enum {
     AlignBottom
 } VAlign;
 
-extern Display         *stDisplay;
-extern int              stScreen;
-extern Window           stRoot;
-extern unsigned long    stNumLockMask;
-extern int              stXRandREventBase;
-extern Atom             stAtoms[AtomCount];
-extern Cursor           stCursors[CursorCount];
-extern XftFont         *stLabelFont;
-extern XftFont         *stIconFont;
+extern Display *stDisplay;
+extern int stScreen;
+extern Window stRoot;
+extern unsigned long stNumLockMask;
+extern int stXRandREventBase;
+extern Atom stAtoms[AtomCount];
+extern Cursor stCursors[CursorCount];
+extern XftFont *stLabelFont;
+extern XftFont *stIconFont;
+extern XErrorHandler stDefaultErrorHandler;
 
 void InitializeX11();
 void GetTextPosition(const char *s, XftFont *ft, HAlign ha, VAlign va, int w, int h, int *x, int *y);
 void WriteText(Drawable d, const char*s, XftFont *ft, int color, int x, int y);
 void TeardownX11();
+int EventLoopErrorHandler(Display *d, XErrorEvent *e);
+int DummyErrorHandler(Display *d, XErrorEvent *e);
+int WMDetectedErrorHandler(Display *d, XErrorEvent *e);
 
 #endif

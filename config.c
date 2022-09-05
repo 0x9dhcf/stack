@@ -88,6 +88,7 @@ Config stConfig = {
     .shortcuts = {
         { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Stop} } },
         { Modkey | ShiftMask,     XK_r,         CV,     { .vcb={Reload} } },
+        { Modkey | ShiftMask,     XK_k,         CC,     { .ccb={KillClient} } },
         { Modkey | ShiftMask,     XK_h,         CC,     { .ccb={MaximizeClientHorizontally} } },
         { Modkey | ShiftMask,     XK_v,         CC,     { .ccb={MaximizeClientVertically} } },
         { Modkey | ShiftMask,     XK_Left,      CC,     { .ccb={MaximizeClientLeft} } },

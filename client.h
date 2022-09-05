@@ -105,5 +105,6 @@ void MoveClientBefore(Client *c, Client *before);
 void PushClientFront(Client *c);
 void PushClientBack(Client *c);
 void AssignClientToDesktop(Client *c, int d);
+void KillClient(Client *c);
 
 #endif
