@@ -3,7 +3,6 @@
 
 #include <X11/Xlib.h>
 
-
 #define IsFixed(n) (\
         n.minw != 0 &&\
         n.maxw != INT_MAX &&\

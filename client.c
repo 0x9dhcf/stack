@@ -3,32 +3,49 @@
 #include <X11/Xatom.h>
 
 #include "client.h"
+#include "config.h"
+#include "event.h"
 #include "hints.h"
-#include "log.h"
+#include "manager.h"
 #include "monitor.h"
-#include "utils.h"
-#include "x11.h"
+#include "stack.h"
 
+#define DecorationWidth (2 * config.borderWidth\
+    + ButtonCount * (config.buttonSize + config.buttonGap) + 1)
+#define DecorationHeight (2 * config.borderWidth +\
+        config.topbarHeight + 1)
 
-#define DecorationWidth (2 * stConfig.borderWidth\
-    + ButtonCount * (stConfig.buttonSize + stConfig.buttonGap) + 1)
-#define DecorationHeight (2 * stConfig.borderWidth +\
-        stConfig.topbarHeight + 1)
+/* we always use Center and Middle, but we are ready for
+ * window name right aligned */
+typedef enum {
+    AlignLeft,
+    AlignCenter,
+    AlignRight
+} HAlign;
+
+typedef enum {
+    AlignTop,
+    AlignMiddle,
+    AlignBottom
+} VAlign;
+
 
 static void ApplyNormalHints(Client *c);
 static void Configure(Client *c);
 static void SaveGeometries(Client *c);
 static void SynchronizeFrameGeometry(Client *c);
 static void SynchronizeWindowGeometry(Client *c);
+static void WriteText(Drawable d, const char*s, FontType ft, int color,
+        HAlign ha, VAlign va, int w, int h);
 
 void
 HideClient(Client *c)
 {
     /* move all windows off screen without changing anything */
-    XMoveWindow(stDisplay, c->frame, -c->fw, c->fy);
+    XMoveWindow(display, c->frame, -c->fw, c->fy);
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
-            XMoveWindow(stDisplay, c->handles[i], -c->fw, c->fy);
+            XMoveWindow(display, c->handles[i], -c->fw, c->fy);
 }
 
 void
@@ -308,10 +325,10 @@ RaiseClient(Client *c)
 {
     c->states |= NetWMStateAbove;
     c->states &= ~NetWMStateBelow;
-    XRaiseWindow(stDisplay, c->frame);
+    XRaiseWindow(display, c->frame);
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
-            XRaiseWindow(stDisplay, c->handles[i]);
+            XRaiseWindow(display, c->handles[i]);
 
     for (Transient *tc = c->transients; tc; tc = tc->next)
         RaiseClient(tc->client);
@@ -324,10 +341,10 @@ LowerClient(Client *c)
 {
     c->states |= NetWMStateBelow;
     c->states &= ~NetWMStateAbove;
-    XLowerWindow(stDisplay, c->frame);
+    XLowerWindow(display, c->frame);
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
         for (int i = 0; i < HandleCount; ++i)
-            XLowerWindow(stDisplay, c->handles[i]);
+            XLowerWindow(display, c->handles[i]);
 
     for (Transient *tc = c->transients; tc; tc = tc->next)
         LowerClient(tc->client);
@@ -338,13 +355,13 @@ LowerClient(Client *c)
 void
 SetClientActive(Client *c, Bool b)
 {
-    unsigned int modifiers[] = { 0, LockMask, stNumLockMask, stNumLockMask|LockMask };
+    unsigned int modifiers[] = { 0, LockMask, numLockMask, numLockMask|LockMask };
 
     if (b && !c->active) {
         if (c->hints & HintsFocusable)
-            XSetInputFocus(stDisplay, c->window, RevertToPointerRoot, CurrentTime);
+            XSetInputFocus(display, c->window, RevertToPointerRoot, CurrentTime);
         else if (c->protocols & NetWMProtocolTakeFocus)
-            SendMessage(c->window, stAtoms[AtomWMTakeFocus]);
+            SendMessage(c->window, atoms[AtomWMTakeFocus]);
 
         c->states &= ~NetWMStateDemandsAttention;
         c->hints &= ~HintsUrgent;
@@ -354,7 +371,7 @@ SetClientActive(Client *c, Bool b)
 
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; ++i)
-                XGrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window,
+                XGrabButton(display, Button1, Modkey | modifiers[i], c->window,
                         False, ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                         GrabModeAsync, GrabModeSync, None, None);
 
@@ -365,229 +382,64 @@ SetClientActive(Client *c, Bool b)
         RefreshClient(c);
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; i++)
-                XUngrabButton(stDisplay, Button1, Modkey | modifiers[i], c->window);
+                XUngrabButton(display, Button1, Modkey | modifiers[i], c->window);
     }
-}
-
-Client *
-NextClient(Client *c)
-{
-    return c->next ? c->next : c->monitor->chead;
-}
-
-Client *
-PreviousClient(Client *c)
-{
-    return c->prev ? c->prev : c->monitor->ctail;
-}
-
-void
-MoveClientAfter(Client *c, Client *after)
-{
-    if (c == after)
-        return;
-
-    /* remove c */
-    if (c->prev)
-          c->prev->next = c->next;
-    else
-        c->monitor->chead = c->next;
-
-    /* change monitor is needed */
-    c->monitor = after->monitor;
-
-    if (c->next)
-        c->next->prev = c->prev;
-    else
-        c->monitor->ctail = c->prev;
-
-    if (after == c->monitor->ctail) {
-        PushClientBack(c);
-    } else {
-        c->next = after->next;
-        c->prev = after;
-        after->next->prev = c;
-        after->next = c;
-    }
-}
-
-void
-MoveClientBefore(Client *c, Client *before)
-{
-    if (c == before)
-        return;
-
-    /* remove c */
-    if (c->prev)
-          c->prev->next = c->next;
-    else
-        c->monitor->chead = c->next;
-
-    /* change monitor is needed */
-    c->monitor = before->monitor;
-
-    if (c->next)
-        c->next->prev = c->prev;
-    else
-        c->monitor->ctail = c->prev;
-
-    if (before == c->monitor->chead) {
-        PushClientFront(c);
-    } else {
-        c->next = before;
-        c->prev = before->prev;
-        before->prev->next = c;
-        before->prev = c;
-    }
-}
-
-void
-PushClientFront(Client *c)
-{
-    if (c->monitor->chead) {
-        c->next = c->monitor->chead;
-        c->monitor->chead->prev = c;
-    }
-
-    if (! c->monitor->ctail)
-        c->monitor->ctail = c;
-
-    c->monitor->chead = c;
-    c->prev = NULL;
-}
-
-void
-PushClientBack(Client *c)
-{
-    if (c->monitor->ctail) {
-        c->prev = c->monitor->ctail;
-        c->monitor->ctail->next = c;
-    }
-
-    if (! c->monitor->chead)
-        c->monitor->chead = c;
-
-    c->monitor->ctail = c;
-    c->next = NULL;
-}
-
-void
-AssignClientToDesktop(Client *c, int desktop)
-{
-    Monitor *m = c->monitor;
-    Desktop *d = &(m->desktops[desktop]);
-
-    if (desktop < 0 || desktop >= DesktopCount || c->desktop == desktop)
-        return;
-
-    /* remove ourself from previous desktop if any */
-    if (c->desktop >= 0) {
-        Desktop *pd = &m->desktops[c->desktop];
-        if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
-            pd->wx = m->x;
-            pd->wy = m->y;
-            pd->ww = m->w;
-            pd->wh = m->h;
-            for (Client *mc = m->chead; mc; mc = mc->next) {
-                if (mc != c && mc->desktop == c->desktop) {
-                    pd->wx = Max(pd->wx, m->x + mc->strut.left);
-                    pd->wy = Max(pd->wy, m->y + mc->strut.top);
-                    pd->ww = Min(pd->ww, m->w - (mc->strut.right + mc->strut.left));
-                    pd->wh = Min(pd->wh, m->h - (mc->strut.top + mc->strut.bottom));
-                }
-            }
-        }
-    }
-
-    /* now set the new one */
-    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
-        d->wx = Max(d->wx, m->x + c->strut.left);
-        d->wy = Max(d->wy, m->y + c->strut.top);
-        d->ww = Min(d->ww, m->w - (c->strut.right + c->strut.left));
-        d->wh = Min(d->wh, m->h - (c->strut.top + c->strut.bottom));
-    }
-
-    c->desktop = desktop;
-    if (c->tiled && !d->dynamic) {
-        UntileClient(c);
-        Restack(c->monitor);
-    }
-
-    if (!(c->types & NetWMTypeFixed))
-        MoveResizeClientFrame(c,
-                Max(c->fx, c->monitor->desktops[c->desktop].wx),
-                Max(c->fy, c->monitor->desktops[c->desktop].wy),
-                Min(c->fw, c->monitor->desktops[c->desktop].ww),
-                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
-
-    if ((c->strut.right
-            || c->strut.left
-            || c->strut.top
-            || c->strut.bottom
-            || d->dynamic))
-        Restack(m);
-
-    /* finally let the pager know where we are */
-    XChangeProperty(stDisplay, c->window, stAtoms[AtomNetWMDesktop], XA_CARDINAL, 32,
-            PropModeReplace, (unsigned char*)&c->desktop, 1);
 }
 
 void
 KillClient(Client *c)
 {
+    DLog();
     if (c->protocols & NetWMProtocolDeleteWindow) {
-        SendMessage(c->window, stAtoms[AtomWMDeleteWindow]);
+        SendMessage(c->window, atoms[AtomWMDeleteWindow]);
     } else {
-        XGrabServer(stDisplay);
-        XSetErrorHandler(DummyErrorHandler);
-        XSetCloseDownMode(stDisplay, DestroyAll);
-        XKillClient(stDisplay, c->window);
-        XSync(stDisplay, False);
-        XSetErrorHandler(EventLoopErrorHandler);
-        XUngrabServer(stDisplay);
+        XGrabServer(display);
+        XSetErrorHandler(DisableErrorHandler);
+        XSetCloseDownMode(display, DestroyAll);
+        XKillClient(display, c->window);
+        XSync(display, False);
+        XSetErrorHandler(EnableErrorHandler);
+        XUngrabServer(display);
     }
 }
-
 
 void
 RefreshClientButton(Client *c, int button, Bool hovered)
 {
-    int bg, fg, x, y;
+    int bg, fg;
     /* Select the button colors */
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = stConfig.urgentBackground;
-        fg = stConfig.urgentForeground;
+        bg = config.urgentBackground;
+        fg = config.urgentForeground;
     }  else if (c->active) {
         if (hovered) {
-            bg = stConfig.buttonStyles[button].activeHoveredBackground;
-            fg = stConfig.buttonStyles[button].activeHoveredForeground;
+            bg = config.buttonStyles[button].activeHoveredBackground;
+            fg = config.buttonStyles[button].activeHoveredForeground;
         } else {
-            bg = stConfig.buttonStyles[button].activeBackground;
-            fg = stConfig.buttonStyles[button].activeForeground;
+            bg = config.buttonStyles[button].activeBackground;
+            fg = config.buttonStyles[button].activeForeground;
         }
     } else {
         if (hovered) {
-            bg = stConfig.buttonStyles[button].inactiveHoveredBackground;
-            fg = stConfig.buttonStyles[button].inactiveHoveredForeground;
+            bg = config.buttonStyles[button].inactiveHoveredBackground;
+            fg = config.buttonStyles[button].inactiveHoveredForeground;
         } else {
-            bg = stConfig.buttonStyles[button].inactiveBackground;
-            fg = stConfig.buttonStyles[button].inactiveForeground;
+            bg = config.buttonStyles[button].inactiveBackground;
+            fg = config.buttonStyles[button].inactiveForeground;
         }
     }
 
-    XSetWindowBackground(stDisplay, c->buttons[button], bg);
-    XClearWindow(stDisplay, c->buttons[button]);
-    GetTextPosition(stConfig.buttonStyles[button].icon, stIconFont,
-            AlignCenter, AlignMiddle, stConfig.buttonSize,
-            stConfig.buttonSize, &x, &y);
-    WriteText(c->buttons[button], stConfig.buttonStyles[button].icon,
-            stIconFont, fg, x, y);
+    XSetWindowBackground(display, c->buttons[button], bg);
+    XClearWindow(display, c->buttons[button]);
+    WriteText(c->buttons[button], config.buttonStyles[button].icon, FontIcon,
+            fg, AlignCenter, AlignMiddle, config.buttonSize,
+            config.buttonSize);
 }
 
 void
 RefreshClient(Client *c)
 {
-    int bg, fg, /*bbg, bfg,*/ x, y;
+    int bg, fg;
 
     /* Do not attempt to refresh non decorated or hidden clients */
     if (!c->decorated || (c->desktop != c->monitor->activeDesktop
@@ -596,25 +448,23 @@ RefreshClient(Client *c)
 
     /* Select the frame colors */
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = stConfig.urgentBackground;
-        fg = stConfig.urgentForeground;
+        bg = config.urgentBackground;
+        fg = config.urgentForeground;
     }  else if (c->active) {
-        bg = c->tiled ?  stConfig.activeTileBackground : stConfig.activeBackground;
-        fg = stConfig.activeForeground;
+        bg = c->tiled ?  config.activeTileBackground : config.activeBackground;
+        fg = config.activeForeground;
     } else {
-        bg = c->tiled ?  stConfig.inactiveTileBackground : stConfig.inactiveBackground;
-        fg = stConfig.inactiveForeground;
+        bg = c->tiled ?  config.inactiveTileBackground : config.inactiveBackground;
+        fg = config.inactiveForeground;
     }
 
-    XSetWindowBackground(stDisplay, c->frame, bg);
-    XClearWindow(stDisplay, c->frame);
-    XSetWindowBackground(stDisplay, c->topbar, bg);
-    XClearWindow(stDisplay, c->topbar);
-    if (c->name) {
-        GetTextPosition(c->name, stLabelFont, AlignCenter, AlignMiddle,
-                c->ww - 2 * stConfig.borderWidth, stConfig.topbarHeight, &x, &y);
-        WriteText(c->topbar, c->name, stLabelFont, fg, x, y);
-    }
+    XSetWindowBackground(display, c->frame, bg);
+    XClearWindow(display, c->frame);
+    XSetWindowBackground(display, c->topbar, bg);
+    XClearWindow(display, c->topbar);
+    if (c->name)
+        WriteText(c->topbar, c->name, FontLabel, fg, AlignCenter, AlignMiddle,
+                c->ww - 2 * config.borderWidth, config.topbarHeight);
 
     for (int i = 0; i < ButtonCount; ++i)
         RefreshClientButton(c, i, False);
@@ -673,45 +523,45 @@ Configure(Client *c)
     wy = c->wy - c->fy;
 
     /* place frame and window */
-    XMoveResizeWindow(stDisplay, c->frame, c->fx, c->fy, c->fw, c->fh);
-    XMoveResizeWindow(stDisplay, c->window, wx, wy, c->ww, c->wh);
+    XMoveResizeWindow(display, c->frame, c->fx, c->fy, c->fw, c->fh);
+    XMoveResizeWindow(display, c->window, wx, wy, c->ww, c->wh);
 
     /* place decoration windows */
     if (c->decorated && !c->tiled && ! (c->types & NetWMTypeNoTopbar)) {
-        XMoveResizeWindow(stDisplay, c->topbar, stConfig.borderWidth,
-                stConfig.borderWidth, c->fw - 2 * stConfig.borderWidth,
-                stConfig.topbarHeight);
+        XMoveResizeWindow(display, c->topbar, config.borderWidth,
+                config.borderWidth, c->fw - 2 * config.borderWidth,
+                config.topbarHeight);
         for (int i = 0; i < ButtonCount; ++i) {
-            XMoveResizeWindow(stDisplay, c->buttons[i],
-                    c->fw - 2 * stConfig.borderWidth
-                    - ((i+1) * (stConfig.buttonSize) + i * stConfig.buttonGap),
-                    (stConfig.topbarHeight - stConfig.buttonSize) / 2,
-                    stConfig.buttonSize, stConfig.buttonSize);
+            XMoveResizeWindow(display, c->buttons[i],
+                    c->fw - 2 * config.borderWidth
+                    - ((i+1) * (config.buttonSize) + i * config.buttonGap),
+                    (config.topbarHeight - config.buttonSize) / 2,
+                    config.buttonSize, config.buttonSize);
         }
     } else if (!(c->types & NetWMTypeFixed)) {
         /* move the topbar outside the frame */
-        XMoveWindow(stDisplay, c->topbar, stConfig.borderWidth,
-                -(stConfig.borderWidth + stConfig.topbarHeight));
+        XMoveWindow(display, c->topbar, config.borderWidth,
+                -(config.borderWidth + config.topbarHeight));
     }
 
     /* suround frame by handles */
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
-        hw = stConfig.handleWidth;
-        XMoveResizeWindow(stDisplay, c->handles[HandleNorth],
+        hw = config.handleWidth;
+        XMoveResizeWindow(display, c->handles[HandleNorth],
                 c->fx, c->fy - hw, c->fw, hw);
-        XMoveResizeWindow(stDisplay, c->handles[HandleNorthWest],
+        XMoveResizeWindow(display, c->handles[HandleNorthWest],
                 c->fx + c->fw, c->fy - hw, hw, hw);
-        XMoveResizeWindow(stDisplay, c->handles[HandleWest],
+        XMoveResizeWindow(display, c->handles[HandleWest],
                 c->fx + c->fw, c->fy, hw, c->fh);
-        XMoveResizeWindow(stDisplay, c->handles[HandleSouthWest],
+        XMoveResizeWindow(display, c->handles[HandleSouthWest],
                 c->fx + c->fw, c->fy + c->fh, hw, hw);
-        XMoveResizeWindow(stDisplay, c->handles[HandleSouth],
+        XMoveResizeWindow(display, c->handles[HandleSouth],
                 c->fx, c->fy + c->fh, c->fw, hw);
-        XMoveResizeWindow(stDisplay, c->handles[HandleSouthEast],
+        XMoveResizeWindow(display, c->handles[HandleSouthEast],
                 c->fx - hw, c->fy + c->fh, hw, hw);
-        XMoveResizeWindow(stDisplay, c->handles[HandleEast],
+        XMoveResizeWindow(display, c->handles[HandleEast],
                 c->fx - hw, c->fy, hw, c->fh);
-        XMoveResizeWindow(stDisplay, c->handles[HandleNorthEast],
+        XMoveResizeWindow(display, c->handles[HandleNorthEast],
                 c->fx - hw, c->fy - hw, hw, hw);
     }
 
@@ -756,19 +606,19 @@ SaveGeometries(Client *c)
     }
 }
 
-#define WXOffset(c) (c->decorated ? stConfig.borderWidth : 0)
-#define WYOffset(c) (c->decorated ? stConfig.borderWidth + stConfig.topbarHeight : 0)
-#define WWOffset(c) (c->decorated ? 2 * stConfig.borderWidth : 0)
-#define WHOffset(c) (c->decorated ? 2 * stConfig.borderWidth + stConfig.topbarHeight: 0)
+#define WXOffset(c) (c->decorated ? config.borderWidth : 0)
+#define WYOffset(c) (c->decorated ? config.borderWidth + config.topbarHeight : 0)
+#define WWOffset(c) (c->decorated ? 2 * config.borderWidth : 0)
+#define WHOffset(c) (c->decorated ? 2 * config.borderWidth + config.topbarHeight: 0)
 
 void
 SynchronizeFrameGeometry(Client *c)
 {
     if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
-        c->fx = c->wx - stConfig.borderWidth;
-        c->fy = c->wy - stConfig.borderWidth;
-        c->fw = c->ww + 2 * stConfig.borderWidth;
-        c->fh = c->wh + 2 * stConfig.borderWidth;
+        c->fx = c->wx - config.borderWidth;
+        c->fy = c->wy - config.borderWidth;
+        c->fw = c->ww + 2 * config.borderWidth;
+        c->fh = c->wh + 2 * config.borderWidth;
     } else {
         c->fx = c->wx - WXOffset(c);
         c->fy = c->wy - WYOffset(c);
@@ -781,14 +631,61 @@ void
 SynchronizeWindowGeometry(Client *c)
 {
     if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
-        c->wx = c->fx + stConfig.borderWidth;
-        c->wy = c->fy + stConfig.borderWidth;
-        c->ww = c->fw - 2 * stConfig.borderWidth;
-        c->wh = c->fh - 2 * stConfig.borderWidth;
+        c->wx = c->fx + config.borderWidth;
+        c->wy = c->fy + config.borderWidth;
+        c->ww = c->fw - 2 * config.borderWidth;
+        c->wh = c->fh - 2 * config.borderWidth;
     } else {
         c->wx = c->fx + WXOffset(c);
         c->wy = c->fy + WYOffset(c);
         c->ww = c->fw - WWOffset(c);
         c->wh = c->fh - WHOffset(c);
     }
+}
+
+void
+WriteText(Drawable d, const char*s, FontType ft, int color,
+        HAlign ha, VAlign va, int w, int h)
+{
+    int x, y;
+    XGlyphInfo info;
+    XftColor xftc;
+    XftDraw *draw;
+    Visual *v;
+    Colormap cm;
+    XftFont *f;
+
+    f = fonts[ft];
+    XftTextExtentsUtf8(display, f, (FcChar8*)s, strlen(s), &info);
+    x = y = 0;
+    switch ((int)ha) {
+        case AlignCenter:
+            x = (w - (info.xOff >= info.width ? info.xOff : info.width)) / 2;
+            break;
+        case AlignRight:
+            x = w - (info.xOff >= info.width ? info.xOff : info.width);
+            break;
+    }
+    switch ((int)va) {
+        case AlignTop:
+            y = h + f->ascent + f->descent - f->descent + info.yOff;
+            break;
+        case AlignMiddle:
+            y = (h + f->ascent + f->descent) / 2 - f->descent + info.yOff;
+            break;
+    }
+
+    v = DefaultVisual(display, 0);
+    cm = DefaultColormap(display, 0);
+    draw = XftDrawCreate(display, d, v, cm);
+
+    char name[] = "#ffffff";
+    snprintf(name, sizeof(name), "#%06X", color);
+    XftColorAllocName(display, DefaultVisual(display,
+                DefaultScreen(display)),
+                DefaultColormap(display, DefaultScreen(display)),
+                name, &xftc);
+    XftDrawStringUtf8(draw, &xftc, f, x, y, (XftChar8 *)s, strlen(s));
+    XftDrawDestroy(draw);
+    XftColorFree(display,v, cm, &xftc);
 }

@@ -9,7 +9,8 @@
 
 #include "client.h"
 #include "config.h"
-#include "log.h"
+#include "event.h"
+#include "manager.h"
 #include "stack.h"
 
 static void SplitLine(char *str, char **key, char **val);
@@ -17,9 +18,9 @@ static void SetIntValue(const char *val, void *to);
 static void SetStrValue(const char *val, void *to);
 static void SetColValue(const char *val, void *to);
 
-char stConfigFile[256];
+char configFile[256];
 
-Config stConfig = {
+Config config = {
     /* Globals */
     .labelFontname  = "Sans-10",
     .iconFontname   = "Sans-10",
@@ -86,8 +87,8 @@ Config stConfig = {
     .split      = .6,
 
     .shortcuts = {
-        { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={Stop} } },
-        { Modkey | ShiftMask,     XK_r,         CV,     { .vcb={Reload} } },
+        { Modkey | ShiftMask,     XK_q,         CV,     { .vcb={StopEventLoop} } },
+        { Modkey | ShiftMask,     XK_r,         CV,     { .vcb={ReloadConfig} } },
         { Modkey | ShiftMask,     XK_k,         CC,     { .ccb={KillClient} } },
         { Modkey | ShiftMask,     XK_h,         CC,     { .ccb={MaximizeClientHorizontally} } },
         { Modkey | ShiftMask,     XK_v,         CC,     { .ccb={MaximizeClientVertically} } },
@@ -130,48 +131,48 @@ static struct {
     void *to;
     void (*set)(const char *, void *);
 } callbacks[] = {
-    {"LabelFont",                           (void*)&stConfig.labelFontname,                             SetStrValue},
-    {"IconFont",                            (void*)&stConfig.iconFontname,                              SetStrValue},
-    {"BorderWidth",                         (void*)&stConfig.borderWidth,                               SetIntValue},
-    {"TopbarHeight",                        (void*)&stConfig.topbarHeight,                              SetIntValue},
-    {"HandleWidth",                         (void*)&stConfig.handleWidth,                               SetIntValue},
-    {"ButtonSize",                          (void*)&stConfig.buttonSize,                                SetIntValue},
-    {"ButtonGap",                           (void*)&stConfig.buttonGap,                                 SetIntValue},
-    {"ActiveBackground",                    (void*)&stConfig.activeBackground,                          SetColValue},
-    {"ActiveForeground",                    (void*)&stConfig.activeForeground,                          SetColValue},
-    {"InactiveBackground",                  (void*)&stConfig.inactiveBackground,                        SetColValue},
-    {"InactiveForeground",                  (void*)&stConfig.inactiveForeground,                        SetColValue},
-    {"UrgentBackground",                    (void*)&stConfig.urgentBackground,                          SetColValue},
-    {"UrgentForeground",                    (void*)&stConfig.urgentForeground,                          SetColValue},
-    {"ActiveTileBackground",                (void*)&stConfig.activeTileBackground,                      SetColValue},
-    {"InactiveTileBackground",              (void*)&stConfig.inactiveTileBackground,                    SetColValue},
-    {"CloseIcon",                           (void*)&stConfig.buttonStyles[0].icon,                      SetStrValue},
-    {"CloseActiveBackground",               (void*)&stConfig.buttonStyles[0].activeBackground,          SetColValue},
-    {"CloseActiveForeground",               (void*)&stConfig.buttonStyles[0].activeForeground,          SetColValue},
-    {"CloseInactiveBackground",             (void*)&stConfig.buttonStyles[0].inactiveBackground,        SetColValue},
-    {"CloseInactiveForeground",             (void*)&stConfig.buttonStyles[0].inactiveForeground,        SetColValue},
-    {"CloseActiveHoveredBackground",        (void*)&stConfig.buttonStyles[0].activeHoveredBackground,   SetColValue},
-    {"CloseActiveHoveredForeground",        (void*)&stConfig.buttonStyles[0].activeHoveredForeground,   SetColValue},
-    {"CloseInactiveHoveredBackground",      (void*)&stConfig.buttonStyles[0].inactiveHoveredBackground, SetColValue},
-    {"CloseInactiveHoveredForeground",      (void*)&stConfig.buttonStyles[0].inactiveHoveredForeground, SetColValue},
-    {"MaximizeIcon",                        (void*)&stConfig.buttonStyles[1].icon,                      SetStrValue},
-    {"MaximizeActiveBackground",            (void*)&stConfig.buttonStyles[1].activeBackground,          SetColValue},
-    {"MaximizeActiveForeground",            (void*)&stConfig.buttonStyles[1].activeForeground,          SetColValue},
-    {"MaximizeInactiveBackground",          (void*)&stConfig.buttonStyles[1].inactiveBackground,        SetColValue},
-    {"MaximizeInactiveForeground",          (void*)&stConfig.buttonStyles[1].inactiveForeground,        SetColValue},
-    {"MaximizeActiveHoveredBackground",     (void*)&stConfig.buttonStyles[1].activeHoveredBackground,   SetColValue},
-    {"MaximizeActiveHoveredForeground",     (void*)&stConfig.buttonStyles[1].activeHoveredForeground,   SetColValue},
-    {"MaximizeInactiveHoveredBackground",   (void*)&stConfig.buttonStyles[1].inactiveHoveredBackground, SetColValue},
-    {"MaximizeInactiveHoveredForeground",   (void*)&stConfig.buttonStyles[1].inactiveHoveredForeground, SetColValue},
-    {"MinimizeIcon",                        (void*)&stConfig.buttonStyles[2].icon,                      SetStrValue},
-    {"MinimizeActiveBackground",            (void*)&stConfig.buttonStyles[2].activeBackground,          SetColValue},
-    {"MinimizeActiveForeground",            (void*)&stConfig.buttonStyles[2].activeForeground,          SetColValue},
-    {"MinimizeInactiveBackground",          (void*)&stConfig.buttonStyles[2].inactiveBackground,        SetColValue},
-    {"MinimizeInactiveForeground",          (void*)&stConfig.buttonStyles[2].inactiveForeground,        SetColValue},
-    {"MinimizeActiveHoveredBackground",     (void*)&stConfig.buttonStyles[2].activeHoveredBackground,   SetColValue},
-    {"MinimizeActiveHoveredForeground",     (void*)&stConfig.buttonStyles[2].activeHoveredForeground,   SetColValue},
-    {"MinimizeInactiveHoveredBackground",   (void*)&stConfig.buttonStyles[2].inactiveHoveredBackground, SetColValue},
-    {"MinimizeInactiveHoveredForeground",   (void*)&stConfig.buttonStyles[2].inactiveHoveredForeground, SetColValue}
+    {"LabelFont",                           (void*)&config.labelFontname,                             SetStrValue},
+    {"IconFont",                            (void*)&config.iconFontname,                              SetStrValue},
+    {"BorderWidth",                         (void*)&config.borderWidth,                               SetIntValue},
+    {"TopbarHeight",                        (void*)&config.topbarHeight,                              SetIntValue},
+    {"HandleWidth",                         (void*)&config.handleWidth,                               SetIntValue},
+    {"ButtonSize",                          (void*)&config.buttonSize,                                SetIntValue},
+    {"ButtonGap",                           (void*)&config.buttonGap,                                 SetIntValue},
+    {"ActiveBackground",                    (void*)&config.activeBackground,                          SetColValue},
+    {"ActiveForeground",                    (void*)&config.activeForeground,                          SetColValue},
+    {"InactiveBackground",                  (void*)&config.inactiveBackground,                        SetColValue},
+    {"InactiveForeground",                  (void*)&config.inactiveForeground,                        SetColValue},
+    {"UrgentBackground",                    (void*)&config.urgentBackground,                          SetColValue},
+    {"UrgentForeground",                    (void*)&config.urgentForeground,                          SetColValue},
+    {"ActiveTileBackground",                (void*)&config.activeTileBackground,                      SetColValue},
+    {"InactiveTileBackground",              (void*)&config.inactiveTileBackground,                    SetColValue},
+    {"CloseIcon",                           (void*)&config.buttonStyles[0].icon,                      SetStrValue},
+    {"CloseActiveBackground",               (void*)&config.buttonStyles[0].activeBackground,          SetColValue},
+    {"CloseActiveForeground",               (void*)&config.buttonStyles[0].activeForeground,          SetColValue},
+    {"CloseInactiveBackground",             (void*)&config.buttonStyles[0].inactiveBackground,        SetColValue},
+    {"CloseInactiveForeground",             (void*)&config.buttonStyles[0].inactiveForeground,        SetColValue},
+    {"CloseActiveHoveredBackground",        (void*)&config.buttonStyles[0].activeHoveredBackground,   SetColValue},
+    {"CloseActiveHoveredForeground",        (void*)&config.buttonStyles[0].activeHoveredForeground,   SetColValue},
+    {"CloseInactiveHoveredBackground",      (void*)&config.buttonStyles[0].inactiveHoveredBackground, SetColValue},
+    {"CloseInactiveHoveredForeground",      (void*)&config.buttonStyles[0].inactiveHoveredForeground, SetColValue},
+    {"MaximizeIcon",                        (void*)&config.buttonStyles[1].icon,                      SetStrValue},
+    {"MaximizeActiveBackground",            (void*)&config.buttonStyles[1].activeBackground,          SetColValue},
+    {"MaximizeActiveForeground",            (void*)&config.buttonStyles[1].activeForeground,          SetColValue},
+    {"MaximizeInactiveBackground",          (void*)&config.buttonStyles[1].inactiveBackground,        SetColValue},
+    {"MaximizeInactiveForeground",          (void*)&config.buttonStyles[1].inactiveForeground,        SetColValue},
+    {"MaximizeActiveHoveredBackground",     (void*)&config.buttonStyles[1].activeHoveredBackground,   SetColValue},
+    {"MaximizeActiveHoveredForeground",     (void*)&config.buttonStyles[1].activeHoveredForeground,   SetColValue},
+    {"MaximizeInactiveHoveredBackground",   (void*)&config.buttonStyles[1].inactiveHoveredBackground, SetColValue},
+    {"MaximizeInactiveHoveredForeground",   (void*)&config.buttonStyles[1].inactiveHoveredForeground, SetColValue},
+    {"MinimizeIcon",                        (void*)&config.buttonStyles[2].icon,                      SetStrValue},
+    {"MinimizeActiveBackground",            (void*)&config.buttonStyles[2].activeBackground,          SetColValue},
+    {"MinimizeActiveForeground",            (void*)&config.buttonStyles[2].activeForeground,          SetColValue},
+    {"MinimizeInactiveBackground",          (void*)&config.buttonStyles[2].inactiveBackground,        SetColValue},
+    {"MinimizeInactiveForeground",          (void*)&config.buttonStyles[2].inactiveForeground,        SetColValue},
+    {"MinimizeActiveHoveredBackground",     (void*)&config.buttonStyles[2].activeHoveredBackground,   SetColValue},
+    {"MinimizeActiveHoveredForeground",     (void*)&config.buttonStyles[2].activeHoveredForeground,   SetColValue},
+    {"MinimizeInactiveHoveredBackground",   (void*)&config.buttonStyles[2].inactiveHoveredBackground, SetColValue},
+    {"MinimizeInactiveHoveredForeground",   (void*)&config.buttonStyles[2].inactiveHoveredForeground, SetColValue}
 };
 
 void
@@ -227,7 +228,7 @@ FindConfigFile()
     char *paths = NULL;
     char *token = NULL;
 
-    stConfigFile[0] = '\0';
+    configFile[0] = '\0';
 
     paths = malloc(1024);
     if (!paths) {
@@ -248,7 +249,7 @@ FindConfigFile()
     token = strtok(paths, ":");
     while(token) {
         if (access(token, F_OK) == 0) {
-            strcpy(stConfigFile, token);
+            strcpy(configFile, token);
             break;
         }
         token = strtok(NULL, ":");
@@ -264,14 +265,14 @@ LoadConfigFile()
     ssize_t nread;
     FILE *stream;
 
-    if (stConfigFile[0] == '\0') {
+    if (configFile[0] == '\0') {
         ILog("No configuration file defined.");
         return;
     }
 
-    ILog("Using %s configuration file", stConfigFile);
+    ILog("Using %s configuration file", configFile);
 
-    stream = fopen(stConfigFile, "r");
+    stream = fopen(configFile, "r");
     if (stream == NULL) {
         ELog("Can't open config file, %s", strerror(errno));
         return;

@@ -7,16 +7,161 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
-void Start();
-void Stop();
-void Reload();
-void ActivateNext();
-void ActivatePrev();
-void MoveForward();
-void MoveBackward();
-void ShowDesktop(int desktop);
-void MoveToDesktop(int desktop);
-void ToggleDynamic();
-void AddMaster(int nb);
+#ifndef VERSION
+    #define VERSION "0.0.0"
+#endif
+
+// TODO: make it configurable
+#define Modkey Mod1Mask
+#define ModkeySym XK_Alt_L
+
+#define Max(v1, v2) (v1 > v2 ? v1 : v2)
+#define Min(v1, v2) (v1 < v2 ? v1 : v2)
+
+#define FLog(fmt, ...) do {\
+    fprintf (stderr, "FATAL - [%s: %d]: " fmt "\n",\
+            __FILE__,__LINE__, ##__VA_ARGS__);\
+    exit (EXIT_FAILURE);\
+} while(0)
+
+#define ELog(fmt, ...) do {\
+    fprintf (stderr, "ERROR - [%s: %d]: " fmt "\n",\
+            __FILE__,__LINE__, ##__VA_ARGS__);\
+} while (0)
+
+#define ILog(fmt, ...) do {\
+    fprintf (stdout, "INFO: " fmt "\n", ##__VA_ARGS__);\
+} while (0)
+
+#ifndef NDEBUG
+#define DLog(fmt, ...) do {\
+    fprintf (stdout, "DEBUG - [%s: %d - %s]: " fmt "\n",\
+            __FILE__,__LINE__,__FUNCTION__, ##__VA_ARGS__);\
+    fflush(stdout);\
+} while (0)
+#else
+#define DLog(fmt, ...)
+#endif
+
+typedef struct Monitor Monitor;
+
+enum AtomType {
+    /* icccm */
+    AtomWMState,
+    AtomWMDeleteWindow,
+    AtomWMTakeFocus,
+    AtomWMProtocols,
+    /* motif */
+    AtomMotifWMHints,
+    /* ewmh */
+    AtomNetSupported,
+    AtomNetClientList,
+    AtomNetClientListStacking,      /* unused */
+    AtomNetNumberOfDesktops,
+    AtomNetDesktopGeometry,         /* unused */
+    AtomNetDesktopViewport,         /* unused */
+    AtomNetCurrentDesktop,
+    AtomNetDesktopNames,            /* unused */
+    AtomNetActiveWindow,
+    AtomNetWorkarea,                /* unused */
+    AtomNetSupportingWMCheck,
+    AtomNetVirtualRoots,            /* unused */
+    AtomNetDesktopLayout,           /* unused */
+    AtomNetShowingDesktop,          /* unused */
+    AtomNetCloseWindow,             /* unused */
+    AtomNetMoveresizeWindow,        /* unused */
+    AtomNetWMMoveresize,            /* unused */
+    AtomNetRestackWindow,           /* unused */
+    AtomNetRequestFrameExtents,     /* unused */
+    AtomNetWMName,
+    AtomNetWMVisibleName,           /* unused */
+    AtomNetWMIconName,              /* unused */
+    AtomNetWMVisibleIconName,       /* unused */
+    AtomNetWMDesktop,               /* unused */
+    AtomNetWMWindowType,
+    AtomNetWMState,
+    AtomNetWMAllowedActions,
+    AtomNetWMStrut,                 /* unused */
+    AtomNetWMStrutpartial,
+    AtomNetWMIconGeometry,          /* unused */
+    AtomNetWMIcon,                  /* unused */
+    AtomNetWMPID,
+    AtomNetWMHandledIcons,          /* unused */
+    AtomNetWMUserTime,              /* unused */
+    AtomNetWMUserTimeWindow,        /* unused */
+    AtomNetFrameExtents,            /* unused */
+    AtomNetWMPing,                  /* unused */
+    AtomNetWMSyncRequest,           /* unused */
+    AtomNetWMSyncRequestCounter,    /* unused */
+    AtomNetWMFullscreenMonitors,    /* unused */
+    AtomNetWMFullPlacement,         /* unused */
+    AtomNetWMWindowTypeDesktop,
+    AtomNetWMWindowTypeDock,
+    AtomNetWMWindowTypeToolbar,
+    AtomNetWMWindowTypeMenu,
+    AtomNetWMWindowTypeUtility,
+    AtomNetWMWindowTypeSplash,
+    AtomNetWMWindowTypeDialog,
+    AtomNetWMWindowTypeDropdownMenu,
+    AtomNetWMWindowTypePopupMenu,
+    AtomNetWMWindowTypeTooltip,
+    AtomNetWMWindowTypeNotification,
+    AtomNetWMWindowTypeCombo,
+    AtomNetWMWindowTypeDnd,
+    AtomNetWMWindowTypeNormal,
+    AtomNetWMStateModal,
+    AtomNetWMStateSticky,
+    AtomNetWMStateMaximizedVert,
+    AtomNetWMStateMaximizedHorz,
+    AtomNetWMStateShaded,
+    AtomNetWMStateSkipTaskbar,
+    AtomNetWMStateSkipPager,
+    AtomNetWMStateHidden,
+    AtomNetWMStateFullscreen,
+    AtomNetWMStateAbove,
+    AtomNetWMStateBelow,
+    AtomNetWMStateDemandsAttention,
+    AtomNetWMActionMove,
+    AtomNetWMActionResize,
+    AtomNetWMActionMinimize,
+    AtomNetWMActionShade,
+    AtomNetWMActionStick,
+    AtomNetWMActionMaximizeHorz,
+    AtomNetWMActionMaximizeVert,
+    AtomNetWMActionFullscreen,
+    AtomNetWMActionChangeDesktop,
+    AtomNetWMActionClose,
+    AtomNetWMActionAbove,
+    AtomNetWMActionBelow,
+    AtomCount
+};
+
+enum CursorType {
+    CursorNormal,
+    CursorMove,
+    CursorResizeNorth,
+    CursorResizeNorthWest,
+    CursorResizeWest,
+    CursorResizeSouthWest,
+    CursorResizeSouth,
+    CursorResizeSouthEast,
+    CursorResizeEast,
+    CursorResizeNorthEast,
+    CursorCount
+};
+
+typedef enum {
+    FontLabel,
+    FontIcon,
+    FontCount
+} FontType;
+
+extern Display *display;
+extern Window root;
+extern unsigned long numLockMask;
+extern Atom atoms[AtomCount];
+extern Cursor cursors[CursorCount];
+extern XftFont *fonts[FontCount];
+extern Monitor *monitors;
 
 #endif

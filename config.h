@@ -1,9 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define Modkey Mod1Mask
-#define ModkeySym XK_Alt_L
-#define DesktopCount 8
 #define ShortcutCount 36
 
 typedef struct Client Client;
@@ -51,8 +48,7 @@ typedef struct Config {
     Shortcut shortcuts[ShortcutCount];
 } Config;
 
-extern char     stConfigFile[256];
-extern Config   stConfig;
+extern Config config;
 
 void FindConfigFile();
 void LoadConfigFile();

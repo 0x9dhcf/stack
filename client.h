@@ -32,29 +32,22 @@ struct Transient {
 };
 
 struct Client {
-    /* Components */
     Window window;
     Window frame;
     Window topbar;
     Window buttons[ButtonCount];
     Window handles[HandleCount];
-
-    /* Geometries */
-    int wx, wy, ww, wh;     /* Window absolute geometry                     */
-    int fx, fy, fw, fh;     /* Frame absolute geometry                      */
-    int sfx, sfy, sfw, sfh; /* Saved frame geometry before fullscreen       */
-    int smx, smy, smw, smh; /* Saved frame geometry before max/minimixed    */
-    int shx, shy, shw, shh; /* saved frame geometry before minimixed        */
-    int stx, sty, stw, sth; /* Saved frame geometry before tiling           */
-    int sbw;                /* Saved border width                           */
-
-    /* Statuses */
+    int wx, wy, ww, wh;     /* Window absolute geometry                 */
+    int fx, fy, fw, fh;     /* Frame absolute geometry                  */
+    int sfx, sfy, sfw, sfh; /* Saved frame geometry ante fullscreen     */
+    int smx, smy, smw, smh; /* Saved frame geometry ante max/minimixed  */
+    int shx, shy, shw, shh; /* saved frame geometry ante minimixed      */
+    int stx, sty, stw, sth; /* Saved frame geometry ante tiling         */
+    int sbw;                /* Saved border width                       */
     Bool active;
     Bool decorated;
     Bool tiled;
     int desktop;
-
-    /* icccm, ewmh*/
     char *name;
     WMClass wmclass;
     WMNormals normals;
@@ -66,10 +59,7 @@ struct Client {
     Client *transfor;
     Transient *transients;
     MotifHints motifs;
-
-    /* Internals */
     Monitor *monitor;
-
     Client *prev;
     Client *next;
 };
@@ -99,13 +89,6 @@ void LowerClient(Client *c);
 void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
-Client *NextClient(Client *c);
-Client *PreviousClient(Client *c);
-void MoveClientAfter(Client *c, Client *after);
-void MoveClientBefore(Client *c, Client *before);
-void PushClientFront(Client *c);
-void PushClientBack(Client *c);
-void AssignClientToDesktop(Client *c, int d);
 void KillClient(Client *c);
 
 #endif

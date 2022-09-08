@@ -5,9 +5,8 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 
-#include "log.h"
 #include "hints.h"
-#include "x11.h"
+#include "stack.h"
 
 void
 GetWMName(Window w, char **name)
@@ -18,9 +17,9 @@ GetWMName(Window w, char **name)
 
     XTextProperty p;
 
-    if (!XGetTextProperty(stDisplay, w, &p, stAtoms[AtomNetWMName])
+    if (!XGetTextProperty(display, w, &p, atoms[AtomNetWMName])
             || !p.nitems)
-        if (!XGetTextProperty(stDisplay, w, &p, XA_WM_NAME) || !p.nitems) {
+        if (!XGetTextProperty(display, w, &p, XA_WM_NAME) || !p.nitems) {
             *name = strdup("Error");
             return;
         }
@@ -30,11 +29,11 @@ GetWMName(Window w, char **name)
     } else {
         char **list = NULL;
         int n;
-        if (XmbTextPropertyToTextList(stDisplay, &p, &list, &n) >= Success
+        if (XmbTextPropertyToTextList(display, &p, &list, &n) >= Success
                 && n > 0 && *list) {
             if (n > 1) {
                 XTextProperty p2;
-                if (XmbTextListToTextProperty(stDisplay, list, n,
+                if (XmbTextListToTextProperty(display, list, n,
                             XStringStyle, &p2) == Success) {
                     *name = strdup((char *)p2.value);
                     XFree(p2.value);
@@ -56,7 +55,7 @@ GetWMHints(Window w, WMHints *h)
 {
     /* the default is to be focusable */
     *h = HintsFocusable;
-    XWMHints *hints = XGetWMHints(stDisplay, w);
+    XWMHints *hints = XGetWMHints(display, w);
     if (hints) {
         /* urgency */
         if (hints->flags & XUrgencyHint)
@@ -75,11 +74,11 @@ GetWMProtocols(Window w, WMProtocols *h)
 {
     Atom *protocols;
     int n;
-    if (XGetWMProtocols(stDisplay, w, &protocols, &n)) {
+    if (XGetWMProtocols(display, w, &protocols, &n)) {
         for (int i = 0; i < n; ++i) {
-            if (protocols[i] == stAtoms[AtomWMTakeFocus])
+            if (protocols[i] == atoms[AtomWMTakeFocus])
                 *h |= NetWMProtocolTakeFocus;
-            if (protocols[i] == stAtoms[AtomWMDeleteWindow])
+            if (protocols[i] == atoms[AtomWMDeleteWindow])
                 *h |= NetWMProtocolDeleteWindow;
         }
         XFree(protocols);
@@ -97,7 +96,7 @@ GetWMNormals(Window w, WMNormals *h)
     h->maxw = h->maxh = INT_MAX;
     h->mina = h->maxa = 0.0;
 
-    if (XGetWMNormalHints(stDisplay, w, &hints, &supplied)) {
+    if (XGetWMNormalHints(display, w, &hints, &supplied)) {
         if (supplied & PBaseSize) {
             h->bw = hints.base_width;
             h->bh = hints.base_height;
@@ -134,7 +133,7 @@ GetWMClass(Window w, WMClass *klass)
         free(klass->iname);
     klass->iname = NULL;
 
-    if (XGetClassHint(stDisplay, w, &hints)) {
+    if (XGetClassHint(display, w, &hints)) {
         klass->cname = strdup(hints.res_class);
         klass->iname = strdup(hints.res_name);
         XFree(hints.res_class);
@@ -152,7 +151,7 @@ GetWMStrut(Window w, WMStrut *strut)
 
     prop = NULL;
     strut->left = strut->right = strut->top = strut->bottom = 0;
-    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMStrutpartial],
+    status = XGetWindowProperty(display, w, atoms[AtomNetWMStrutpartial],
             0, 12, False, XA_CARDINAL, &type, &format, &num_items,
             &bytes_after, (unsigned char**)&prop);
 
@@ -171,42 +170,42 @@ GetNetWMWindowType(Window w, NetWMWindowType *h)
     Atom type;
     int format;
     unsigned long i, num_items, bytes_after;
-    Atom *atoms;
+    Atom *wtypes;
 
-    atoms = NULL;
+    wtypes = NULL;
 
-    XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMWindowType], 0, 1024,
+    XGetWindowProperty(display, w, atoms[AtomNetWMWindowType], 0, 1024,
             False, XA_ATOM, &type, &format, &num_items, &bytes_after,
-            (unsigned char**)&atoms);
+            (unsigned char**)&wtypes);
 
     *h = 0;
     for (i = 0; i < num_items; ++i) {
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeNormal])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeNormal])
             *h |= NetWMTypeNormal;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeDialog])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeDialog])
             *h |= NetWMTypeDialog;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeDesktop])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeDesktop])
             *h |= NetWMTypeDesktop;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeDock])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeDock])
             *h |= NetWMTypeDock;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeMenu])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeMenu])
             *h |= NetWMTypeMenu;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeNotification])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeNotification])
             *h |= NetWMTypeNotification;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeSplash])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeSplash])
             *h |= NetWMTypeSplash;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeToolbar])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeToolbar])
             *h |= NetWMTypeToolbar;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeUtility])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeUtility])
             *h |= NetWMTypeUtility;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeCombo])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeCombo])
             *h |= NetWMTypeCombo;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypePopupMenu])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypePopupMenu])
             *h |= NetWMTypePopupMenu;
-        if (atoms[i] == stAtoms[AtomNetWMWindowTypeTooltip])
+        if (wtypes[i] == atoms[AtomNetWMWindowTypeTooltip])
             *h |= NetWMTypeTooltip;
     }
-    XFree(atoms);
+    XFree(wtypes);
     if (!*h)
         *h |= NetWMTypeNormal;
 }
@@ -217,52 +216,52 @@ GetNetWMStates(Window w, NetWMStates *h)
     Atom type;
     int format;
     unsigned long i, num_items, bytes_after;
-    Atom *atoms;
+    Atom *states;
 
-    atoms = NULL;
+    states = NULL;
 
-    XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMState], 0, 1024,
+    XGetWindowProperty(display, w, atoms[AtomNetWMState], 0, 1024,
             False, XA_ATOM, &type, &format, &num_items, &bytes_after,
-            (unsigned char**)&atoms);
+            (unsigned char**)&states);
 
     *h = NetWMStateNone;
 
     for(i = 0; i < num_items; ++i) {
-        if (atoms[i] == stAtoms[AtomNetWMStateModal])
+        if (states[i] == atoms[AtomNetWMStateModal])
             *h |= NetWMStateModal;
-        if (atoms[i] == stAtoms[AtomNetWMStateSticky])
+        if (states[i] == atoms[AtomNetWMStateSticky])
             *h |= NetWMStateSticky;
-        if (atoms[i] == stAtoms[AtomNetWMStateMaximizedVert])
+        if (states[i] == atoms[AtomNetWMStateMaximizedVert])
             *h |= NetWMStateMaximizedVert;
-        if (atoms[i] == stAtoms[AtomNetWMStateMaximizedHorz])
+        if (states[i] == atoms[AtomNetWMStateMaximizedHorz])
             *h |= NetWMStateMaximizedHorz;
-        if (atoms[i] == stAtoms[AtomNetWMStateShaded])
+        if (states[i] == atoms[AtomNetWMStateShaded])
             *h |= NetWMStateShaded;
-        if (atoms[i] == stAtoms[AtomNetWMStateSkipTaskbar])
+        if (states[i] == atoms[AtomNetWMStateSkipTaskbar])
             *h |= NetWMStateSkipTaskbar;
-        if (atoms[i] == stAtoms[AtomNetWMStateSkipPager])
+        if (states[i] == atoms[AtomNetWMStateSkipPager])
             *h |= NetWMStateSkipPager;
-        if (atoms[i] == stAtoms[AtomNetWMStateHidden])
+        if (states[i] == atoms[AtomNetWMStateHidden])
             *h |= NetWMStateHidden;
-        if (atoms[i] == stAtoms[AtomNetWMStateFullscreen])
+        if (states[i] == atoms[AtomNetWMStateFullscreen])
             *h |= NetWMStateFullscreen;
-        if (atoms[i] == stAtoms[AtomNetWMStateAbove])
+        if (states[i] == atoms[AtomNetWMStateAbove])
             *h |= NetWMStateAbove;
-        if (atoms[i] == stAtoms[AtomNetWMStateBelow])
+        if (states[i] == atoms[AtomNetWMStateBelow])
             *h |= NetWMStateBelow;
-        if (atoms[i] == stAtoms[AtomNetWMStateSticky])
+        if (states[i] == atoms[AtomNetWMStateSticky])
             *h |= NetWMStateSticky;
-        if (atoms[i] == stAtoms[AtomNetWMStateDemandsAttention])
+        if (states[i] == atoms[AtomNetWMStateDemandsAttention])
             *h |= NetWMStateDemandsAttention;
     }
-    XFree(atoms);
+    XFree(states);
 }
 
 void
 SetNetWMAllowedActions(Window w, NetWMActions a)
 {
     int i, n, count;
-    Atom *atoms;
+    Atom *actions;
 
     /* count the atoms we will set */
     n = a;
@@ -273,8 +272,8 @@ SetNetWMAllowedActions(Window w, NetWMActions a)
     }
 
     /* now we can allocate a new set of atoms */
-    atoms = malloc(count * sizeof(Atom));
-    if (! atoms) {
+    actions = malloc(count * sizeof(Atom));
+    if (! actions) {
         ELog("can't alloc atoms");
         XFree(atoms);
         return;
@@ -282,35 +281,35 @@ SetNetWMAllowedActions(Window w, NetWMActions a)
 
     i = 0;
     if (a & NetWMActionMove)
-        atoms[i++] = stAtoms[AtomNetWMActionMove];
+        actions[i++] = atoms[AtomNetWMActionMove];
     if (a & NetWMActionResize)
-        atoms[i++] = stAtoms[AtomNetWMActionResize];
+        actions[i++] = atoms[AtomNetWMActionResize];
     if (a & NetWMActionMinimize)
-        atoms[i++] = stAtoms[AtomNetWMActionMinimize];
+        actions[i++] = atoms[AtomNetWMActionMinimize];
     if (a & NetWMActionShade)
-        atoms[i++] = stAtoms[AtomNetWMActionShade];
+        actions[i++] = atoms[AtomNetWMActionShade];
     if (a & NetWMActionStick)
-        atoms[i++] = stAtoms[AtomNetWMActionStick];
+        actions[i++] = atoms[AtomNetWMActionStick];
     if (a & NetWMActionMaximizeHorz)
-        atoms[i++] = stAtoms[AtomNetWMActionMaximizeHorz];
+        actions[i++] = atoms[AtomNetWMActionMaximizeHorz];
     if (a & NetWMActionMaximizeVert)
-        atoms[i++] = stAtoms[AtomNetWMActionMaximizeVert];
+        actions[i++] = atoms[AtomNetWMActionMaximizeVert];
     if (a & NetWMActionFullscreen)
-        atoms[i++] = stAtoms[AtomNetWMActionFullscreen];
+        actions[i++] = atoms[AtomNetWMActionFullscreen];
     if (a & NetWMActionChangeDesktop)
-        atoms[i++] = stAtoms[AtomNetWMActionChangeDesktop];
+        actions[i++] = atoms[AtomNetWMActionChangeDesktop];
     if (a & NetWMActionClose)
-        atoms[i++] = stAtoms[AtomNetWMActionClose];
+        actions[i++] = atoms[AtomNetWMActionClose];
     if (a & NetWMActionAbove)
-        atoms[i++] = stAtoms[AtomNetWMActionAbove];
+        actions[i++] = atoms[AtomNetWMActionAbove];
     if (a & NetWMActionBelow)
-        atoms[i++] = stAtoms[AtomNetWMActionBelow];
+        actions[i++] = atoms[AtomNetWMActionBelow];
 
     /* finally set them */
-    XChangeProperty(stDisplay, w, stAtoms[AtomNetWMAllowedActions], XA_ATOM, 32,
-            PropModeReplace, (unsigned char*)atoms, count);
+    XChangeProperty(display, w, atoms[AtomNetWMAllowedActions], XA_ATOM, 32,
+            PropModeReplace, (unsigned char*)actions, count);
 
-    XFree(atoms);
+    XFree(actions);
 }
 
 
@@ -320,22 +319,22 @@ SetNetWMStates(Window w, NetWMStates h)
     Atom type;
     int format, count, n;
     unsigned long i, j, num_items, bytes_after;
-    Atom *atoms, *natoms;
+    Atom *cstates, *nstates;
 
     /* get the current state atoms */
-    atoms = NULL;
-    XGetWindowProperty(stDisplay, w, stAtoms[AtomNetWMState], 0, 1024,
+    cstates = NULL;
+    XGetWindowProperty(display, w, atoms[AtomNetWMState], 0, 1024,
             False, XA_ATOM, &type, &format, &num_items, &bytes_after,
-            (unsigned char**)&atoms);
+            (unsigned char**)&cstates);
 
     /* count the number of atoms we don't honor but we will keep
      * for whatever the app wants to do wit it */
     count = 0;
     for(i = 0; i < num_items; ++i) {
-        if (atoms[i] == stAtoms[AtomNetWMStateModal]
-                || atoms[i] == stAtoms[AtomNetWMStateShaded]
-                || atoms[i] == stAtoms[AtomNetWMStateSkipTaskbar]
-                || atoms[i] == stAtoms[AtomNetWMStateSkipPager]) {
+        if (cstates[i] == atoms[AtomNetWMStateModal]
+                || cstates[i] == atoms[AtomNetWMStateShaded]
+                || cstates[i] == atoms[AtomNetWMStateSkipTaskbar]
+                || cstates[i] == atoms[AtomNetWMStateSkipPager]) {
             count++;
         }
     }
@@ -348,46 +347,46 @@ SetNetWMStates(Window w, NetWMStates h)
     }
 
     /* now we can allocate a new set of atoms */
-    natoms = malloc(count * sizeof(Atom));
-    if (! natoms) {
+    nstates = malloc(count * sizeof(Atom));
+    if (! nstates) {
         ELog("can't alloc atoms");
-        XFree(atoms);
+        XFree(cstates);
         return;
     }
 
     /* populate it with existing atoms not honored */
     j = 0;
     for(i = 0; i < num_items; ++i) {
-        if (atoms[i] == stAtoms[AtomNetWMStateModal]
-                || atoms[i] == stAtoms[AtomNetWMStateShaded]
-                || atoms[i] == stAtoms[AtomNetWMStateSkipTaskbar]
-                || atoms[i] == stAtoms[AtomNetWMStateSkipPager]) {
-            natoms[j++] = atoms[i];
+        if (cstates[i] == atoms[AtomNetWMStateModal]
+                || cstates[i] == atoms[AtomNetWMStateShaded]
+                || cstates[i] == atoms[AtomNetWMStateSkipTaskbar]
+                || cstates[i] == atoms[AtomNetWMStateSkipPager]) {
+            nstates[j++] = atoms[i];
         }
     }
 
     /* add ours */
     if (h & NetWMStateMaximizedVert)
-        natoms[j++] = stAtoms[AtomNetWMStateMaximizedVert];
+        nstates[j++] = atoms[AtomNetWMStateMaximizedVert];
     if (h & NetWMStateMaximizedHorz)
-        natoms[j++] = stAtoms[AtomNetWMStateMaximizedHorz];
+        nstates[j++] = atoms[AtomNetWMStateMaximizedHorz];
     if (h & NetWMStateHidden)
-        natoms[j++] = stAtoms[AtomNetWMStateHidden];
+        nstates[j++] = atoms[AtomNetWMStateHidden];
     if (h & NetWMStateFullscreen)
-        natoms[j++] = stAtoms[AtomNetWMStateFullscreen];
+        nstates[j++] = atoms[AtomNetWMStateFullscreen];
     if (h & NetWMStateAbove)
-        natoms[j++] = stAtoms[AtomNetWMStateAbove];
+        nstates[j++] = atoms[AtomNetWMStateAbove];
     if (h & NetWMStateBelow)
-        natoms[j++] = stAtoms[AtomNetWMStateBelow];
+        nstates[j++] = atoms[AtomNetWMStateBelow];
     if (h & NetWMStateDemandsAttention)
-        natoms[j++] = stAtoms[AtomNetWMStateDemandsAttention];
+        nstates[j++] = atoms[AtomNetWMStateDemandsAttention];
 
     /* finally set them */
-    XChangeProperty(stDisplay, w, stAtoms[AtomNetWMState], XA_ATOM, 32,
-            PropModeReplace, (unsigned char*)natoms, count);
+    XChangeProperty(display, w, atoms[AtomNetWMState], XA_ATOM, 32,
+            PropModeReplace, (unsigned char*)nstates, count);
 
-    XFree(atoms);
-    XFree(natoms);
+    XFree(cstates);
+    XFree(nstates);
 }
 
 void
@@ -400,8 +399,8 @@ GetMotifHints(Window w, MotifHints *h)
 
     memset(h, 0, sizeof(MotifHints));
     prop = NULL;
-    status = XGetWindowProperty(stDisplay, w, stAtoms[AtomMotifWMHints], 0, 5,
-            False, stAtoms[AtomMotifWMHints], &type, &format, &num_items, &bytes_after,
+    status = XGetWindowProperty(display, w, atoms[AtomMotifWMHints], 0, 5,
+            False, atoms[AtomMotifWMHints], &type, &format, &num_items, &bytes_after,
             (unsigned char**)&prop);
 
     if ((status == Success) && prop && num_items > 4) {
@@ -417,15 +416,16 @@ GetMotifHints(Window w, MotifHints *h)
 void
 SendMessage(Window w, Atom a)
 {
+    DLog("%ld", w);
     XEvent e;
 
     e.type = ClientMessage;
     e.xclient.window = w;
-    e.xclient.message_type = stAtoms[AtomWMProtocols];
+    e.xclient.message_type = atoms[AtomWMProtocols];
     e.xclient.format = 32;
     e.xclient.data.l[0] = a;
     e.xclient.data.l[1] = CurrentTime;
 
-    XSendEvent(stDisplay, w, False, NoEventMask, (XEvent *)&e);
+    XSendEvent(display, w, False, NoEventMask, &e);
 }
 

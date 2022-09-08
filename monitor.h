@@ -3,12 +3,12 @@
 
 #include <X11/Xlib.h>
 
-#include "config.h"
+#define DesktopCount 8
 
 typedef struct Client Client;
 
 typedef struct Desktop {
-    int wx, wy, ww, wh; /* The working area geometry    */
+    int wx, wy, ww, wh;
     Bool dynamic;
     int masters;
     float split;
@@ -16,17 +16,13 @@ typedef struct Desktop {
 } Desktop;
 
 typedef struct Monitor {
-    int x, y, w, h; /* The geometry of the monitor  */
-
+    int x, y, w, h;
     Desktop desktops[DesktopCount];
     int activeDesktop;
-
-    Client *chead;      /* Clients list head            */
-    Client *ctail;      /* Clients list tail            */
+    Client *head;
+    Client *tail;
     struct Monitor *next;
 } Monitor;
-
-extern Monitor *stMonitors;
 
 void InitializeMonitors();
 void TeardownMonitors();
@@ -34,5 +30,12 @@ void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
 void SetActiveDesktop(Monitor *m, int desktop);
 void Restack(Monitor *m);
+Client *NextClient(Client *c);
+Client *PreviousClient(Client *c);
+void MoveClientAfter(Client *c, Client *after);
+void MoveClientBefore(Client *c, Client *before);
+void PushClientFront(Client *c);
+void PushClientBack(Client *c);
+void AssignClientToDesktop(Client *c, int d);
 
 #endif

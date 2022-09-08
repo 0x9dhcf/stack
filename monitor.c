@@ -5,12 +5,9 @@
 #include <X11/extensions/Xrandr.h>
 
 #include "client.h"
-#include "log.h"
+#include "config.h"
 #include "monitor.h"
-#include "utils.h"
-#include "x11.h"
-
-Monitor *stMonitors = NULL;
+#include "stack.h"
 
 void
 InitializeMonitors()
@@ -19,9 +16,9 @@ InitializeMonitors()
     XRRCrtcInfo *ci;
     int i;
 
-    sr = XRRGetScreenResources(stDisplay, stRoot);
+    sr = XRRGetScreenResources(display, root);
     for (i = 0, ci = NULL; i < sr->ncrtc; ++i) {
-        ci = XRRGetCrtcInfo(stDisplay, sr, sr->crtcs[i]);
+        ci = XRRGetCrtcInfo(display, sr, sr->crtcs[i]);
         if (ci == NULL)
             continue;
         if (ci->noutput == 0) {
@@ -45,60 +42,68 @@ InitializeMonitors()
             m->desktops[i].wy = m->y;
             m->desktops[i].ww = m->w;
             m->desktops[i].wh = m->h;
-            m->desktops[i].masters = stConfig.masters;
-            m->desktops[i].split = stConfig.split;
+            m->desktops[i].masters = config.masters;
+            m->desktops[i].split = config.split;
         }
         m->activeDesktop = 0;
-        m->chead= NULL;
-        m->ctail= NULL;
-        m->next = stMonitors;
-        stMonitors = m;
+        m->head= NULL;
+        m->tail= NULL;
+        m->next = monitors;
+        monitors = m;
         XRRFreeCrtcInfo(ci);
     }
     XRRFreeScreenResources(sr);
 
     /* fallback */
-    if (!stMonitors) {
-        stMonitors = malloc(sizeof(Monitor));
-        stMonitors->x = 0;
-        stMonitors->y = 0;
-        stMonitors->w = DisplayWidth(stDisplay, stScreen);
-        stMonitors->h = XDisplayHeight(stDisplay, stScreen);
+    if (!monitors) {
+        monitors = malloc(sizeof(Monitor));
+        monitors->x = 0;
+        monitors->y = 0;
+        monitors->w = DisplayWidth(display, DefaultScreen(display));
+        monitors->h = XDisplayHeight(display, DefaultScreen(display));
         for (int i = 0; i < DesktopCount; ++i) {
-            stMonitors->desktops[i].wx = stMonitors->x;
-            stMonitors->desktops[i].wy = stMonitors->y;
-            stMonitors->desktops[i].ww = stMonitors->w;
-            stMonitors->desktops[i].wh = stMonitors->h;
-            stMonitors->desktops[i].masters = stConfig.masters;
-            stMonitors->desktops[i].split = stConfig.split;
+            monitors->desktops[i].wx = monitors->x;
+            monitors->desktops[i].wy = monitors->y;
+            monitors->desktops[i].ww = monitors->w;
+            monitors->desktops[i].wh = monitors->h;
+            monitors->desktops[i].masters = config.masters;
+            monitors->desktops[i].split = config.split;
         }
-        stMonitors->activeDesktop = 0;
-        stMonitors->chead= NULL;
-        stMonitors->ctail= NULL;
-        stMonitors->next = NULL;
+        monitors->activeDesktop = 0;
+        monitors->head= NULL;
+        monitors->tail= NULL;
+        monitors->next = NULL;
     }
-    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
+    XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace,
-            (unsigned char *)&stMonitors->activeDesktop, 1);
+            (unsigned char *)&monitors->activeDesktop, 1);
 }
 
 void
 TeardownMonitors()
 {
-    Monitor *m = stMonitors;
+    Monitor *m = monitors;
     while (m) {
         Monitor *p = m->next;
         free(m);
         m = p;
     }
+    monitors = NULL;
 }
+
+//Monitor *
+//GetMonitors()
+//{
+//    DAssert(monitors != NULL);
+//    return monitors;
+//}
 
 void
 AttachClientToMonitor(Monitor *m, Client *c)
 {
     c->monitor = m;
 
-    if (c->transfor && c->transfor != m->chead) {
+    if (c->transfor && c->transfor != m->head) {
         c->next = c->transfor;
         c->prev = c->transfor->prev;
         c->transfor->prev->next = c;
@@ -122,12 +127,12 @@ DetachClientFromMonitor(Monitor *m, Client *c)
     if (c->prev)
           c->prev->next = c->next;
     else
-        m->chead = c->next;
+        m->head = c->next;
 
     if (c->next)
         c->next->prev = c->prev;
     else
-        m->ctail = c->prev;
+        m->tail = c->prev;
 
     c->next = NULL;
     c->prev = NULL;
@@ -137,7 +142,7 @@ DetachClientFromMonitor(Monitor *m, Client *c)
         d->wy = m->y;
         d->ww = m->w;
         d->wh = m->h;
-        for (Client *mc = m->chead; mc; mc = mc->next) {
+        for (Client *mc = m->head; mc; mc = mc->next) {
             d->wx = Max(d->wx, m->x + mc->strut.left);
             d->wy = Max(d->wy, m->y + mc->strut.top);
             d->ww = Min(d->ww, m->w - (mc->strut.right + mc->strut.left));
@@ -165,11 +170,11 @@ SetActiveDesktop(Monitor *m, int desktop)
     m->activeDesktop = desktop;
 
     /* assign all stickies to this desktop */
-    for (Client *c = m->chead; c; c = c->next)
+    for (Client *c = m->head; c; c = c->next)
         if ((c->states & NetWMStateSticky) || (c->types & NetWMTypeFixed))
             AssignClientToDesktop(c, desktop);
 
-    XChangeProperty(stDisplay, stRoot, stAtoms[AtomNetCurrentDesktop],
+    XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
 }
 
@@ -182,7 +187,7 @@ Restack(Monitor *m)
         Client *c;
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
-        for (c = m->chead; c; c = c->next)
+        for (c = m->head; c; c = c->next)
             if (c->desktop == m->activeDesktop
                     && !(c->types & NetWMTypeFixed)
                     && !c->transfor)
@@ -194,7 +199,7 @@ Restack(Monitor *m)
         else
             mw = d->ww;
 
-        for (c = m->chead; c; c = c->next) {
+        for (c = m->head; c; c = c->next) {
             if (c->desktop == m->activeDesktop
                     && !(c->types & NetWMTypeFixed)
                     && !c->transfor) {
@@ -215,13 +220,176 @@ Restack(Monitor *m)
             }
         }
         /* Avoid having enter notify event changing active client */
-        XSync(stDisplay, False);
-        while (XCheckMaskEvent(stDisplay, EnterWindowMask, &e));
+        XSync(display, False);
+        while (XCheckMaskEvent(display, EnterWindowMask, &e));
     } else {
-        for (Client *c = m->chead; c; c = c->next)
+        for (Client *c = m->head; c; c = c->next)
             if (c->desktop == m->activeDesktop)
                 ShowClient(c);
             else
                 HideClient(c);
     }
+}
+
+Client *
+NextClient(Client *c)
+{
+    return c->next ? c->next : c->monitor->head;
+}
+
+Client *
+PreviousClient(Client *c)
+{
+    return c->prev ? c->prev : c->monitor->tail;
+}
+
+void
+MoveClientAfter(Client *c, Client *after)
+{
+    if (c == after)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->head = c->next;
+
+    /* change monitor is needed */
+    c->monitor = after->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->tail = c->prev;
+
+    if (after == c->monitor->tail) {
+        PushClientBack(c);
+    } else {
+        c->next = after->next;
+        c->prev = after;
+        after->next->prev = c;
+        after->next = c;
+    }
+}
+
+void
+MoveClientBefore(Client *c, Client *before)
+{
+    if (c == before)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->head = c->next;
+
+    /* change monitor is needed */
+    c->monitor = before->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->tail = c->prev;
+
+    if (before == c->monitor->head) {
+        PushClientFront(c);
+    } else {
+        c->next = before;
+        c->prev = before->prev;
+        before->prev->next = c;
+        before->prev = c;
+    }
+}
+
+void
+PushClientFront(Client *c)
+{
+    if (c->monitor->head) {
+        c->next = c->monitor->head;
+        c->monitor->head->prev = c;
+    }
+
+    if (! c->monitor->tail)
+        c->monitor->tail = c;
+
+    c->monitor->head = c;
+    c->prev = NULL;
+}
+
+void
+PushClientBack(Client *c)
+{
+    if (c->monitor->tail) {
+        c->prev = c->monitor->tail;
+        c->monitor->tail->next = c;
+    }
+
+    if (! c->monitor->head)
+        c->monitor->head = c;
+
+    c->monitor->tail = c;
+    c->next = NULL;
+}
+
+void
+AssignClientToDesktop(Client *c, int desktop)
+{
+    Monitor *m = c->monitor;
+    Desktop *d = &(m->desktops[desktop]);
+
+    if (desktop < 0 || desktop >= DesktopCount || c->desktop == desktop)
+        return;
+
+    /* remove ourself from previous desktop if any */
+    if (c->desktop >= 0) {
+        Desktop *pd = &m->desktops[c->desktop];
+        if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+            pd->wx = m->x;
+            pd->wy = m->y;
+            pd->ww = m->w;
+            pd->wh = m->h;
+            for (Client *mc = m->head; mc; mc = mc->next) {
+                if (mc != c && mc->desktop == c->desktop) {
+                    pd->wx = Max(pd->wx, m->x + mc->strut.left);
+                    pd->wy = Max(pd->wy, m->y + mc->strut.top);
+                    pd->ww = Min(pd->ww, m->w - (mc->strut.right + mc->strut.left));
+                    pd->wh = Min(pd->wh, m->h - (mc->strut.top + mc->strut.bottom));
+                }
+            }
+        }
+    }
+
+    /* now set the new one */
+    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        d->wx = Max(d->wx, m->x + c->strut.left);
+        d->wy = Max(d->wy, m->y + c->strut.top);
+        d->ww = Min(d->ww, m->w - (c->strut.right + c->strut.left));
+        d->wh = Min(d->wh, m->h - (c->strut.top + c->strut.bottom));
+    }
+
+    c->desktop = desktop;
+    if (c->tiled && !d->dynamic) {
+        UntileClient(c);
+        Restack(c->monitor);
+    }
+
+    if (!(c->types & NetWMTypeFixed))
+        MoveResizeClientFrame(c,
+                Max(c->fx, c->monitor->desktops[c->desktop].wx),
+                Max(c->fy, c->monitor->desktops[c->desktop].wy),
+                Min(c->fw, c->monitor->desktops[c->desktop].ww),
+                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+
+    if ((c->strut.right
+            || c->strut.left
+            || c->strut.top
+            || c->strut.bottom
+            || d->dynamic))
+        Restack(m);
+
+    /* finally let the pager know where we are */
+    XChangeProperty(display, c->window, atoms[AtomNetWMDesktop], XA_CARDINAL, 32,
+            PropModeReplace, (unsigned char*)&c->desktop, 1);
 }
