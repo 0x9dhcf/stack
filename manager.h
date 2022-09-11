@@ -14,15 +14,17 @@ void CleanupWindowManager();
 void ReloadConfig();
 void ManageWindow(Window w, Bool mapped);
 void UnmanageWindow(Window w, Bool destroyed);
-Client *Lookup(Window w);
+Client *LookupClient(Window w);
 void SetActiveClient(Client *c);
-void ActivateNext();
-void ActivatePrev();
-void MoveForward();
-void MoveBackward();
+void SwitchToNextClient();
+void SwitchToPreviousClient();
+void StackActiveClientDown();
+void StackActiveClientUp();
+//void StackActiveClientFront();
+//void StackActiveClientBack();
 void ShowDesktop(int desktop);
-void MoveToDesktop(int desktop);
-void ToggleDynamic();
-void AddMaster(int nb);
+void MoveActiveClientToDesktop(int desktop);
+void ToggleDynamicForActiveDesktop();
+void AddMasterToActiveDesktop(int nb);
 
 #endif /* __MANAGER_H__ */

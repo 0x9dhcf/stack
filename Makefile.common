@@ -14,14 +14,13 @@ CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS		+= `$(PKG_CONFIG) --libs ${DEPS}`
 
 SRC = client.c\
-	config.c\
 	event.c\
 	hints.c\
 	main.c\
 	manager.c\
-	monitor.c
+	monitor.c\
+	stack.c
 HDR = client.h\
-	config.h\
 	event.h\
 	hints.h\
 	manager.h\

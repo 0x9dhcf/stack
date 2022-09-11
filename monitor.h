@@ -3,6 +3,8 @@
 
 #include <X11/Xlib.h>
 
+#include "hints.h"
+
 #define DesktopCount 8
 
 typedef struct Client Client;
@@ -24,18 +26,9 @@ typedef struct Monitor {
     struct Monitor *next;
 } Monitor;
 
-void InitializeMonitors();
-void TeardownMonitors();
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
 void SetActiveDesktop(Monitor *m, int desktop);
-void Restack(Monitor *m);
-Client *NextClient(Client *c);
-Client *PreviousClient(Client *c);
-void MoveClientAfter(Client *c, Client *after);
-void MoveClientBefore(Client *c, Client *before);
-void PushClientFront(Client *c);
-void PushClientBack(Client *c);
-void AssignClientToDesktop(Client *c, int d);
+void RestackMonitor(Monitor *m);
 
-#endif
+#endif /* __MONITOR_H__ */

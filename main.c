@@ -10,14 +10,13 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 
-#include "config.h"
 #include "event.h"
 #include "manager.h"
 #include "monitor.h"
 #include "stack.h"
 
-static void Setup();
-static void Cleanup();
+static void SetupX11();
+static void CleanupX11();
 static void TrapSignal(int sig);
 #include "atoms.inc"
 #include "cursors.inc"
@@ -31,7 +30,7 @@ XftFont *fonts[FontCount];
 Monitor *monitors;
 
 void
-Setup()
+SetupX11()
 {
     int ebr;
     int xreb;
@@ -138,7 +137,7 @@ Setup()
 }
 
 void
-Cleanup()
+CleanupX11()
 {
     /* release monitors */
     Monitor *m = monitors;
@@ -199,11 +198,11 @@ main(int argc, char **argv)
     FindConfigFile();
     LoadConfigFile();
 
-    Setup();
+    SetupX11();
     SetupWindowManager();
     StartEventLoop();
     CleanupWindowManager();
-    Cleanup();
+    CleanupX11();
 
     ILog("Bye...");
 

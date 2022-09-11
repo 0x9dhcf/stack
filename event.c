@@ -9,7 +9,6 @@
 #include <X11/XKBlib.h>
 
 #include "client.h"
-#include "config.h"
 #include "event.h"
 #include "manager.h"
 #include "monitor.h"
@@ -168,7 +167,7 @@ DisableErrorHandler(Display *d, XErrorEvent *e)
 void
 OnConfigureRequest(XConfigureRequestEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
 
     if (!c) {
         XWindowChanges xwc;
@@ -243,7 +242,7 @@ OnMapRequest(XMapRequestEvent *e)
     if (wa.override_redirect)
         return;
 
-    if (!Lookup(e->window))
+    if (!LookupClient(e->window))
         ManageWindow(e->window, False);
 }
 
@@ -272,7 +271,7 @@ OnDestroyNotify(XDestroyWindowEvent *e)
 void
 OnExpose(XExposeEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
     if (c && e->window == c->frame)
         RefreshClient(c);
 }
@@ -280,7 +279,7 @@ OnExpose(XExposeEvent *e)
 void
 OnPropertyNotify(XPropertyEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -309,7 +308,7 @@ OnPropertyNotify(XPropertyEvent *e)
 void
 OnButtonPress(XButtonEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -351,7 +350,7 @@ OnButtonPress(XButtonEvent *e)
 void
 OnButtonRelease(XButtonEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -375,7 +374,7 @@ OnButtonRelease(XButtonEvent *e)
 void
 OnMotionNotify(XMotionEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
 
     /* prevent moving type fixed, maximized or fulscreen window
      * avoid to move to often as well */
@@ -394,7 +393,7 @@ OnMotionNotify(XMotionEvent *e)
                 || e->window == c->handles[HandleEast]) {
             c->monitor->desktops[c->desktop].split =
                 (e->x_root - c->monitor->x) / (float)c->monitor->w;
-            Restack(c->monitor);
+            RestackMonitor(c->monitor);
         }
     } else {
         /* we do not apply normal hints during motion but when button is released
@@ -448,7 +447,7 @@ OnMessage(XClientMessageEvent *e)
          * most pagers send to the client
          */
         if (e->message_type == atoms[AtomNetActiveWindow]) {
-            Client *toActivate = Lookup(e->window);
+            Client *toActivate = LookupClient(e->window);
             if (toActivate) {
                 // TODO: not on the same monitor!
                 // XXX: move to setActiveClient
@@ -460,7 +459,7 @@ OnMessage(XClientMessageEvent *e)
         return;
     }
 
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -569,7 +568,7 @@ OnEnter(XCrossingEvent *e)
     if ((e->mode != NotifyNormal || e->detail == NotifyInferior) && e->window != root)
         return;
 
-    c = Lookup(e->window);
+    c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -585,7 +584,7 @@ OnEnter(XCrossingEvent *e)
 
 void OnLeave(XCrossingEvent *e)
 {
-    Client *c = Lookup(e->window);
+    Client *c = LookupClient(e->window);
 
     if (c)
         for (int i = 0; i < ButtonCount; ++i)
@@ -614,17 +613,23 @@ OnKeyPress(XKeyPressedEvent *e)
         }
     }
 
-    if (keysym == (XK_Tab) && CleanMask(Modkey) == CleanMask(e->state))
+    /* Warning related to config. Won't work anymore if replacing TAB by
+     * something else */
+    if (keysym == (XK_Tab)
+            && (CleanMask(Modkey) == CleanMask(e->state)
+                || CleanMask(Modkey|ShiftMask) == CleanMask(e->state)))
         switching = True;
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
-        Shortcut sc = config.shortcuts[i];
-        if (keysym == (sc.keysym) &&
-                CleanMask(sc.modifier) == CleanMask(e->state)) {
-            if (sc.type == CV) sc.cb.vcb.f();
-            if (sc.type == CI) sc.cb.icb.f(sc.cb.icb.i);
-            if (sc.type == CC && activeClient) sc.cb.ccb.f(activeClient);
+        if (keysym == (config.shortcuts[i].keysym) &&
+                CleanMask(config.shortcuts[i].modifier) == CleanMask(e->state)) {
+            if (config.shortcuts[i].type == CV)
+                config.shortcuts[i].cb.vcb.f();
+            if (config.shortcuts[i].type == CI)
+                config.shortcuts[i].cb.icb.f(config.shortcuts[i].cb.icb.i);
+            if (config.shortcuts[i].type == CC && activeClient)
+                config.shortcuts[i].cb.ccb.f(activeClient);
         }
     }
 }
@@ -637,9 +642,10 @@ OnKeyRelease(XKeyReleasedEvent *e)
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
     if (keysym == (ModkeySym)
             && activeClient
-            && switching
-            && !activeClient->tiled) {
-        MoveClientBefore(activeClient, activeClient->monitor->head);
+            && switching) {
+        StackClientBefore(activeClient, activeClient->monitor->head);
+        if (activeClient->tiled)
+            RestackMonitor(activeClient->monitor);
         switching = False;
     }
 }

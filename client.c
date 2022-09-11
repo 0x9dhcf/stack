@@ -3,7 +3,6 @@
 #include <X11/Xatom.h>
 
 #include "client.h"
-#include "config.h"
 #include "event.h"
 #include "hints.h"
 #include "manager.h"
@@ -171,7 +170,6 @@ UntileClient(Client *c)
 {
     c->tiled = False;
     MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
-    RestoreClient(c);
 }
 
 void
@@ -389,7 +387,6 @@ SetClientActive(Client *c, Bool b)
 void
 KillClient(Client *c)
 {
-    DLog();
     if (c->protocols & NetWMProtocolDeleteWindow) {
         SendMessage(c->window, atoms[AtomWMDeleteWindow]);
     } else {
@@ -468,6 +465,157 @@ RefreshClient(Client *c)
 
     for (int i = 0; i < ButtonCount; ++i)
         RefreshClientButton(c, i, False);
+}
+
+void
+StackClientAfter(Client *c, Client *after)
+{
+    if (c == after)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->head = c->next;
+
+    /* change monitor is needed */
+    c->monitor = after->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->tail = c->prev;
+
+    if (after == c->monitor->tail) {
+        PushClientBack(c);
+    } else {
+        c->next = after->next;
+        c->prev = after;
+        after->next->prev = c;
+        after->next = c;
+    }
+}
+
+void
+StackClientBefore(Client *c, Client *before)
+{
+    if (c == before)
+        return;
+
+    /* remove c */
+    if (c->prev)
+          c->prev->next = c->next;
+    else
+        c->monitor->head = c->next;
+
+    /* change monitor is needed */
+    c->monitor = before->monitor;
+
+    if (c->next)
+        c->next->prev = c->prev;
+    else
+        c->monitor->tail = c->prev;
+
+    if (before == c->monitor->head) {
+        PushClientFront(c);
+    } else {
+        c->next = before;
+        c->prev = before->prev;
+        before->prev->next = c;
+        before->prev = c;
+    }
+}
+
+void
+PushClientFront(Client *c)
+{
+    if (c->monitor->head) {
+        c->next = c->monitor->head;
+        c->monitor->head->prev = c;
+    }
+
+    if (! c->monitor->tail)
+        c->monitor->tail = c;
+
+    c->monitor->head = c;
+    c->prev = NULL;
+}
+
+void
+PushClientBack(Client *c)
+{
+    if (c->monitor->tail) {
+        c->prev = c->monitor->tail;
+        c->monitor->tail->next = c;
+    }
+
+    if (! c->monitor->head)
+        c->monitor->head = c;
+
+    c->monitor->tail = c;
+    c->next = NULL;
+}
+
+void
+AssignClientToDesktop(Client *c, int desktop)
+{
+    Monitor *m = c->monitor;
+    Desktop *d = &(m->desktops[desktop]);
+
+    if (desktop < 0 || desktop >= DesktopCount || c->desktop == desktop)
+        return;
+
+    /* remove ourself from previous desktop if any */
+    if (c->desktop >= 0) {
+        Desktop *pd = &m->desktops[c->desktop];
+        if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+            pd->wx = m->x;
+            pd->wy = m->y;
+            pd->ww = m->w;
+            pd->wh = m->h;
+            for (Client *mc = m->head; mc; mc = mc->next) {
+                if (mc != c && mc->desktop == c->desktop) {
+                    pd->wx = Max(pd->wx, m->x + mc->strut.left);
+                    pd->wy = Max(pd->wy, m->y + mc->strut.top);
+                    pd->ww = Min(pd->ww, m->w - (mc->strut.right + mc->strut.left));
+                    pd->wh = Min(pd->wh, m->h - (mc->strut.top + mc->strut.bottom));
+                }
+            }
+        }
+    }
+
+    /* now set the new one */
+    if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        d->wx = Max(d->wx, m->x + c->strut.left);
+        d->wy = Max(d->wy, m->y + c->strut.top);
+        d->ww = Min(d->ww, m->w - (c->strut.right + c->strut.left));
+        d->wh = Min(d->wh, m->h - (c->strut.top + c->strut.bottom));
+    }
+
+    c->desktop = desktop;
+    if (c->tiled && !d->dynamic) {
+        UntileClient(c);
+        RestackMonitor(c->monitor);
+    }
+
+    if (!(c->types & NetWMTypeFixed))
+        MoveResizeClientFrame(c,
+                Max(c->fx, c->monitor->desktops[c->desktop].wx),
+                Max(c->fy, c->monitor->desktops[c->desktop].wy),
+                Min(c->fw, c->monitor->desktops[c->desktop].ww),
+                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
+
+    if ((c->strut.right
+            || c->strut.left
+            || c->strut.top
+            || c->strut.bottom
+            || d->dynamic))
+        RestackMonitor(m);
+
+    /* finally let the pager know where we are */
+    XChangeProperty(display, c->window, atoms[AtomNetWMDesktop], XA_CARDINAL, 32,
+            PropModeReplace, (unsigned char*)&c->desktop, 1);
 }
 
 void

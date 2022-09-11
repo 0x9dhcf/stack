@@ -64,6 +64,14 @@ struct Client {
     Client *next;
 };
 
+#define ForEachForward(h, c)\
+    for (c = h ? h->next ? h->next : h->monitor->head : h;\
+            c != h; c = c->next ? c->next : h->monitor->head)
+
+#define ForEachBackward(h, c)\
+    for (c = h ? h->prev ? h->prev : h->monitor->tail : h;\
+            c != h; c = c->prev ? c->prev : h->monitor->tail)
+
 void HideClient(Client *c);
 void ShowClient(Client *c);
 void MoveClientWindow(Client *c, int x, int y);
@@ -90,5 +98,10 @@ void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
 void KillClient(Client *c);
+void StackClientAfter(Client *c, Client *after);
+void StackClientBefore(Client *c, Client *before);
+void PushClientFront(Client *c);
+void PushClientBack(Client *c);
+void AssignClientToDesktop(Client *c, int d);
 
-#endif
+#endif /* __CLIENT_H__ */
