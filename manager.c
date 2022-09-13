@@ -160,6 +160,9 @@ SetupWindowManager()
                         root, True, GrabModeSync, GrabModeAsync);
         }
     }
+
+    /* finally exec autostart */
+    ExecAutostartFile();
 }
 
 void

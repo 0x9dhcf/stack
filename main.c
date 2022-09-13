@@ -191,6 +191,7 @@ main(int argc, char **argv)
     signal(SIGTERM, TrapSignal);
 
     FindConfigFile();
+    FindAutostartFile();
     LoadConfigFile();
 
     SetupX11();

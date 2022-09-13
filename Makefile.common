@@ -51,8 +51,10 @@ clean:
 install: ${TARGET}
 	mkdir -p ${PREFIX}/bin
 	cp -f ${TARGET} ${PREFIX}/bin
+	cp -f stack.desktop /usr/share/xsessions
 
 uninstall:
 	rm -f ${PREFIX}/bin/${TARGET}
+	rm -f /usr/share/xsessions/stack.desktop
 
 .PHONY: all clean install uninstall

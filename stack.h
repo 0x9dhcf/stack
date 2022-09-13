@@ -210,6 +210,8 @@ extern Monitor *monitors;
 extern Config config;
 
 void FindConfigFile();
+void FindAutostartFile();
 void LoadConfigFile();
+void ExecAutostartFile();
 
 #endif
