@@ -129,11 +129,6 @@ SetupX11()
         monitors->tail= NULL;
         monitors->next = NULL;
     }
-
-    // TODO: move in starting of WM
-    XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
-            XA_CARDINAL, 32, PropModeReplace,
-            (unsigned char *)&monitors->activeDesktop, 1);
 }
 
 void

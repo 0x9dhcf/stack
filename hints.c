@@ -416,7 +416,6 @@ GetMotifHints(Window w, MotifHints *h)
 void
 SendMessage(Window w, Atom a)
 {
-    DLog("%ld", w);
     XEvent e;
 
     e.type = ClientMessage;

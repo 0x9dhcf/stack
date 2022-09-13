@@ -61,6 +61,9 @@ ShowClient(Client *c)
 
     if (c->states & NetWMStateFullscreen)
         RaiseClient(c);
+
+    // XXX: Agrrr
+    RefreshClient(c);
 }
 
 void

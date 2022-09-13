@@ -64,14 +64,6 @@ struct Client {
     Client *next;
 };
 
-#define ForEachForward(h, c)\
-    for (c = h ? h->next ? h->next : h->monitor->head : h;\
-            c != h; c = c->next ? c->next : h->monitor->head)
-
-#define ForEachBackward(h, c)\
-    for (c = h ? h->prev ? h->prev : h->monitor->tail : h;\
-            c != h; c = c->prev ? c->prev : h->monitor->tail)
-
 void HideClient(Client *c);
 void ShowClient(Client *c);
 void MoveClientWindow(Client *c, int x, int y);

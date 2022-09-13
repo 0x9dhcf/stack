@@ -69,7 +69,6 @@ StartEventLoop()
 
         if (select(xConnection + 1, &fdSet, NULL, NULL, &timeout) > 0) {
             while (XPending(display)) {
-                // TODO: replace by an array
                 XEvent e;
                 XNextEvent(display, &e);
 
@@ -147,7 +146,7 @@ EnableErrorHandler(Display *d, XErrorEvent *e)
         DLog("ignored error: request code=%d, error code=%d",
             e->request_code, e->error_code);
         XGetErrorText(display, e->error_code, message, 255);
-        DLog("%ld: %s", e->resourceid, message);
+        ILog("%ld: %s (ignored)", e->resourceid, message);
         return 0;
     }
     ELog("error: request code=%d, error code=%d",
@@ -271,6 +270,7 @@ OnDestroyNotify(XDestroyWindowEvent *e)
 void
 OnExpose(XExposeEvent *e)
 {
+    /* useless, no expose event reported */
     Client *c = LookupClient(e->window);
     if (c && e->window == c->frame)
         RefreshClient(c);
@@ -369,6 +369,7 @@ OnButtonRelease(XButtonEvent *e)
 
     if (e->window == c->window)
         XAllowEvents(display, ReplayPointer, CurrentTime);
+
 }
 
 void
@@ -383,6 +384,7 @@ OnMotionNotify(XMotionEvent *e)
             || (e->time - lastSeenPointerTime) <= (1000 / 60))
         return;
 
+    /* update client geometry */
     int vx = e->x_root - lastSeenPointerX;
     int vy = e->y_root - lastSeenPointerY;
 
@@ -430,15 +432,7 @@ OnMotionNotify(XMotionEvent *e)
 void
 OnMessage(XClientMessageEvent *e)
 {
-    /* TODO: root active window and Curent desktop
-     * Especially since we have advertised supported actions
-     * _NET_CLOSE_WINDOW
-     * _NET_MOVERESIZE_WINDOW
-     * _NET_WM_MOVERESIZE
-     * _NET_RESTACK_WINDOW */
-
     if (e->window == root) {
-        DLog("Root received: %ld",e->message_type);
         if (e->message_type == atoms[AtomNetCurrentDesktop])
             ShowDesktop(e->data.l[0]);
 
@@ -448,13 +442,8 @@ OnMessage(XClientMessageEvent *e)
          */
         if (e->message_type == atoms[AtomNetActiveWindow]) {
             Client *toActivate = LookupClient(e->window);
-            if (toActivate) {
-                // TODO: not on the same monitor!
-                // XXX: move to setActiveClient
-                //if (activeMonitor->activeDesktop != toActivate->desktop)
-                //    ShowDesktop(toActivate->desktop);
+            if (toActivate)
                 SetActiveClient(toActivate);
-            }
         }
         return;
     }
@@ -534,26 +523,9 @@ OnMessage(XClientMessageEvent *e)
                     MinimizeClient(c);
             }
         }
-        /* TODO: maximixed, minimized sticky (mainly for CSD) */
     }
 
-    // TODO: does not work like this obviously!
-    //if (e->message_type == atoms[AtomWMProtocols]
-    //        && e->data.l[0] == (long)atoms[AtomWMDeleteWindow]) {
-    //    XGrabServer(display);
-    //    XSetErrorHandler(DummyErrorHandler);
-    //    XSetCloseDownMode(display, DestroyAll);
-    //    XKillClient(display, c->window);
-    //    XSync(display, False);
-    //    XSetErrorHandler(EventLoopErrorHandler);
-    //    XUngrabServer(display);
-    //}
-
     if (e->message_type == atoms[AtomNetActiveWindow]) {
-        // TODO: not on the same monitor!
-        // XXX: Move to setActiveClient
-        // if (activeMonitor->activeDesktop != c->desktop)
-        //         ShowDesktop(c->desktop);
         if (c->states & NetWMStateHidden)
             RestoreClient(c);
         SetActiveClient(c);

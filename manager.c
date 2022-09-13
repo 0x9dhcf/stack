@@ -1,3 +1,4 @@
+#include <X11/X.h>
 #include <X11/Xlib.h>
 #include <unistd.h>
 #include <limits.h>
@@ -101,6 +102,11 @@ SetupWindowManager()
     int desktops = DesktopCount;
     XChangeProperty(display, root, atoms[AtomNetNumberOfDesktops], XA_CARDINAL, 32,
             PropModeReplace, (unsigned char *)&desktops, 1);
+
+    /* use the 1st desktop of the active monitor as the current one */
+    XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
+            XA_CARDINAL, 32, PropModeReplace,
+            (unsigned char *)&monitors->activeDesktop, 1);
 
     /* Reset the client list. */
     XDeleteProperty(display, root, atoms[AtomNetClientList]);
@@ -319,6 +325,8 @@ ManageWindow(Window w, Bool mapped)
     wh = Min(dp->wh, (int)wh);
     wx = Min(Max(dp->wx, wx), dp->wx + dp->ww - (int)ww);
     wy = Min(Max(dp->wy, wy), dp->wy + dp->wh - (int)wh);
+    wx = (dp->wx + dp->ww - (int)ww) / 2;
+    wy = (dp->wy + dp->wh - (int)wh) / 2;
     MoveResizeClientWindow(c, wx, wy, ww, wh, False);
     AttachClientToMonitor(activeMonitor, c);
 
@@ -468,14 +476,13 @@ ReloadConfig()
 void
 SwitchToNextClient()
 {
-    /* find the next normal client of the same desktop */
-    Client *head = activeClient ? activeClient : activeMonitor->head;
-    Client *nc = NULL;
-    ForEachForward(head, nc) {
-        if (nc->desktop == head->desktop && nc->types & NetWMTypeNormal) {
-            if (nc->states & NetWMStateHidden)
-                RestoreClient(nc);
-            SetActiveClient(nc);
+    Client *h = activeClient ? activeClient : activeMonitor->head;
+    for (Client *c = h ? h->next ? h->next : h->monitor->head : h;
+            c != h; c = c->next ? c->next : h->monitor->head) {
+        if (c->desktop == h->desktop && c->types & NetWMTypeNormal) {
+            if (c->states & NetWMStateHidden)
+                RestoreClient(c);
+            SetActiveClient(c);
             break;
         }
     }
@@ -484,13 +491,13 @@ SwitchToNextClient()
 void
 SwitchToPreviousClient()
 {
-    Client *tail = activeClient ? activeClient : activeMonitor->tail;
-    Client *pc = NULL;
-    ForEachBackward(tail, pc) {
-        if (pc->desktop == tail->desktop && pc->types & NetWMTypeNormal) {
-            if (pc->states & NetWMStateHidden)
-                RestoreClient(pc);
-            SetActiveClient(pc);
+    Client *t = activeClient ? activeClient : activeMonitor->tail;
+    for (Client *c = t ? t->prev ? t->prev : t->monitor->tail : t;
+            c != t; c = c->prev ? c->prev : t->monitor->tail) {
+        if (c->desktop == t->desktop && c->types & NetWMTypeNormal) {
+            if (c->states & NetWMStateHidden)
+                RestoreClient(c);
+            SetActiveClient(c);
             break;
         }
     }
@@ -530,20 +537,6 @@ StackActiveClientDown()
         }
     }
 }
-
-//
-//    if (activeClient != activeClient->monitor->head
-//            && activeMonitor->desktops[activeMonitor->activeDesktop].dynamic) {
-//
-//        /* search the head of this client desktop */
-//        Client *head = activeClient->monitor->head;
-//        for (; head && head != activeClient
-//                && (head->desktop != activeClient->desktop
-//                        || !(head->types & NetWMTypeNormal)
-//                        ||  head->states & NetWMStateHidden);
-//        MoveClientBefore(activeClient, activeClient->monitor->head);
-//    }
-//}
 
 void
 StackActiveClientUp()
@@ -657,13 +650,17 @@ SetActiveClient(Client *c)
              * in the stack of the active monitor's active desktop
              */
             Client *head = activeClient ? activeClient : activeMonitor->head;
-            ForEachForward(head, toActivate)
-                if (toActivate->desktop == head->desktop
-                            && toActivate->types & NetWMTypeNormal
-                            && toActivate->states & NetWMStateHidden)
-                    break;
+            if ((toActivate = head)) {
+                do {
+                    if (toActivate->desktop == activeMonitor->activeDesktop
+                                && toActivate->types & NetWMTypeNormal
+                                && !(toActivate->states & NetWMStateHidden))
+                        break;
+                    toActivate = toActivate->next ?
+                        toActivate->next : toActivate->monitor->head;
+                } while (toActivate != head);
+            }
         }
-
     }
 
     /* the last active is now the current active (could be NULL) */

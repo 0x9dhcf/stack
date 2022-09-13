@@ -20,8 +20,6 @@ void SwitchToNextClient();
 void SwitchToPreviousClient();
 void StackActiveClientDown();
 void StackActiveClientUp();
-//void StackActiveClientFront();
-//void StackActiveClientBack();
 void ShowDesktop(int desktop);
 void MoveActiveClientToDesktop(int desktop);
 void ToggleDynamicForActiveDesktop();
