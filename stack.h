@@ -158,7 +158,7 @@ typedef enum {
 } FontType;
 
 
-#define ShortcutCount 36
+#define ShortcutCount 39
 typedef struct Config {
     char labelFontname[128];
     char iconFontname[128];
@@ -186,6 +186,7 @@ typedef struct Config {
         int inactiveHoveredBackground;
         int inactiveHoveredForeground;
     } buttonStyles[3];
+    int decorateTiles;
     int masters;
     float split;
     struct {

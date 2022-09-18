@@ -94,7 +94,7 @@ SetupWindowManager()
     wa.event_mask = RootEventMask;
     XChangeWindowAttributes(display, root, CWEventMask | CWCursor, &wa);
 
-    /* Let ewmh listeners know about what is supported. */
+    /* let ewmh listeners know about what is supported. */
     XChangeProperty(display, root, atoms[AtomNetSupported], XA_ATOM, 32,
             PropModeReplace, (unsigned char *) atoms , AtomCount);
 
@@ -189,6 +189,7 @@ ManageWindow(Window w, Bool mapped)
     Window r = None, t = None;
     int wx = 0, wy = 0 ;
     unsigned int ww, wh, d, b;
+    Bool decorated;
 
     Client *c = malloc(sizeof(Client));
     if (!c) {
@@ -212,14 +213,18 @@ ManageWindow(Window w, Bool mapped)
     GetWMStrut(w, &c->strut);
     GetMotifHints(w, &c->motifs);
 
+    decorated = (c->types & NetWMTypeFixed
+            || (c->motifs.flags == 0x2 && c->motifs.decorations == 0))
+        ? False : True;
+    c->isBorderVisible = decorated;
+    c->isTopbarVisible = decorated;
+    c->hasTopbar = decorated;
+    c->hasHandles = !((c->types & NetWMTypeFixed) && !IsFixed(c->normals));
     c->active = False;
-    c->decorated = (c->types & NetWMTypeFixed
-            || (c->motifs.flags == 0x2 && c->motifs.decorations == 0)) ?
-        False : True;
     c->tiled = False;
     c->desktop = -1;
 
-    /* If transient for, register the client we are transient for
+    /* if transient for, register the client we are transient for
      * and regiter this new client as a transient of this
      * transient for client */
     if (t != None) {
@@ -471,9 +476,19 @@ void
 ReloadConfig()
 {
     LoadConfigFile();
-    for (Monitor *m = monitors; m; m = m->next)
-        for (Client *c = m->head; c; c = c->next)
+    for (Monitor *m = monitors; m; m = m->next) {
+        for (int i = 0; i < DesktopCount; ++i) {
+            m->desktops[i].masters = config.masters;
+            m->desktops[i].split = config.split;
+            //m->desktops[i].toolbar = config.decorateTiles;
+        }
+        for (Client *c = m->head; c; c = c->next) {
+            SynchronizeWindowGeometry(c);
+            Configure(c);
             RefreshClient(c);
+        }
+    }
+    RestackMonitor(activeMonitor);
 }
 
 void
@@ -606,6 +621,23 @@ ToggleDynamicForActiveDesktop()
         for (Client *c = activeMonitor->head; c; c = c->next)
             if (c->desktop == activeMonitor->activeDesktop)
                 UntileClient(c);
+    RestackMonitor(activeMonitor);
+}
+
+void
+ToggleTopbarForActiveDesktop()
+{
+    Bool b = activeMonitor->desktops[activeMonitor->activeDesktop].toolbar;
+    activeMonitor->desktops[activeMonitor->activeDesktop].toolbar = ! b;
+    DLog("%d", b);
+    for (Client *c = activeMonitor->head; c; c = c->next) {
+        if (c->desktop == activeMonitor->activeDesktop) {
+            c->isTopbarVisible = ! b;
+            SynchronizeWindowGeometry(c);
+            Configure(c);
+        }
+        //RefreshClient(c);
+    }
     RestackMonitor(activeMonitor);
 }
 

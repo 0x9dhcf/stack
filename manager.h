@@ -23,6 +23,7 @@ void StackActiveClientUp();
 void ShowDesktop(int desktop);
 void MoveActiveClientToDesktop(int desktop);
 void ToggleDynamicForActiveDesktop();
+void ToggleTopbarForActiveDesktop();
 void AddMasterToActiveDesktop(int nb);
 
 #endif /* __MANAGER_H__ */

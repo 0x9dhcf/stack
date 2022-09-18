@@ -12,6 +12,7 @@ typedef struct Client Client;
 typedef struct Desktop {
     int wx, wy, ww, wh;
     Bool dynamic;
+    Bool toolbar;
     int masters;
     float split;
     Client *activeOnLeave;

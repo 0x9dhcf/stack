@@ -9,11 +9,6 @@
 #include "monitor.h"
 #include "stack.h"
 
-#define DecorationWidth (2 * config.borderWidth\
-    + ButtonCount * (config.buttonSize + config.buttonGap) + 1)
-#define DecorationHeight (2 * config.borderWidth +\
-        config.topbarHeight + 1)
-
 /* we always use Center and Middle, but we are ready for
  * window name right aligned */
 typedef enum {
@@ -30,10 +25,7 @@ typedef enum {
 
 
 static void ApplyNormalHints(Client *c);
-static void Configure(Client *c);
 static void SaveGeometries(Client *c);
-static void SynchronizeFrameGeometry(Client *c);
-static void SynchronizeWindowGeometry(Client *c);
 static void WriteText(Drawable d, const char*s, FontType ft, int color,
         HAlign ha, VAlign va, int w, int h);
 
@@ -42,7 +34,7 @@ HideClient(Client *c)
 {
     /* move all windows off screen without changing anything */
     XMoveWindow(display, c->frame, -c->fw, c->fy);
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
+    if (c->hasHandles)
         for (int i = 0; i < HandleCount; ++i)
             XMoveWindow(display, c->handles[i], -c->fw, c->fy);
 }
@@ -121,8 +113,18 @@ MoveClientFrame(Client *c, int x, int y)
 void
 ResizeClientFrame(Client *c, int w, int h, Bool sh)
 {
-    int mw = (c->decorated) ? DecorationWidth : 1;
-    int mh = (c->decorated) ? DecorationHeight : 1;
+    int mw, mh;
+    mw = mh = 1;
+    if (c->isBorderVisible) {
+        mw += 2 * config.borderWidth;
+        mh += 2 * config.borderWidth;
+    }
+
+    if (c->hasTopbar && c->isTopbarVisible) {
+        mw += ButtonCount * (config.buttonSize + config.buttonGap);
+        mh += config.topbarHeight;;
+    }
+
     if (w < mw || h < mh)
         return;
 
@@ -141,8 +143,18 @@ ResizeClientFrame(Client *c, int w, int h, Bool sh)
 void
 MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
 {
-    int mw = (c->decorated) ? DecorationWidth : 1;
-    int mh = (c->decorated) ? DecorationHeight : 1;
+    int mw, mh;
+    mw = mh = 1;
+    if (c->isBorderVisible) {
+        mw += 2 * config.borderWidth;
+        mh += 2 * config.borderWidth;
+    }
+
+    if (c->hasTopbar && c->isTopbarVisible) {
+        mw += ButtonCount * (config.buttonSize + config.buttonGap);
+        mh += config.topbarHeight;;
+    }
+
     if (w < mw || h < mh)
         return;
 
@@ -288,7 +300,8 @@ FullscreenClient(Client *c)
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->tiled) {
         SaveGeometries(c);
 
-        c->decorated = False;
+        c->isBorderVisible = False;
+        c->isTopbarVisible = False;
         c->states |= NetWMStateFullscreen;
 
         MoveResizeClientWindow(c, c->monitor->x, c->monitor->y, c->monitor->w,
@@ -307,7 +320,8 @@ RestoreClient(Client *c)
         return;
 
     if (c->states & NetWMStateFullscreen) {
-        c->decorated = True;
+        c->isBorderVisible = True;
+        c->isTopbarVisible = True;
         c->states &= ~NetWMStateFullscreen;
         MoveResizeClientFrame(c, c->sfx, c->sfy, c->sfw, c->sfh, False);
     } else if (c->states & NetWMStateHidden) {
@@ -388,6 +402,21 @@ SetClientActive(Client *c, Bool b)
 }
 
 void
+SetClientTopbarVisible(Client *c, Bool b)
+{
+    c->isTopbarVisible = b;
+    SynchronizeWindowGeometry(c);
+    Configure(c);
+    RefreshClient(c);
+}
+
+void
+ToggleClientTopbar(Client *c)
+{
+    SetClientTopbarVisible(c, !c->isTopbarVisible);
+}
+
+void
 KillClient(Client *c)
 {
     if (c->protocols & NetWMProtocolDeleteWindow) {
@@ -442,7 +471,8 @@ RefreshClient(Client *c)
     int bg, fg;
 
     /* Do not attempt to refresh non decorated or hidden clients */
-    if (!c->decorated || (c->desktop != c->monitor->activeDesktop
+    if (!(c->isTopbarVisible && c->isBorderVisible)
+            || (c->desktop != c->monitor->activeDesktop
                 && !(c->states & NetWMStateSticky)))
         return;
 
@@ -458,16 +488,21 @@ RefreshClient(Client *c)
         fg = config.inactiveForeground;
     }
 
-    XSetWindowBackground(display, c->frame, bg);
-    XClearWindow(display, c->frame);
-    XSetWindowBackground(display, c->topbar, bg);
-    XClearWindow(display, c->topbar);
-    if (c->name)
-        WriteText(c->topbar, c->name, FontLabel, fg, AlignCenter, AlignMiddle,
-                c->ww - 2 * config.borderWidth, config.topbarHeight);
+    if (c->isBorderVisible) {
+        XSetWindowBackground(display, c->frame, bg);
+        XClearWindow(display, c->frame);
+    }
 
-    for (int i = 0; i < ButtonCount; ++i)
-        RefreshClientButton(c, i, False);
+    if (c->hasTopbar && c->isTopbarVisible) {
+        XSetWindowBackground(display, c->topbar, bg);
+        XClearWindow(display, c->topbar);
+        if (c->name)
+            WriteText(c->topbar, c->name, FontLabel, fg, AlignCenter, AlignMiddle,
+                    c->ww - 2 * config.borderWidth, config.topbarHeight);
+
+        for (int i = 0; i < ButtonCount; ++i)
+            RefreshClientButton(c, i, False);
+    }
 }
 
 void
@@ -596,6 +631,7 @@ AssignClientToDesktop(Client *c, int desktop)
         d->wh = Min(d->wh, m->h - (c->strut.top + c->strut.bottom));
     }
 
+    c->isTopbarVisible = d->toolbar;
     c->desktop = desktop;
     if (c->tiled && !d->dynamic) {
         UntileClient(c);
@@ -667,9 +703,12 @@ ApplyNormalHints(Client *c)
 void
 Configure(Client *c)
 {
-    int hw, wx, wy;
+    int wx, wy, bw;
 
-    /* compute the relative window position */
+    /* what is the border width */
+    bw = c->isBorderVisible ? config.borderWidth : 0;
+
+    /* compute the relative window's position */
     wx = c->wx - c->fx;
     wy = c->wy - c->fy;
 
@@ -677,27 +716,25 @@ Configure(Client *c)
     XMoveResizeWindow(display, c->frame, c->fx, c->fy, c->fw, c->fh);
     XMoveResizeWindow(display, c->window, wx, wy, c->ww, c->wh);
 
-    /* place decoration windows */
-    if (c->decorated && !c->tiled && ! (c->types & NetWMTypeNoTopbar)) {
-        XMoveResizeWindow(display, c->topbar, config.borderWidth,
-                config.borderWidth, c->fw - 2 * config.borderWidth,
-                config.topbarHeight);
-        for (int i = 0; i < ButtonCount; ++i) {
-            XMoveResizeWindow(display, c->buttons[i],
-                    c->fw - 2 * config.borderWidth
+    /* place topbar */
+    if (c->hasTopbar) {
+        if (c->isTopbarVisible) {
+            XMoveResizeWindow(display, c->topbar, bw, bw, c->fw - 2 * bw,
+                    config.topbarHeight);
+            for (int i = 0; i < ButtonCount; ++i)
+                XMoveResizeWindow(display, c->buttons[i], c->fw - 2 * bw
                     - ((i+1) * (config.buttonSize) + i * config.buttonGap),
                     (config.topbarHeight - config.buttonSize) / 2,
                     config.buttonSize, config.buttonSize);
+        } else {
+            /* move the topbar outside the frame */
+            XMoveWindow(display, c->topbar, bw, -(bw + config.topbarHeight));
         }
-    } else if (!(c->types & NetWMTypeFixed)) {
-        /* move the topbar outside the frame */
-        XMoveWindow(display, c->topbar, config.borderWidth,
-                -(config.borderWidth + config.topbarHeight));
     }
 
     /* suround frame by handles */
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
-        hw = config.handleWidth;
+    if (c->hasHandles) {
+        int hw = config.handleWidth;
         XMoveResizeWindow(display, c->handles[HandleNorth],
                 c->fx, c->fy - hw, c->fw, hw);
         XMoveResizeWindow(display, c->handles[HandleNorthWest],
@@ -729,6 +766,28 @@ Configure(Client *c)
 }
 
 void
+SynchronizeFrameGeometry(Client *c)
+{
+    int bw = c->isBorderVisible ? config.borderWidth : 0;
+    int th = (c->hasTopbar && c->isTopbarVisible) ? config.topbarHeight : 0;
+    c->fx = c->wx - bw;
+    c->fy = c->wy - bw - th;
+    c->fw = c->ww + 2 * bw;
+    c->fh = c->wh + 2 * bw + th;
+}
+
+void
+SynchronizeWindowGeometry(Client *c)
+{
+    int bw = c->isBorderVisible ? config.borderWidth : 0;
+    int th = (c->hasTopbar && c->isTopbarVisible) ? config.topbarHeight : 0;
+    c->wx = c->fx + bw;
+    c->wy = c->fy + bw + th;
+    c->ww = c->fw - 2 * bw;
+    c->wh = c->fh - 2 * bw - th;
+}
+
+void
 SaveGeometries(Client *c)
 {
     if (!c->tiled) {
@@ -754,43 +813,6 @@ SaveGeometries(Client *c)
         c->shy = c->fy;
         c->shw = c->fw;
         c->shh = c->fh;
-    }
-}
-
-#define WXOffset(c) (c->decorated ? config.borderWidth : 0)
-#define WYOffset(c) (c->decorated ? config.borderWidth + config.topbarHeight : 0)
-#define WWOffset(c) (c->decorated ? 2 * config.borderWidth : 0)
-#define WHOffset(c) (c->decorated ? 2 * config.borderWidth + config.topbarHeight: 0)
-
-void
-SynchronizeFrameGeometry(Client *c)
-{
-    if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
-        c->fx = c->wx - config.borderWidth;
-        c->fy = c->wy - config.borderWidth;
-        c->fw = c->ww + 2 * config.borderWidth;
-        c->fh = c->wh + 2 * config.borderWidth;
-    } else {
-        c->fx = c->wx - WXOffset(c);
-        c->fy = c->wy - WYOffset(c);
-        c->fw = c->ww + WWOffset(c);
-        c->fh = c->wh + WHOffset(c);
-    }
-}
-
-void
-SynchronizeWindowGeometry(Client *c)
-{
-    if (c->tiled || (c->types & NetWMTypeNoTopbar)) {
-        c->wx = c->fx + config.borderWidth;
-        c->wy = c->fy + config.borderWidth;
-        c->ww = c->fw - 2 * config.borderWidth;
-        c->wh = c->fh - 2 * config.borderWidth;
-    } else {
-        c->wx = c->fx + WXOffset(c);
-        c->wy = c->fy + WYOffset(c);
-        c->ww = c->fw - WWOffset(c);
-        c->wh = c->fh - WHOffset(c);
     }
 }
 

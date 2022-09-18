@@ -40,12 +40,15 @@ struct Client {
     int wx, wy, ww, wh;     /* Window absolute geometry                 */
     int fx, fy, fw, fh;     /* Frame absolute geometry                  */
     int sfx, sfy, sfw, sfh; /* Saved frame geometry ante fullscreen     */
+    Bool hasTopbar;
+    Bool hasHandles;
+    Bool isBorderVisible;
+    Bool isTopbarVisible;
     int smx, smy, smw, smh; /* Saved frame geometry ante max/minimixed  */
     int shx, shy, shw, shh; /* saved frame geometry ante minimixed      */
     int stx, sty, stw, sth; /* Saved frame geometry ante tiling         */
     int sbw;                /* Saved border width                       */
     Bool active;
-    Bool decorated;
     Bool tiled;
     int desktop;
     char *name;
@@ -64,6 +67,9 @@ struct Client {
     Client *next;
 };
 
+void Configure(Client *c);
+void SynchronizeFrameGeometry(Client *c);
+void SynchronizeWindowGeometry(Client *c);
 void HideClient(Client *c);
 void ShowClient(Client *c);
 void MoveClientWindow(Client *c, int x, int y);
@@ -89,6 +95,8 @@ void LowerClient(Client *c);
 void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
+void SetClientTopbarVisible(Client *c, Bool b);
+void ToggleClientTopbar(Client *c);
 void KillClient(Client *c);
 void StackClientAfter(Client *c, Client *after);
 void StackClientBefore(Client *c, Client *before);

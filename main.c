@@ -97,6 +97,8 @@ SetupX11()
             m->desktops[j].wy = m->y;
             m->desktops[j].ww = m->w;
             m->desktops[j].wh = m->h;
+            m->desktops[j].dynamic = False;
+            m->desktops[j].toolbar = True;
             m->desktops[j].masters = config.masters;
             m->desktops[j].split = config.split;
         }
@@ -121,6 +123,8 @@ SetupX11()
             monitors->desktops[i].wy = monitors->y;
             monitors->desktops[i].ww = monitors->w;
             monitors->desktops[i].wh = monitors->h;
+            monitors->desktops[i].dynamic = False;
+            monitors->desktops[i].toolbar = True;
             monitors->desktops[i].masters = config.masters;
             monitors->desktops[i].split = config.split;
         }
