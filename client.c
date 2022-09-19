@@ -168,7 +168,6 @@ MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh)
         ApplyNormalHints(c);
         SynchronizeFrameGeometry(c);
     }
-
     Configure(c);
 }
 
@@ -382,8 +381,6 @@ SetClientActive(Client *c, Bool b)
         c->hints &= ~HintsUrgent;
         c->active = b;
 
-        RefreshClient(c);
-
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; ++i)
                 XGrabButton(display, Button1, Modkey | modifiers[i], c->window,
@@ -394,11 +391,12 @@ SetClientActive(Client *c, Bool b)
 
     if (!b && c->active) {
         c->active = b;
-        RefreshClient(c);
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; i++)
                 XUngrabButton(display, Button1, Modkey | modifiers[i], c->window);
     }
+
+    RefreshClient(c);
 }
 
 void
@@ -407,7 +405,6 @@ SetClientTopbarVisible(Client *c, Bool b)
     c->isTopbarVisible = b;
     SynchronizeWindowGeometry(c);
     Configure(c);
-    RefreshClient(c);
 }
 
 void
@@ -471,7 +468,7 @@ RefreshClient(Client *c)
     int bg, fg;
 
     /* Do not attempt to refresh non decorated or hidden clients */
-    if (!(c->isTopbarVisible && c->isBorderVisible)
+    if ((!c->isTopbarVisible && !c->isBorderVisible)
             || (c->desktop != c->monitor->activeDesktop
                 && !(c->states & NetWMStateSticky)))
         return;
@@ -752,6 +749,7 @@ Configure(Client *c)
         XMoveResizeWindow(display, c->handles[HandleNorthEast],
                 c->fx - hw, c->fy - hw, hw, hw);
     }
+    RefreshClient(c);
 
     /* synchronize transients */
     Desktop *d = &c->monitor->desktops[c->desktop];
@@ -762,6 +760,7 @@ Configure(Client *c)
         x = Min(Max(d->wx, c->fx + (c->fw - t->client->fw) / 2), d->wx + d->ww - w);
         y = Min(Max(d->wy, c->fy + (c->fh - t->client->fh) / 2), d->wy + d->wh - h);
         MoveResizeClientFrame(t->client, x, y, w, h, False);
+        RefreshClient(t->client);
     }
 }
 

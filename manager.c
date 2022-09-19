@@ -18,8 +18,7 @@
 #define RootEventMask (SubstructureRedirectMask | SubstructureNotifyMask)
 
 #define FrameEvenMask (\
-          ExposureMask\
-        | ButtonPressMask\
+          ButtonPressMask\
         | EnterWindowMask\
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
@@ -329,13 +328,13 @@ ManageWindow(Window w, Bool mapped)
     /* we need a first Move resize to sync the geometries before attaching */
     /* make sure we're in the working area */
     Desktop *dp = &activeMonitor->desktops[activeMonitor->activeDesktop];
-    ww = Min(dp->ww, (int)ww);
-    wh = Min(dp->wh, (int)wh);
-    wx = Min(Max(dp->wx, wx), dp->wx + dp->ww - (int)ww);
-    wy = Min(Max(dp->wy, wy), dp->wy + dp->wh - (int)wh);
-    wx = (dp->wx + dp->ww - (int)ww) / 2;
-    wy = (dp->wy + dp->wh - (int)wh) / 2;
-    MoveResizeClientWindow(c, wx, wy, ww, wh, False);
+    c->ww = Min(dp->ww, (int)ww);
+    c->wh = Min(dp->wh, (int)wh);
+    c->wx = Min(Max(dp->wx, wx), dp->wx + dp->ww - (int)ww);
+    c->wy = Min(Max(dp->wy, wy), dp->wy + dp->wh - (int)wh);
+    c->wx = (dp->wx + dp->ww - (int)ww) / 2;
+    c->wy = (dp->wy + dp->wh - (int)wh) / 2;
+    SynchronizeFrameGeometry(c);
     AttachClientToMonitor(activeMonitor, c);
 
     /* we can only apply structure states once attached in floating mode */
@@ -480,12 +479,10 @@ ReloadConfig()
         for (int i = 0; i < DesktopCount; ++i) {
             m->desktops[i].masters = config.masters;
             m->desktops[i].split = config.split;
-            //m->desktops[i].toolbar = config.decorateTiles;
         }
         for (Client *c = m->head; c; c = c->next) {
             SynchronizeWindowGeometry(c);
             Configure(c);
-            RefreshClient(c);
         }
     }
     RestackMonitor(activeMonitor);
@@ -629,14 +626,10 @@ ToggleTopbarForActiveDesktop()
 {
     Bool b = activeMonitor->desktops[activeMonitor->activeDesktop].toolbar;
     activeMonitor->desktops[activeMonitor->activeDesktop].toolbar = ! b;
-    DLog("%d", b);
     for (Client *c = activeMonitor->head; c; c = c->next) {
-        if (c->desktop == activeMonitor->activeDesktop) {
-            c->isTopbarVisible = ! b;
-            SynchronizeWindowGeometry(c);
-            Configure(c);
-        }
-        //RefreshClient(c);
+        if (c->desktop == activeMonitor->activeDesktop)
+            SetClientTopbarVisible(c, !b);
+        RefreshClient(c);
     }
     RestackMonitor(activeMonitor);
 }

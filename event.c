@@ -40,7 +40,6 @@ static void OnConfigureRequest(XConfigureRequestEvent *e);
 static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
 static void OnDestroyNotify(XDestroyWindowEvent *e);
-static void OnExpose(XExposeEvent *e);
 static void OnEnter(XCrossingEvent *e);
 static void OnLeave(XCrossingEvent *e);
 static void OnPropertyNotify(XPropertyEvent *e);
@@ -63,7 +62,7 @@ StartEventLoop()
     xConnection = XConnectionNumber(display);
     running = True;
     while (running) {
-        struct timeval timeout = { 0, 2500 };
+        struct timeval timeout = { 0, 500000 };
         FD_ZERO(&fdSet);
         FD_SET(xConnection, &fdSet);
 
@@ -84,9 +83,6 @@ StartEventLoop()
                     break;
                     case ConfigureRequest:
                         OnConfigureRequest(&e.xconfigurerequest);
-                    break;
-                    case Expose:
-                        OnExpose(&e.xexpose);
                     break;
                     case PropertyNotify:
                         OnPropertyNotify(&e.xproperty);
@@ -265,15 +261,6 @@ void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
     UnmanageWindow(e->window, True);
-}
-
-void
-OnExpose(XExposeEvent *e)
-{
-    /* useless, no expose event reported */
-    Client *c = LookupClient(e->window);
-    if (c && e->window == c->frame)
-        RefreshClient(c);
 }
 
 void
