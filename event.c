@@ -24,18 +24,6 @@
          | Mod4Mask\
          | Mod5Mask))
 
-static XErrorHandler defaultErrorHandler = NULL;
-static char *terminal[] = {"st", NULL};
-static int lastSeenPointerX;
-static int lastSeenPointerY;
-static Time lastSeenPointerTime;
-static int motionStartX;
-static int motionStartY;
-static int motionStartW;
-static int motionStartH;
-static Bool switching;
-static Bool running;
-
 static void OnConfigureRequest(XConfigureRequestEvent *e);
 static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
@@ -49,6 +37,18 @@ static void OnMotionNotify(XMotionEvent *e);
 static void OnMessage(XClientMessageEvent *e);
 static void OnKeyPress(XKeyPressedEvent *e);
 static void OnKeyRelease(XKeyReleasedEvent *e);
+
+static XErrorHandler defaultErrorHandler = NULL;
+static char *terminal[] = {"st", NULL};
+static int lastSeenPointerX;
+static int lastSeenPointerY;
+static Time lastSeenPointerTime;
+static int motionStartX;
+static int motionStartY;
+static int motionStartW;
+static int motionStartH;
+static Bool switching;
+static Bool running;
 
 void
 StartEventLoop()
