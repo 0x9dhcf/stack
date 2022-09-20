@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Stack ;)
+Comment=This session logs you into stack session
+Exec=/usr/local/bin/stack
+TryExec=/usr/local/bin/stack
+Type=Application
