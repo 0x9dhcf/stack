@@ -42,15 +42,16 @@ static void OnKeyRelease(XKeyReleasedEvent *e);
 
 static XErrorHandler defaultErrorHandler = NULL;
 static char *terminal[] = {"st", NULL};
-static int lastSeenPointerX;
-static int lastSeenPointerY;
-static Time lastSeenPointerTime;
-static int motionStartX;
-static int motionStartY;
-static int motionStartW;
-static int motionStartH;
-static Bool switching;
-static Bool running;
+static int lastSeenPointerX = 0;
+static int lastSeenPointerY = 0;
+static Time lastSeenPointerTime = 0;
+static Time lastClickPointerTime = 0;
+static int motionStartX = 0;
+static int motionStartY = 0;
+static int motionStartW = 0;
+static int motionStartH = 0;
+static Bool switching = 0;
+static Bool running = 0;
 
 void
 StartEventLoop()
@@ -309,8 +310,17 @@ OnButtonPress(XButtonEvent *e)
     motionStartH = c->fh;
 
     if (!c->tiled) {
-        if (e->window == c->topbar || (e->window == c->window && e->state == Modkey))
-            XDefineCursor(display, e->window, cursors[CursorMove]);
+        if (e->window == c->topbar || (e->window == c->window && e->state == Modkey)) {
+            if (e->time - lastClickPointerTime < 250) {
+                if ((c->states & NetWMStateMaximized)) {
+                    RestoreClient(c);
+                } else {
+                    MaximizeClient(c);
+                }
+            } else {
+                XDefineCursor(display, e->window, cursors[CursorMove]);
+            }
+        }
 
         if (e->window == c->buttons[ButtonMaximize]) {
             if ((c->states & NetWMStateMaximized)) {
@@ -334,6 +344,8 @@ OnButtonPress(XButtonEvent *e)
 
     if (e->window == c->window)
         XAllowEvents(display, ReplayPointer, CurrentTime);
+
+    lastClickPointerTime = e->time;
 }
 
 void
