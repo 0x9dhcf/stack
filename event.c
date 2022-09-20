@@ -382,7 +382,7 @@ OnMotionNotify(XMotionEvent *e)
      * avoid to move to often as well */
     if (!c || c->types & NetWMTypeFixed
             || c->states & (NetWMStateMaximized | NetWMStateFullscreen)
-            || (e->time - lastSeenPointerTime) <= (1000 / 60))
+            || (e->time - lastSeenPointerTime) <= 20)
         return;
 
     /* update client geometry */
@@ -590,8 +590,10 @@ OnKeyPress(XKeyPressedEvent *e)
      * something else */
     if (keysym == (XK_Tab)
             && (CleanMask(Modkey) == CleanMask(e->state)
-                || CleanMask(Modkey|ShiftMask) == CleanMask(e->state)))
+                || CleanMask(Modkey|ShiftMask) == CleanMask(e->state))){
+        DLog("switching");
         switching = True;
+    }
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
@@ -613,9 +615,7 @@ OnKeyRelease(XKeyReleasedEvent *e)
     KeySym keysym;
 
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
-    if (keysym == (ModkeySym)
-            && activeClient
-            && switching) {
+    if (keysym == (ModkeySym) && activeClient && switching) {
         StackClientBefore(activeClient, activeClient->monitor->head);
         if (activeClient->tiled)
             RestackMonitor(activeClient->monitor);
