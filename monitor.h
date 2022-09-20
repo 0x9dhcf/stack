@@ -27,6 +27,10 @@ typedef struct Monitor {
     struct Monitor *next;
 } Monitor;
 
+extern Monitor *monitors;
+
+void SetupMonitors();
+void CleanupMonitors();
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
 void SetActiveDesktop(Monitor *m, int desktop);

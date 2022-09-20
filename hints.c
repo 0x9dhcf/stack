@@ -6,7 +6,8 @@
 #include <X11/Xatom.h>
 
 #include "hints.h"
-#include "stack.h"
+#include "log.h"
+#include "x11.h"
 
 void
 GetWMName(Window w, char **name)

@@ -10,10 +10,12 @@
 #include <X11/XKBlib.h>
 
 #include "client.h"
+#include "config.h"
 #include "event.h"
+#include "log.h"
 #include "manager.h"
 #include "monitor.h"
-#include "stack.h"
+#include "x11.h"
 
 #define RootEventMask (SubstructureRedirectMask | SubstructureNotifyMask)
 

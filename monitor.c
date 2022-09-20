@@ -5,8 +5,95 @@
 #include <X11/extensions/Xrandr.h>
 
 #include "client.h"
+#include "config.h"
+#include "log.h"
 #include "monitor.h"
 #include "stack.h"
+#include "x11.h"
+
+Monitor *monitors = NULL;
+
+void
+SetupMonitors()
+{
+    XRRScreenResources *sr;
+    XRRCrtcInfo *ci;
+    int i;
+
+    /* scan for monitors */
+    sr = XRRGetScreenResources(display, root);
+    for (i = 0, ci = NULL; i < sr->ncrtc; ++i) {
+        ci = XRRGetCrtcInfo(display, sr, sr->crtcs[i]);
+        if (ci == NULL)
+            continue;
+        if (ci->noutput == 0) {
+            XRRFreeCrtcInfo(ci);
+            continue;
+        }
+
+        Monitor *m = malloc(sizeof(Monitor));
+        if (!m) FLog("could not allocate memory for output.");
+        memset(m, 0 , sizeof(Monitor));
+
+        m->x = ci->x;
+        m->y = ci->y;
+        m->w = ci->width;
+        m->h = ci->height;
+        for (int j = 0; j < DesktopCount; ++j) {
+            m->desktops[j].wx = m->x;
+            m->desktops[j].wy = m->y;
+            m->desktops[j].ww = m->w;
+            m->desktops[j].wh = m->h;
+            m->desktops[j].dynamic = False;
+            m->desktops[j].toolbar = True;
+            m->desktops[j].masters = config.masters;
+            m->desktops[j].split = config.split;
+        }
+        m->activeDesktop = 0;
+        m->head= NULL;
+        m->tail= NULL;
+        m->next = monitors;
+        monitors = m;
+        XRRFreeCrtcInfo(ci);
+    }
+    XRRFreeScreenResources(sr);
+
+    /* fallback */
+    if (!monitors) {
+        monitors = malloc(sizeof(Monitor));
+        monitors->x = 0;
+        monitors->y = 0;
+        monitors->w = DisplayWidth(display, DefaultScreen(display));
+        monitors->h = XDisplayHeight(display, DefaultScreen(display));
+        for (int i = 0; i < DesktopCount; ++i) {
+            monitors->desktops[i].wx = monitors->x;
+            monitors->desktops[i].wy = monitors->y;
+            monitors->desktops[i].ww = monitors->w;
+            monitors->desktops[i].wh = monitors->h;
+            monitors->desktops[i].dynamic = False;
+            monitors->desktops[i].toolbar = True;
+            monitors->desktops[i].masters = config.masters;
+            monitors->desktops[i].split = config.split;
+        }
+        monitors->activeDesktop = 0;
+        monitors->head= NULL;
+        monitors->tail= NULL;
+        monitors->next = NULL;
+    }
+}
+
+void
+CleanupMonitors()
+{
+    /* release monitors */
+    Monitor *m = monitors;
+    while (m) {
+        Monitor *p = m->next;
+        free(m);
+        m = p;
+    }
+    monitors = NULL;
+}
 
 void
 AttachClientToMonitor(Monitor *m, Client *c)

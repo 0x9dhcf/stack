@@ -3,11 +3,13 @@
 #include <X11/Xatom.h>
 
 #include "client.h"
+#include "config.h"
 #include "event.h"
+#include "log.h"
 #include "hints.h"
 #include "manager.h"
 #include "monitor.h"
-#include "stack.h"
+#include "x11.h"
 
 /* we always use Center and Middle, but we are ready for
  * window name right aligned */
@@ -26,7 +28,7 @@ typedef enum {
 
 static void ApplyNormalHints(Client *c);
 static void SaveGeometries(Client *c);
-static void WriteText(Drawable d, const char*s, FontType ft, int color,
+static void WriteText(Drawable d, const char*s, int ft, int color,
         HAlign ha, VAlign va, int w, int h);
 
 void
@@ -816,7 +818,7 @@ SaveGeometries(Client *c)
 }
 
 void
-WriteText(Drawable d, const char*s, FontType ft, int color,
+WriteText(Drawable d, const char*s, int ft, int color,
         HAlign ha, VAlign va, int w, int h)
 {
     int x, y;
