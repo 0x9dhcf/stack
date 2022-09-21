@@ -25,7 +25,6 @@ typedef enum {
     AlignBottom
 } VAlign;
 
-
 static void ApplyNormalHints(Client *c);
 static void SaveGeometries(Client *c);
 static void WriteText(Drawable d, const char*s, int ft, int color,
@@ -316,7 +315,8 @@ FullscreenClient(Client *c)
 void
 MoveClientLeftmost(Client *c)
 {
-    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
+            && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
         MoveClientFrame(c, d->wx, c->fy);
     }
@@ -325,7 +325,8 @@ MoveClientLeftmost(Client *c)
 void
 MoveClientRightmost(Client *c)
 {
-    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
+            && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
         MoveClientFrame(c, d->wx + d->ww - c->fw, c->fy);
     }
@@ -334,7 +335,8 @@ MoveClientRightmost(Client *c)
 void
 MoveClientTopmost(Client *c)
 {
-    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
+            && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
         MoveClientFrame(c, c->fx, d->wy);
     }
@@ -343,7 +345,8 @@ MoveClientTopmost(Client *c)
 void
 MoveClientBottommost(Client *c)
 {
-    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
+            && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
         MoveClientFrame(c, c->fx, d->wy + d->wh - c->fh);
     }
@@ -352,7 +355,8 @@ MoveClientBottommost(Client *c)
 void
 CenterClient(Client *c)
 {
-    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+    if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
+            && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
         MoveClientFrame(c, (d->wx + d->ww - c->fw) / 2,
                 (d->wy + d->wh - c->fh) / 2);
