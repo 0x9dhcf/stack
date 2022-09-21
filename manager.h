@@ -21,7 +21,7 @@ void SwitchToPreviousClient();
 void StackActiveClientDown();
 void StackActiveClientUp();
 void ShowDesktop(int desktop);
-void MoveActiveClientToDesktop(int desktop);
+void MoveActiveClientToDesktop(int desktop); //XXX: should be move to desktop in clien
 void ToggleDynamicForActiveDesktop();
 void ToggleTopbarForActiveDesktop();
 void AddMasterToActiveDesktop(int nb);

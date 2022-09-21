@@ -97,6 +97,11 @@ Config config = {
         { Modkey | ShiftMask,   XK_Up,        CC,     { .ccb={MaximizeClientTop} } },
         { Modkey | ShiftMask,   XK_Down,      CC,     { .ccb={MaximizeClientBottom} } },
         { Modkey,               XK_Up,        CC,     { .ccb={MaximizeClient} } },
+        { Modkey,               XK_c,         CC,     { .ccb={CenterClient} } },
+        { Modkey | ControlMask, XK_Left,      CC,     { .ccb={MoveClientLeftmost} } },
+        { Modkey | ControlMask, XK_Up,        CC,     { .ccb={MoveClientTopmost} } },
+        { Modkey | ControlMask, XK_Right,     CC,     { .ccb={MoveClientRightmost} } },
+        { Modkey | ControlMask, XK_Down,      CC,     { .ccb={MoveClientBottommost} } },
         { Modkey,               XK_Down,      CC,     { .ccb={RestoreClient} } },
         { Modkey,               XK_Delete,    CC,     { .ccb={MinimizeClient} } },
         { Modkey,               XK_t,         CC,     { .ccb={ToggleClientTopbar} } },
@@ -124,8 +129,8 @@ Config config = {
         { Modkey | ShiftMask,   XK_t,         CV,     { .vcb={ToggleTopbarForActiveDesktop} } },
         { Modkey,               XK_Page_Up,   CI,     { .icb={AddMasterToActiveDesktop, 1} } },
         { Modkey,               XK_Page_Down, CI,     { .icb={AddMasterToActiveDesktop, -1} } },
-        { Modkey | ControlMask, XK_Right,     CV,     { .vcb={StackActiveClientDown} } },
-        { Modkey | ControlMask, XK_Left,      CV,     { .vcb={StackActiveClientUp} } }
+        { Modkey | ShiftMask | ControlMask, XK_Right,     CV,     { .vcb={StackActiveClientDown} } },
+        { Modkey | ShiftMask | ControlMask, XK_Left,      CV,     { .vcb={StackActiveClientUp} } }
     },
 };
 

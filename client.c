@@ -314,6 +314,52 @@ FullscreenClient(Client *c)
 }
 
 void
+MoveClientLeftmost(Client *c)
+{
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, d->wx, c->fy);
+    }
+}
+
+void
+MoveClientRightmost(Client *c)
+{
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, d->wx + d->ww - c->fw, c->fy);
+    }
+}
+
+void
+MoveClientTopmost(Client *c)
+{
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, c->fx, d->wy);
+    }
+}
+
+void
+MoveClientBottommost(Client *c)
+{
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, c->fx, d->wy + d->wh - c->fh);
+    }
+}
+
+void
+CenterClient(Client *c)
+{
+    if (!(c->types & NetWMTypeFixed) && !c->tiled) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, (d->wx + d->ww - c->fw) / 2,
+                (d->wy + d->wh - c->fh) / 2);
+    }
+}
+
+void
 RestoreClient(Client *c)
 {
     /* do not restore any tiled window */

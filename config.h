@@ -19,7 +19,7 @@
 typedef struct Monitor Monitor;
 typedef struct Client Client;
 
-#define ShortcutCount 39
+#define ShortcutCount 44
 typedef struct Config {
     char labelFontname[128];
     char iconFontname[128];
