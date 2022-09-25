@@ -2,6 +2,7 @@
 #include <X11/Xproto.h>
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
+#include <X11/extensions/Xinerama.h>
 
 #include "config.h"
 #include "log.h"
@@ -108,6 +109,7 @@ static unsigned int cursorIds[] = {
 };
 
 Display *display;
+int extensions;
 Window root;
 unsigned long numLockMask;
 Atom atoms[AtomCount];
@@ -127,10 +129,11 @@ SetupX11()
         FLog("Can't open display.");
 
     /* check for extensions */
-    if (! XRRQueryExtension(display, &xreb, &ebr)) {
-        XCloseDisplay(display);
-        FLog("Can't load XRandR extension.");
-    }
+    extensions = ExtentionNone;
+    if (XRRQueryExtension(display, &xreb, &ebr))
+        extensions |= ExtentionXRandR;
+    if (XineramaQueryExtension(display, &xreb, &ebr))
+        extensions |= ExtentionXinerama;
 
     /* get the root window */
     root = RootWindow(display, DefaultScreen(display));

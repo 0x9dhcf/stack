@@ -19,6 +19,7 @@ typedef struct Desktop {
 } Desktop;
 
 typedef struct Monitor {
+    int id;
     int x, y, w, h;
     Desktop desktops[DesktopCount];
     int activeDesktop;
@@ -29,11 +30,16 @@ typedef struct Monitor {
 
 extern Monitor *monitors;
 
-void SetupMonitors();
+Bool SetupMonitors();
 void CleanupMonitors();
 void AttachClientToMonitor(Monitor *m, Client *c);
 void DetachClientFromMonitor(Monitor *m, Client *c);
-void SetActiveDesktop(Monitor *m, int desktop);
+void ShowDesktop(Monitor *m, int desktop);
+void SwitchToNextDesktop(Monitor *m);
+void SwitchToPreviousDesktop(Monitor *m);
+void ToggleDynamic(Monitor *m);
+void ToggleTopbar(Monitor *m);
+void AddMaster(Monitor *m, int nb);
 void RestackMonitor(Monitor *m);
 
 #endif /* __MONITOR_H__ */

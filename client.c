@@ -4,7 +4,6 @@
 
 #include "client.h"
 #include "config.h"
-#include "event.h"
 #include "log.h"
 #include "hints.h"
 #include "manager.h"
@@ -358,8 +357,8 @@ CenterClient(Client *c)
     if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
             && !(c->types & NetWMTypeFixed) && !c->tiled) {
         Desktop *d = &c->monitor->desktops[c->desktop];
-        MoveClientFrame(c, (d->wx + d->ww - c->fw) / 2,
-                (d->wy + d->wh - c->fh) / 2);
+        MoveClientFrame(c, d->wx + (d->ww - c->fw) / 2,
+                d->wy + (d->wh - c->fh) / 2);
     }
 }
 
@@ -615,6 +614,77 @@ StackClientBefore(Client *c, Client *before)
 }
 
 void
+StackClientDown(Client *c)
+{
+    if (c->transfor)
+        return;
+
+    // XXX: WHY??
+    if (c->monitor->desktops[c->monitor->activeDesktop].dynamic) {
+
+        Client *after = NULL;
+        for (after = c->next;
+                        after && (after->desktop != c->desktop
+                        || !(after->types & NetWMTypeNormal)
+                        ||  after->states & NetWMStateHidden);
+                after = after->next);
+
+        if (after) {
+            StackClientAfter(c, after);
+            RestackMonitor(c->monitor);
+            return;
+        }
+
+        Client *before = NULL;
+        for (before = c->monitor->head;
+                        before && (before->desktop != c->desktop
+                        || !(before->types & NetWMTypeNormal)
+                        ||  before->states & NetWMStateHidden);
+                before = before->next);
+
+        if (before) {
+            StackClientBefore(c, before);
+            RestackMonitor(c->monitor);
+        }
+    }
+}
+
+void
+StackClientUp(Client *c)
+{
+    if (c->transfor)
+        return;
+
+    if (c->monitor->desktops[c->monitor->activeDesktop].dynamic) {
+
+        Client *before = NULL;
+        for (before = c->prev;
+                        before && (before->desktop != c->desktop
+                        || !(before->types & NetWMTypeNormal)
+                        ||  before->states & NetWMStateHidden);
+                before = before->prev);
+
+        if (before) {
+            StackClientBefore(c, before);
+            RestackMonitor(activeMonitor);
+            return;
+        }
+
+        Client *after = NULL;
+        for (after = c->monitor->tail;
+                        after && (after->desktop != c->desktop
+                        || !(after->types & NetWMTypeNormal)
+                        ||  after->states & NetWMStateHidden);
+                after = after->prev);
+
+        if (after) {
+            StackClientAfter(c, after);
+            RestackMonitor(c->monitor);
+        }
+    }
+}
+
+void
 PushClientFront(Client *c)
 {
     if (c->monitor->head) {
@@ -645,8 +715,9 @@ PushClientBack(Client *c)
 }
 
 void
-AssignClientToDesktop(Client *c, int desktop)
+MoveClientToDesktop(Client *c, int desktop)
 {
+    int from = c->desktop;
     Monitor *m = c->monitor;
     Desktop *d = &(m->desktops[desktop]);
 
@@ -694,16 +765,54 @@ AssignClientToDesktop(Client *c, int desktop)
                 Min(c->fw, c->monitor->desktops[c->desktop].ww),
                 Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
 
-    if ((c->strut.right
-            || c->strut.left
-            || c->strut.top
-            || c->strut.bottom
-            || d->dynamic))
+    if (from != -1) { /* it's probably a new window not affected yet */
+        SetActiveClient(NULL);
         RestackMonitor(m);
+    }
 
     /* finally let the pager know where we are */
     XChangeProperty(display, c->window, atoms[AtomNetWMDesktop], XA_CARDINAL, 32,
             PropModeReplace, (unsigned char*)&c->desktop, 1);
+}
+
+void
+MoveClientToNextDesktop(Client *c)
+{
+    MoveClientToDesktop(c, c->desktop + 1);
+}
+
+void
+MoveClientToPreviousDesktop(Client *c)
+{
+    MoveClientToDesktop(c, c->desktop - 1);
+}
+
+void
+MoveClientToMonitor(Client *c, Monitor *m)
+{
+    int x, y;
+    x = c->fx - c->monitor->desktops[c->desktop].wx + m->desktops[m->activeDesktop].wx;
+    y = c->fy - c->monitor->desktops[c->desktop].wy + m->desktops[m->activeDesktop].wy;
+    DetachClientFromMonitor(c->monitor, c);
+    AttachClientToMonitor(m, c);
+    MoveClientFrame(c, x, y);
+    SetActiveClient(NULL);
+}
+
+void
+MoveClientToNextMonitor(Client *c)
+{
+    if (c->monitor->next)
+        MoveClientToMonitor(c, c->monitor->next);
+}
+
+void
+MoveClientToPreviousMonitor(Client *c)
+{
+    Monitor *m = NULL;
+    for (m = monitors; m && m->next != c->monitor; m = m->next);
+    if (m)
+        MoveClientToMonitor(c, m);
 }
 
 void

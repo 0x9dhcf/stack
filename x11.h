@@ -108,19 +108,25 @@ enum CursorType {
     CursorCount
 };
 
-enum FontType{
+enum FontType {
     FontLabel,
     FontIcon,
     FontCount
 };
 
+enum Extention {
+    ExtentionNone       = 0,
+    ExtentionXRandR     = (1 << 1),
+    ExtentionXinerama   = (1 << 2)
+};
+
 extern Display *display;
+extern int extensions;
 extern Window root;
 extern unsigned long numLockMask;
 extern Atom atoms[AtomCount];
 extern Cursor cursors[CursorCount];
 extern XftFont *fonts[FontCount];
-
 
 void SetupX11();
 void CleanupX11();

@@ -7,14 +7,14 @@ MINOR = 4
 PREFIX ?= /usr/local
 PKG_CONFIG = pkg-config
 
-DEPS = x11 xrandr xft
+DEPS = x11 xrandr xinerama xft
 
 CPPFLAGS	+= -DVERSION=\"$(MAJOR).$(MINOR)\"
 CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS		+= `$(PKG_CONFIG) --libs ${DEPS}`
 
-SRC = client.c config.c event.c hints.c main.c manager.c monitor.c x11.c
-HDR = client.h config.h event.h hints.h log.h manager.h  monitor.h stack.h x11.h
+SRC = client.c config.c hints.c main.c manager.c monitor.c x11.c
+HDR = client.h config.h hints.h log.h manager.h monitor.h stack.h x11.h
 
 OBJ = ${SRC:.c=.o}
 

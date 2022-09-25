@@ -11,7 +11,6 @@
 #include <X11/extensions/Xrandr.h>
 
 #include "config.h"
-#include "event.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"

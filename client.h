@@ -105,8 +105,15 @@ void ToggleClientTopbar(Client *c);
 void KillClient(Client *c);
 void StackClientAfter(Client *c, Client *after);
 void StackClientBefore(Client *c, Client *before);
+void StackClientDown(Client *c);
+void StackClientUp(Client *c);
 void PushClientFront(Client *c);
 void PushClientBack(Client *c);
-void AssignClientToDesktop(Client *c, int d);
+void MoveClientToDesktop(Client *c, int d);
+void MoveClientToNextDesktop(Client *c);
+void MoveClientToPreviousDesktop(Client *c);
+void MoveClientToMonitor(Client *c, Monitor *m);
+void MoveClientToNextMonitor(Client *c);
+void MoveClientToPreviousMonitor(Client *c);
 
 #endif /* __CLIENT_H__ */

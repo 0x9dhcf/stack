@@ -19,7 +19,7 @@
 typedef struct Monitor Monitor;
 typedef struct Client Client;
 
-#define ShortcutCount 44
+#define ShortcutCount 52
 typedef struct Config {
     char labelFontname[128];
     char iconFontname[128];
@@ -53,11 +53,13 @@ typedef struct Config {
     struct {
         unsigned long modifier;
         unsigned long keysym;
-        enum {CV, CI, CC} type;
+        enum {CV, CC, CCI, CM, CMI} type;
         union {
-            struct { void (*f)(); } vcb;            /* Void callback        */
-            struct { void (*f)(int); int i; } icb;  /* Integer callback     */
-            struct { void (*f)(Client *); } ccb;    /* Client callback      */
+            struct { void (*f)(); } vcb;
+            struct { void (*f)(Client *); } ccb;
+            struct { void (*f)(Client *, int); int i; } cicb;
+            struct { void (*f)(Monitor *); } mcb;
+            struct { void (*f)(Monitor *, int); int i; } micb;
         } cb;
     } shortcuts[ShortcutCount];
 } Config;

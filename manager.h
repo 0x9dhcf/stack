@@ -11,6 +11,10 @@ extern Monitor *activeMonitor;
 
 void SetupWindowManager();
 void CleanupWindowManager();
+void StartEventLoop();
+void StopEventLoop();
+int EnableErrorHandler(Display *d, XErrorEvent *e);
+int DisableErrorHandler(Display *d, XErrorEvent *e);
 void ReloadConfig();
 void ManageWindow(Window w, Bool mapped);
 void UnmanageWindow(Window w, Bool destroyed);
@@ -18,12 +22,8 @@ Client *LookupClient(Window w);
 void SetActiveClient(Client *c);
 void SwitchToNextClient();
 void SwitchToPreviousClient();
-void StackActiveClientDown();
-void StackActiveClientUp();
-void ShowDesktop(int desktop);
-void MoveActiveClientToDesktop(int desktop); //XXX: should be move to desktop in clien
-void ToggleDynamicForActiveDesktop();
-void ToggleTopbarForActiveDesktop();
-void AddMasterToActiveDesktop(int nb);
+void SetActiveMonitor(Monitor *m);
+void SwitchToNextMonitor();
+void SwitchToPreviousMonitor();
 
 #endif /* __MANAGER_H__ */

@@ -9,9 +9,9 @@
 
 #include "client.h"
 #include "config.h"
-#include "event.h"
 #include "log.h"
 #include "manager.h"
+#include "monitor.h"
 
 static void FindFile(const char *name, char *dest);
 static void SplitLine(char *str, char **key, char **val);
@@ -19,7 +19,6 @@ static void SetIntValue(const char *val, void *to);
 static void SetFloatValue(const char *val, void *to);
 static void SetStrValue(const char *val, void *to);
 static void SetColValue(const char *val, void *to);
-
 
 /* default config */
 Config config = {
@@ -109,28 +108,36 @@ Config config = {
         { Modkey,               XK_Right,     CV,     { .vcb={SwitchToNextClient} } },
         { Modkey | ShiftMask,   XK_Tab,       CV,     { .vcb={SwitchToPreviousClient} } },
         { Modkey,               XK_Left,      CV,     { .vcb={SwitchToPreviousClient} } },
-        { Modkey,               XK_1,         CI,     { .icb={ShowDesktop, 0} } },
-        { Modkey,               XK_2,         CI,     { .icb={ShowDesktop, 1} } },
-        { Modkey,               XK_3,         CI,     { .icb={ShowDesktop, 2} } },
-        { Modkey,               XK_4,         CI,     { .icb={ShowDesktop, 3} } },
-        { Modkey,               XK_5,         CI,     { .icb={ShowDesktop, 4} } },
-        { Modkey,               XK_6,         CI,     { .icb={ShowDesktop, 5} } },
-        { Modkey,               XK_7,         CI,     { .icb={ShowDesktop, 6} } },
-        { Modkey,               XK_8,         CI,     { .icb={ShowDesktop, 7} } },
-        { Modkey | ShiftMask,   XK_1,         CI,     { .icb={MoveActiveClientToDesktop, 0} } },
-        { Modkey | ShiftMask,   XK_2,         CI,     { .icb={MoveActiveClientToDesktop, 1} } },
-        { Modkey | ShiftMask,   XK_3,         CI,     { .icb={MoveActiveClientToDesktop, 2} } },
-        { Modkey | ShiftMask,   XK_4,         CI,     { .icb={MoveActiveClientToDesktop, 3} } },
-        { Modkey | ShiftMask,   XK_5,         CI,     { .icb={MoveActiveClientToDesktop, 4} } },
-        { Modkey | ShiftMask,   XK_6,         CI,     { .icb={MoveActiveClientToDesktop, 5} } },
-        { Modkey | ShiftMask,   XK_7,         CI,     { .icb={MoveActiveClientToDesktop, 6} } },
-        { Modkey | ShiftMask,   XK_8,         CI,     { .icb={MoveActiveClientToDesktop, 7} } },
-        { Modkey,               XK_d,         CV,     { .vcb={ToggleDynamicForActiveDesktop} } },
-        { Modkey | ShiftMask,   XK_t,         CV,     { .vcb={ToggleTopbarForActiveDesktop} } },
-        { Modkey,               XK_Page_Up,   CI,     { .icb={AddMasterToActiveDesktop, 1} } },
-        { Modkey,               XK_Page_Down, CI,     { .icb={AddMasterToActiveDesktop, -1} } },
-        { Modkey | ShiftMask | ControlMask, XK_Right,     CV,     { .vcb={StackActiveClientDown} } },
-        { Modkey | ShiftMask | ControlMask, XK_Left,      CV,     { .vcb={StackActiveClientUp} } }
+        { Modkey,               XK_1,         CMI,    { .micb={ShowDesktop, 0} } },
+        { Modkey,               XK_2,         CMI,    { .micb={ShowDesktop, 1} } },
+        { Modkey,               XK_3,         CMI,    { .micb={ShowDesktop, 2} } },
+        { Modkey,               XK_4,         CMI,    { .micb={ShowDesktop, 3} } },
+        { Modkey,               XK_5,         CMI,    { .micb={ShowDesktop, 4} } },
+        { Modkey,               XK_6,         CMI,    { .micb={ShowDesktop, 5} } },
+        { Modkey,               XK_7,         CMI,    { .micb={ShowDesktop, 6} } },
+        { Modkey,               XK_8,         CMI,    { .micb={ShowDesktop, 7} } },
+        { Modkey,               XK_Page_Down, CM,     { .mcb={SwitchToNextDesktop} } },
+        { Modkey,               XK_Page_Up,   CM,     { .mcb={SwitchToPreviousDesktop} } },
+        { Modkey | ShiftMask,   XK_1,         CCI,    { .cicb={MoveClientToDesktop, 0} } },
+        { Modkey | ShiftMask,   XK_2,         CCI,    { .cicb={MoveClientToDesktop, 1} } },
+        { Modkey | ShiftMask,   XK_3,         CCI,    { .cicb={MoveClientToDesktop, 2} } },
+        { Modkey | ShiftMask,   XK_4,         CCI,    { .cicb={MoveClientToDesktop, 3} } },
+        { Modkey | ShiftMask,   XK_5,         CCI,    { .cicb={MoveClientToDesktop, 4} } },
+        { Modkey | ShiftMask,   XK_6,         CCI,    { .cicb={MoveClientToDesktop, 5} } },
+        { Modkey | ShiftMask,   XK_7,         CCI,    { .cicb={MoveClientToDesktop, 6} } },
+        { Modkey | ShiftMask,   XK_8,         CCI,    { .cicb={MoveClientToDesktop, 7} } },
+        { Modkey | ShiftMask,   XK_Page_Down, CC,     { .ccb={MoveClientToNextDesktop } } },
+        { Modkey | ShiftMask,   XK_Page_Up,   CC,     { .ccb={MoveClientToPreviousDesktop } } },
+        { Modkey,               XK_d,         CM,     { .mcb={ToggleDynamic} } },
+        { Modkey | ShiftMask,   XK_t,         CM,     { .mcb={ToggleTopbar} } },
+        { Modkey,               XK_equal,     CMI,    { .micb={AddMaster, 1} } },
+        { Modkey,               XK_minus,     CMI,    { .micb={AddMaster, -1} } },
+        { Modkey | ShiftMask | ControlMask, XK_Right,     CC,     { .ccb={StackClientDown} } },
+        { Modkey | ShiftMask | ControlMask, XK_Left,      CC,     { .ccb={StackClientUp} } },
+        { Modkey,               XK_period,    CV,     { .vcb={SwitchToNextMonitor} } },
+        { Modkey,               XK_comma,     CV,     { .vcb={SwitchToPreviousMonitor} } },
+        { Modkey | ShiftMask,   XK_period,    CC,     { .ccb={MoveClientToNextMonitor} } },
+        { Modkey | ShiftMask,   XK_comma,     CC,     { .ccb={MoveClientToPreviousMonitor} } }
     },
 };
 
