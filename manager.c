@@ -73,8 +73,6 @@ static int motionStartW = 0;
 static int motionStartH = 0;
 static Bool switching = 0;
 static Bool running = 0;
-
-
 static Window supportingWindow;
 static Client *lastActiveClient = NULL;
 static int WMDetectedErrorHandler(Display *d, XErrorEvent *e);
@@ -681,7 +679,8 @@ SetActiveMonitor(Monitor *m)
         activeMonitor = m;
     else
         activeMonitor = monitors;
-    SetActiveClient(NULL);
+    if (activeClient->monitor != m)
+        SetActiveClient(NULL);
     // SetMonitorActive(activeMonitor) ???
 }
 
@@ -768,6 +767,8 @@ SetActiveClient(Client *c)
         SetClientActive(toActivate, True);
         activeClient = toActivate;
         RaiseClient(activeClient);
+        if (toActivate->monitor != activeMonitor)
+            SetActiveMonitor(toActivate->monitor);
         XChangeProperty(display, root, atoms[AtomNetActiveWindow],
                 XA_WINDOW, 32, PropModeReplace,
                 (unsigned char *) &toActivate->window, 1);
@@ -986,7 +987,6 @@ OnButtonRelease(XButtonEvent *e)
 
     if (e->window == c->window)
         XAllowEvents(display, ReplayPointer, CurrentTime);
-
 }
 
 void
