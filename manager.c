@@ -11,12 +11,16 @@
 
 #include "client.h"
 #include "config.h"
+#include "hints.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"
 #include "x11.h"
 
-#define RootEventMask (SubstructureRedirectMask | SubstructureNotifyMask)
+#define RootEventMask (\
+          ButtonPressMask\
+        | SubstructureRedirectMask\
+        | SubstructureNotifyMask)
 
 #define FrameEvenMask (\
           ButtonPressMask\
@@ -370,7 +374,7 @@ ManageWindow(Window w, Bool mapped)
         ? False : True;
     c->isBorderVisible = decorated;
     c->isTopbarVisible = decorated;
-    c->hasTopbar = decorated;
+    c->hasTopbar = decorated && !(c->types & NetWMTypeNoTopbar);
     c->hasHandles = !((c->types & NetWMTypeFixed) && !IsFixed(c->normals));
     c->active = False;
     c->tiled = False;
@@ -679,8 +683,6 @@ SetActiveMonitor(Monitor *m)
         activeMonitor = m;
     else
         activeMonitor = monitors;
-    if (activeClient->monitor != m)
-        SetActiveClient(NULL);
     // SetMonitorActive(activeMonitor) ???
 }
 
@@ -688,6 +690,7 @@ void
 SwitchToNextMonitor()
 {
     SetActiveMonitor(activeMonitor->next ? activeMonitor->next : monitors);
+    SetActiveClient(NULL);
 }
 
 void
@@ -696,6 +699,7 @@ SwitchToPreviousMonitor()
     Monitor *m = monitors;
     for (; m && m->next != activeMonitor; m = m->next);
     SetActiveMonitor(m);
+    SetActiveClient(NULL);
 }
 
 int
@@ -755,10 +759,11 @@ SetActiveClient(Client *c)
         SetClientActive(activeClient, False);
         //activeClient->states |= NetWMStateBelow;
         //activeClient->states &= ~NetWMStateAbove;
-        //SetNetWMStates(activeClient->window, activeClient->states);
+        SetNetWMStates(activeClient->window, activeClient->states);
         activeClient = NULL;
     }
 
+    // XXX: focusable client to be checked
     if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
             //&& toActivate->hints & HintsFocusable
             && toActivate->types & NetWMTypeNormal
@@ -799,8 +804,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
             c->sbw = e->border_width;
 
         if (e->value_mask & (CWX|CWY|CWWidth|CWHeight)
-                && !(c->states & NetWMStateMaximized))
-                {
+                && !(c->states & NetWMStateMaximized)) {
             int x, y, w, h;
 
             x = c->wx;
@@ -818,20 +822,6 @@ OnConfigureRequest(XConfigureRequestEvent *e)
                 h = e->height;
 
             MoveResizeClientWindow(c, x, y, w, h, False);
-
-            XConfigureEvent xce;
-            xce.event = e->window;
-            xce.window = e->window;
-            xce.type = ConfigureNotify;
-            xce.x = c->wx;
-            xce.y = c->wy;
-            xce.width = c->ww;
-            xce.height = c->wh;
-            xce.border_width = 0;
-            xce.above = None;
-            xce.override_redirect = 0;
-            XSendEvent(display, e->window, False, SubstructureNotifyMask, (XEvent*)&xce);
-            XSync(display, False);
         }
 
         /* as the window is reparented, XRaiseWindow and XLowerWindow
@@ -914,7 +904,20 @@ OnPropertyNotify(XPropertyEvent *e)
 void
 OnButtonPress(XButtonEvent *e)
 {
-    Client *c = LookupClient(e->window);
+    Client *c = NULL;
+
+    if (e->window == root) {
+        for (Monitor *m = monitors; m; m = m->next) {
+            if (e->x_root > m->x && e->x_root < m->x + m->w
+                    && e->y_root > m->y && e->y_root < m->y + m->h) {
+                SetActiveMonitor(m);
+                SetActiveClient(NULL);
+                break;
+            }
+        }
+    }
+
+    c = LookupClient(e->window);
     if (!c)
         return;
 
@@ -924,6 +927,7 @@ OnButtonPress(XButtonEvent *e)
     motionStartY = c->fy;
     motionStartW = c->fw;
     motionStartH = c->fh;
+
 
     if (!c->tiled) {
         if (e->window == c->topbar || (e->window == c->window && e->state == Modkey)) {
@@ -982,8 +986,10 @@ OnButtonRelease(XButtonEvent *e)
         }
     }
 
-    if (e->window == c->topbar || e->window == c->window)
+    if (e->window == c->topbar || e->window == c->window) {
         XDefineCursor(display, e->window, cursors[CursorNormal]);
+        /* TODO: check monitor consistency */
+    }
 
     if (e->window == c->window)
         XAllowEvents(display, ReplayPointer, CurrentTime);
@@ -1163,7 +1169,7 @@ OnEnter(XCrossingEvent *e)
 
     if (c) {
         /* TODO: should be configurable */
-        if (c->tiled && e->window == c->frame)
+        if (e->window == c->frame && (c->tiled || c->monitor != activeMonitor))
             SetActiveClient(c);
         for (int i = 0; i < ButtonCount; ++i)
             if (e->window == c->buttons[i])
