@@ -21,6 +21,7 @@ typedef struct Client Client;
 
 #define ShortcutCount 52
 typedef struct Config {
+    /* style */
     char labelFontname[128];
     char iconFontname[128];
     int borderWidth;
@@ -47,9 +48,13 @@ typedef struct Config {
         int inactiveHoveredBackground;
         int inactiveHoveredForeground;
     } buttonStyles[3];
+    /* global */
+    int focusFollowsPointer;
+    /* dynamic */
     int decorateTiles;
     int masters;
     float split;
+    /* shortcuts */
     struct {
         unsigned long modifier;
         unsigned long keysym;

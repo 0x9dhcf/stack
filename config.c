@@ -80,7 +80,9 @@ Config config = {
         },
     },
 
-    /* Dynamic desktops */
+    /* global */
+    .focusFollowsPointer = False,
+    /* dynamic desktops */
     .decorateTiles  = True,
     .masters        = 1,
     .split          = .6,
@@ -188,6 +190,7 @@ static struct {
     {"MinimizeActiveHoveredForeground",     (void*)&config.buttonStyles[2].activeHoveredForeground,   SetColValue},
     {"MinimizeInactiveHoveredBackground",   (void*)&config.buttonStyles[2].inactiveHoveredBackground, SetColValue},
     {"MinimizeInactiveHoveredForeground",   (void*)&config.buttonStyles[2].inactiveHoveredForeground, SetColValue},
+    {"FocusFollowsPointer",                 (void*)&config.focusFollowsPointer,                       SetIntValue},
     {"Masters",                             (void*)&config.masters,                                   SetIntValue},
     {"Split",                               (void*)&config.split,                                     SetFloatValue},
     {"DecorateTiles",                       (void*)&config.decorateTiles,                             SetIntValue}
@@ -225,7 +228,7 @@ SetIntValue(const char *val, void *to) {
 
 void
 SetFloatValue(const char *val, void *to) {
-    *(int*)to = atof(val);
+    *(float*)to = atof(val);
 }
 void
 SetStrValue(const char *val, void *to) {

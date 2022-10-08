@@ -1202,13 +1202,14 @@ OnEnter(XCrossingEvent *e)
         return;
 
     c = LookupClient(e->window);
-    if (!c)
-        return;
 
     if (c) {
-        /* TODO: should be configurable */
-        if (e->window == c->frame && (c->tiled || c->monitor != activeMonitor))
+        if (e->window == c->frame
+                && (config.focusFollowsPointer
+                    ||  c->tiled
+                    || c->monitor != activeMonitor))
             SetActiveClient(c);
+
         for (int i = 0; i < ButtonCount; ++i)
             if (e->window == c->buttons[i])
                 RefreshClientButton(c, i, True);
