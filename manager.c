@@ -28,8 +28,6 @@
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
 
-#define WindowEventMask (PropertyChangeMask)
-
 #define HandleEventMask (\
           ButtonPressMask\
         | ButtonReleaseMask\
@@ -80,6 +78,8 @@ static Bool running = 0;
 static Window supportingWindow;
 static Client *lastActiveClient = NULL;
 static int WMDetectedErrorHandler(Display *d, XErrorEvent *e);
+
+static int moveMessageType = HandleCount + 1;
 
 Monitor *activeMonitor;
 Client  *activeClient;
@@ -375,7 +375,7 @@ ManageWindow(Window w, Bool mapped)
     c->isBorderVisible = decorated;
     c->isTopbarVisible = decorated;
     c->hasTopbar = decorated && !(c->types & NetWMTypeNoTopbar);
-    c->hasHandles = !((c->types & NetWMTypeFixed) && !IsFixed(c->normals));
+    c->hasHandles = decorated && !IsFixed(c->normals);
     c->active = False;
     c->tiled = False;
     c->desktop = -1;
@@ -417,19 +417,15 @@ ManageWindow(Window w, Bool mapped)
 
     /* client */
     c->window = w;
-    XSetWindowAttributes cattrs = {0};
-    cattrs.event_mask = NoEventMask;
-    cattrs.do_not_propagate_mask = NoEventMask;
-    XChangeWindowAttributes(display, w, CWEventMask | CWDontPropagate, &cattrs);
-    XSetWindowBorderWidth(display, w, 0);
     XReparentWindow(display, w, c->frame, 0, 0);
+    XSetWindowBorderWidth(display, w, 0);
     if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
+        /* allows activation on click */
         XUngrabButton(display, AnyButton, AnyModifier, c->window);
         XGrabButton(display, Button1, AnyModifier, c->window, False,
-                ButtonPressMask | ButtonReleaseMask, GrabModeSync,
+                ButtonPressMask, GrabModeSync,
                 GrabModeSync, None, None);
     }
-
     if (! mapped)
         XMapWindow(display, w);
 
@@ -440,6 +436,9 @@ ManageWindow(Window w, Bool mapped)
      */
     if (!(c->types & NetWMTypeFixed)) {
         long state[] = {NormalState, None};
+        XChangeProperty(display, w, atoms[AtomWMState],
+                atoms[AtomWMState], 32, PropModeReplace,
+                (unsigned char *)state, 2);
 
         /* topbar */
         XSetWindowAttributes tattrs = {0};
@@ -449,11 +448,6 @@ ManageWindow(Window w, Bool mapped)
                 CopyFromParent, InputOutput, CopyFromParent,
                 CWEventMask | CWCursor, &tattrs);
         XMapWindow(display, c->topbar);
-
-        // XXX: WHY HERE!!!
-        XChangeProperty(display, w, atoms[AtomWMState],
-                atoms[AtomWMState], 32, PropModeReplace,
-                (unsigned char *)state, 2);
 
         /* buttons */
         XSetWindowAttributes battrs = {0};
@@ -472,7 +466,7 @@ ManageWindow(Window w, Bool mapped)
         XSetWindowAttributes hattrs = {0};
         hattrs.event_mask = HandleEventMask;
         for (int i = 0; i < HandleCount; ++i) {
-            hattrs.cursor = cursors[CursorResizeNorth + i];
+            hattrs.cursor = cursors[CursorResizeNorthEast + i];
             Window h = XCreateWindow(display, root, 0, 0, 1, 1, 0,
                     CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &hattrs);
@@ -482,8 +476,6 @@ ManageWindow(Window w, Bool mapped)
     }
 
     c->sbw = b;
-    /* we need a first Move resize to sync the geometries before attaching */
-    /* make sure we're in the working area */
     Desktop *dp = &activeMonitor->desktops[activeMonitor->activeDesktop];
     c->ww = Min(dp->ww, (int)ww);
     c->wh = Min(dp->wh, (int)wh);
@@ -505,11 +497,12 @@ ManageWindow(Window w, Bool mapped)
         RestackMonitor(c->monitor);
     }
 
-    if (!(c->types & NetWMTypeFixed))
+    if (!(c->types & NetWMTypeFixed)) {
         SetActiveClient(c);
 
-    /* let anyone interrested in ewmh knows what we honor */
-    SetNetWMAllowedActions(w, NetWMActionDefault);
+        /* let anyone interrested in ewmh knows what we honor */
+        SetNetWMAllowedActions(w, NetWMActionDefault);
+    }
 
     /* update the client list */
     XChangeProperty(display, root, atoms[AtomNetClientList], XA_WINDOW,
@@ -843,8 +836,10 @@ OnMapRequest(XMapRequestEvent *e)
     if (!XGetWindowAttributes(display, e->window, &wa))
         return;
 
-    if (wa.override_redirect)
+    if (wa.override_redirect) {
+        XMapWindow(display, e->window);
         return;
+    }
 
     if (!LookupClient(e->window))
         ManageWindow(e->window, False);
@@ -910,8 +905,10 @@ OnButtonPress(XButtonEvent *e)
         for (Monitor *m = monitors; m; m = m->next) {
             if (e->x_root > m->x && e->x_root < m->x + m->w
                     && e->y_root > m->y && e->y_root < m->y + m->h) {
-                SetActiveMonitor(m);
-                SetActiveClient(NULL);
+                if (activeMonitor != m) {
+                    SetActiveMonitor(m);
+                    SetActiveClient(NULL);
+                }
                 break;
             }
         }
@@ -927,7 +924,6 @@ OnButtonPress(XButtonEvent *e)
     motionStartY = c->fy;
     motionStartW = c->fw;
     motionStartH = c->fh;
-
 
     if (!c->tiled) {
         if (e->window == c->topbar || (e->window == c->window && e->state == Modkey)) {
@@ -975,6 +971,11 @@ OnButtonRelease(XButtonEvent *e)
     Client *c = LookupClient(e->window);
     if (!c)
         return;
+
+    if (moveMessageType <= HandleCount) {
+        moveMessageType = HandleCount + 1;
+        XUngrabPointer(display, CurrentTime);
+    }
 
     if (!c->tiled) {
         for (int i = 0; i < HandleCount; ++i) {
@@ -1024,27 +1025,36 @@ OnMotionNotify(XMotionEvent *e)
         /* we do not apply normal hints during motion but when button is released
          * to make the resizing visually smoother. Some client apply normals by
          * themselves anway (e.g gnome-terminal) */
-        if (e->window == c->topbar || e->window == c->window)
+        if (e->window == c->topbar || e->window == c->window
+                || moveMessageType == HandleCount)
             MoveClientFrame(c, motionStartX + vx, motionStartY + vy);
-        else if (e->window == c->handles[HandleNorth])
+        else if (e->window == c->handles[HandleNorth]
+                || moveMessageType == HandleNorth)
             MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
                     motionStartW, motionStartH - vy , False);
-        else if (e->window == c->handles[HandleWest])
+        else if (e->window == c->handles[HandleWest]
+                || moveMessageType == HandleWest)
             ResizeClientFrame(c, motionStartW + vx, motionStartH, False);
-        else if (e->window == c->handles[HandleSouth])
+        else if (e->window == c->handles[HandleSouth]
+                || moveMessageType == HandleSouth)
             ResizeClientFrame(c, motionStartW, motionStartH + vy, False);
-        else if (e->window == c->handles[HandleEast])
+        else if (e->window == c->handles[HandleEast]
+                || moveMessageType == HandleEast)
             MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
                     motionStartW - vx, motionStartH, False);
-        else if (e->window == c->handles[HandleNorthEast])
+        else if (e->window == c->handles[HandleNorthEast]
+                || moveMessageType == HandleNorthEast)
             MoveResizeClientFrame(c, motionStartX + vx, motionStartY + vy,
                     motionStartW - vx, motionStartH - vy, False);
-        else if (e->window == c->handles[HandleNorthWest])
+        else if (e->window == c->handles[HandleNorthWest]
+                || moveMessageType == HandleNorthWest)
             MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
                     motionStartW + vx, motionStartH - vy, False);
-        else if (e->window == c->handles[HandleSouthWest])
+        else if (e->window == c->handles[HandleSouthWest]
+                || moveMessageType == HandleSouthWest)
             ResizeClientFrame(c, motionStartW + vx, motionStartH + vy, False);
-        else if (e->window == c->handles[HandleSouthEast])
+        else if (e->window == c->handles[HandleSouthEast]
+                || moveMessageType == HandleSouthEast)
             MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
                     motionStartW - vx, motionStartH + vy, False);
         else
@@ -1153,6 +1163,34 @@ OnMessage(XClientMessageEvent *e)
             RestoreClient(c);
         SetActiveClient(c);
     }
+
+    if (e->message_type == atoms[AtomNetCloseWindow]) {
+        KillClient(c);
+        SetActiveClient(NULL);
+    }
+
+    if (e->message_type == atoms[AtomNetWMActionMinimize]) {
+        MinimizeClient(c);
+        SetActiveClient(c);
+    }
+
+    //if (e->message_type == atoms[AtomNetMoveresizeWindow]) {
+    //    MoveResizeClientWindow(c, e->data.l[1], e->data.l[2],
+    //            e->data.l[3], e->data.l[4], True);
+    //}
+
+    if (e->message_type == atoms[AtomNetWMMoveresize]) {
+        lastSeenPointerX = e->data.l[0];
+        lastSeenPointerY = e->data.l[1];
+        motionStartX = c->fx;
+        motionStartY = c->fy;
+        motionStartW = c->fw;
+        motionStartH = c->fh;
+        moveMessageType = e->data.l[2];
+        if (moveMessageType <= HandleCount)
+            XGrabPointer(display, c->frame, False, ButtonReleaseMask | PointerMotionMask,
+                    GrabModeAsync, GrabModeSync, None, cursors[CursorMove],CurrentTime);
+    }
 }
 
 void
@@ -1246,3 +1284,4 @@ OnKeyRelease(XKeyReleasedEvent *e)
         switching = False;
     }
 }
+

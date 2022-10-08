@@ -8,6 +8,7 @@ typedef struct Transient Transient;
 typedef struct Client Client;
 
 enum Handles {
+    HandleNorthEast,
     HandleNorth,
     HandleNorthWest,
     HandleWest,
@@ -15,7 +16,6 @@ enum Handles {
     HandleSouth,
     HandleSouthEast,
     HandleEast,
-    HandleNorthEast,
     HandleCount
 };
 

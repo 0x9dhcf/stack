@@ -97,6 +97,7 @@ enum AtomType {
 enum CursorType {
     CursorNormal,
     CursorMove,
+    CursorResizeNorthEast,
     CursorResizeNorth,
     CursorResizeNorthWest,
     CursorResizeWest,
@@ -104,7 +105,6 @@ enum CursorType {
     CursorResizeSouth,
     CursorResizeSouthEast,
     CursorResizeEast,
-    CursorResizeNorthEast,
     CursorCount
 };
 

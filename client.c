@@ -936,12 +936,9 @@ Configure(Client *c)
     ce.xconfigure.y = c->wy;
     ce.xconfigure.width = c->ww;
     ce.xconfigure.height = c->wh;
-    //ce.border_width = c->isBorderVisible ? config.borderWidth : 0;
-    //ce.border_width = c->sbw;
-    //ce.border_width = 0;
+    ce.xconfigure.border_width = c->isBorderVisible ? config.borderWidth : 0;
     ce.xconfigure.above = None;
     ce.xconfigure.override_redirect = False;
-    //DLog("%ld (%d, %d) [%d, %d] %d", ce.window, ce.x, ce.y, ce.width, ce.height, ce.border_width);
     XSendEvent(display, c->window, False, StructureNotifyMask, &ce);
     XSync(display, False);
 }
