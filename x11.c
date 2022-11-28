@@ -4,8 +4,8 @@
 #include <X11/extensions/Xrandr.h>
 #include <X11/extensions/Xinerama.h>
 
-#include "config.h"
 #include "log.h"
+#include "settings.h"
 #include "x11.h"
 
 static char *atomNames[] =  {
@@ -155,8 +155,8 @@ SetupX11()
         cursors[i] = XCreateFontCursor(display, cursorIds[i]);
 
     /* initialise fonts */
-    fonts[FontLabel] = XftFontOpenName(display, 0, config.labelFontname);
-    fonts[FontIcon] = XftFontOpenName(display, 0, config.iconFontname);
+    fonts[FontLabel] = XftFontOpenName(display, 0, settings.labelFontname);
+    fonts[FontIcon] = XftFontOpenName(display, 0, settings.iconFontname);
 }
 
 void

@@ -6,10 +6,10 @@
 #include <X11/extensions/Xinerama.h>
 
 #include "client.h"
-#include "config.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"
+#include "settings.h"
 #include "stack.h"
 #include "x11.h"
 
@@ -87,8 +87,8 @@ XineramaScanMonitors()
                     m->desktops[j].wh = m->h;
                     m->desktops[j].dynamic = False;
                     m->desktops[j].toolbar = True;
-                    m->desktops[j].masters = config.masters;
-                    m->desktops[j].split = config.split;
+                    m->desktops[j].masters = settings.masters;
+                    m->desktops[j].split = settings.split;
                 }
                 m->activeDesktop = 0;
                               }
@@ -171,8 +171,8 @@ XRandRScanMonitors()
                     m->desktops[j].wh = m->h;
                     m->desktops[j].dynamic = False;
                     m->desktops[j].toolbar = True;
-                    m->desktops[j].masters = config.masters;
-                    m->desktops[j].split = config.split;
+                    m->desktops[j].masters = settings.masters;
+                    m->desktops[j].split = settings.split;
                 }
                 m->activeDesktop = 0;
                               }
@@ -235,8 +235,8 @@ SetupMonitors()
                 monitors->desktops[i].wh = monitors->h;
                 monitors->desktops[i].dynamic = False;
                 monitors->desktops[i].toolbar = True;
-                monitors->desktops[i].masters = config.masters;
-                monitors->desktops[i].split = config.split;
+                monitors->desktops[i].masters = settings.masters;
+                monitors->desktops[i].split = settings.split;
             }
             monitors->activeDesktop = 0;
         }

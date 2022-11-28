@@ -10,11 +10,11 @@
 #include <X11/XKBlib.h>
 
 #include "client.h"
-#include "config.h"
 #include "hints.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"
+#include "settings.h"
 #include "x11.h"
 
 #define RootEventMask (\
@@ -201,10 +201,10 @@ SetupWindowManager()
     /* shortcuts */
     // XXX: (some) shortcuts could be grab on the client like buttons
     for (int i = 0; i < ShortcutCount; ++i) {
-        if ((code = XKeysymToKeycode(display, config.shortcuts[i].keysym))) {
+        if ((code = XKeysymToKeycode(display, settings.shortcuts[i].keysym))) {
             for (int j = 0; j < 4; ++j)
                 XGrabKey(display, code,
-                        config.shortcuts[i].modifier | modifiers[j],
+                        settings.shortcuts[i].modifier | modifiers[j],
                         root, True, GrabModeSync, GrabModeAsync);
         }
     }
@@ -376,8 +376,8 @@ ManageWindow(Window w, Bool mapped)
     c->isTopbarVisible = decorated;
     c->hasTopbar = decorated && !(c->types & NetWMTypeNoTopbar);
     c->hasHandles = decorated && !IsFixed(c->normals);
-    c->active = False;
-    c->tiled = False;
+    c->isActive = False;
+    c->isTiled = False;
     c->desktop = -1;
 
     /* if transient for, register the client we are transient for
@@ -413,7 +413,7 @@ ManageWindow(Window w, Bool mapped)
     c->frame = XCreateWindow(display, root, 0, 0, 1, 1, 0,
             CopyFromParent, InputOutput, CopyFromParent,
             CWEventMask | CWBackingStore, &fattrs);
-    XMapWindow(display, c->frame);
+    //XMapWindow(display, c->frame);
 
     /* client */
     c->window = w;
@@ -426,8 +426,8 @@ ManageWindow(Window w, Bool mapped)
                 ButtonPressMask, GrabModeSync,
                 GrabModeSync, None, None);
     }
-    if (! mapped)
-        XMapWindow(display, w);
+    //if (! mapped)
+    //    XMapWindow(display, w);
 
     /*
      * windows with EWMH type fixed are neither moveable,
@@ -447,7 +447,7 @@ ManageWindow(Window w, Bool mapped)
         c->topbar = XCreateWindow(display, c->frame, 0, 0, 1, 1, 0,
                 CopyFromParent, InputOutput, CopyFromParent,
                 CWEventMask | CWCursor, &tattrs);
-        XMapWindow(display, c->topbar);
+        //XMapWindow(display, c->topbar);
 
         /* buttons */
         XSetWindowAttributes battrs = {0};
@@ -457,7 +457,7 @@ ManageWindow(Window w, Bool mapped)
                     CopyFromParent, InputOutput, CopyFromParent,
                     CWEventMask | CWCursor, &battrs);
             c->buttons[i] = b;
-            XMapWindow(display, b);
+            //XMapWindow(display, b);
         }
     }
 
@@ -471,7 +471,7 @@ ManageWindow(Window w, Bool mapped)
                     CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &hattrs);
             c->handles[i] = h;
-            XMapWindow(display, h);
+            //XMapWindow(display, h);
         }
     }
 
@@ -495,6 +495,22 @@ ManageWindow(Window w, Bool mapped)
             FullscreenClient(c);
     } else {
         RestackMonitor(c->monitor);
+    }
+
+    /* map */
+    XMapWindow(display, c->frame);
+    if (! mapped)
+        XMapWindow(display, w);
+    if (!(c->types & NetWMTypeFixed)) {
+        XMapWindow(display, c->topbar);
+        for (int i = 0; i < ButtonCount; ++i) {
+            XMapWindow(display, c->buttons[i]);
+        }
+    }
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
+        for (int i = 0; i < HandleCount; ++i) {
+            XMapWindow(display, c->handles[i]);
+        }
     }
 
     if (!(c->types & NetWMTypeFixed)) {
@@ -628,8 +644,8 @@ ReloadConfig()
     LoadConfigFile();
     for (Monitor *m = monitors; m; m = m->next) {
         for (int i = 0; i < DesktopCount; ++i) {
-            m->desktops[i].masters = config.masters;
-            m->desktops[i].split = config.split;
+            m->desktops[i].masters = settings.masters;
+            m->desktops[i].split = settings.split;
         }
         for (Client *c = m->head; c; c = c->next) {
             SynchronizeWindowGeometry(c);
@@ -925,7 +941,7 @@ OnButtonPress(XButtonEvent *e)
     motionStartW = c->fw;
     motionStartH = c->fh;
 
-    if (!c->tiled) {
+    if (!c->isTiled) {
         if (e->window == c->topbar || (e->window == c->window && e->state == Modkey)) {
             int delay = e->time - lastClickPointerTime;
             if (delay > 150 && delay < 250) {
@@ -977,7 +993,7 @@ OnButtonRelease(XButtonEvent *e)
         XUngrabPointer(display, CurrentTime);
     }
 
-    if (!c->tiled) {
+    if (!c->isTiled) {
         for (int i = 0; i < HandleCount; ++i) {
             if (e->window == c->handles[i]) {
                 /* apply the size hints */
@@ -1014,7 +1030,7 @@ OnMotionNotify(XMotionEvent *e)
 
     lastSeenPointerTime = e->time;
 
-    if (c->tiled) {
+    if (c->isTiled) {
         if (e->window == c->handles[HandleWest]
                 || e->window == c->handles[HandleEast]) {
             c->monitor->desktops[c->desktop].split =
@@ -1205,8 +1221,8 @@ OnEnter(XCrossingEvent *e)
 
     if (c) {
         if (e->window == c->frame
-                && (config.focusFollowsPointer
-                    ||  c->tiled
+                && (settings.focusFollowsPointer
+                    ||  c->isTiled
                     || c->monitor != activeMonitor))
             SetActiveClient(c);
 
@@ -1256,18 +1272,20 @@ OnKeyPress(XKeyPressedEvent *e)
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
-        if (keysym == (config.shortcuts[i].keysym) &&
-                CleanMask(config.shortcuts[i].modifier) == CleanMask(e->state)) {
-            if (config.shortcuts[i].type == CV)
-                config.shortcuts[i].cb.vcb.f();
-            if (config.shortcuts[i].type == CC && activeClient)
-                config.shortcuts[i].cb.ccb.f(activeClient);
-            if (config.shortcuts[i].type == CCI && activeClient)
-                config.shortcuts[i].cb.cicb.f(activeClient, config.shortcuts[i].cb.cicb.i);
-            if (config.shortcuts[i].type == CM && activeMonitor)
-                config.shortcuts[i].cb.mcb.f(activeMonitor);
-            if (config.shortcuts[i].type == CMI && activeMonitor)
-                config.shortcuts[i].cb.micb.f(activeMonitor, config.shortcuts[i].cb.micb.i);
+        if (keysym == (settings.shortcuts[i].keysym) &&
+                CleanMask(settings.shortcuts[i].modifier) == CleanMask(e->state)) {
+            if (settings.shortcuts[i].type == CV)
+                settings.shortcuts[i].cb.vcb.f();
+            if (settings.shortcuts[i].type == CC && activeClient)
+                settings.shortcuts[i].cb.ccb.f(activeClient);
+            if (settings.shortcuts[i].type == CCI && activeClient)
+                settings.shortcuts[i].cb.cicb.f(activeClient,
+                        settings.shortcuts[i].cb.cicb.i);
+            if (settings.shortcuts[i].type == CM && activeMonitor)
+                settings.shortcuts[i].cb.mcb.f(activeMonitor);
+            if (settings.shortcuts[i].type == CMI && activeMonitor)
+                settings.shortcuts[i].cb.micb.f(activeMonitor,
+                        settings.shortcuts[i].cb.micb.i);
         }
     }
 }
@@ -1280,7 +1298,7 @@ OnKeyRelease(XKeyReleasedEvent *e)
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
     if (keysym == (ModkeySym) && activeClient && switching) {
         StackClientBefore(activeClient, activeClient->monitor->head);
-        if (activeClient->tiled)
+        if (activeClient->isTiled)
             RestackMonitor(activeClient->monitor);
         switching = False;
     }

@@ -28,7 +28,7 @@ enum Buttons {
 
 struct Transient {
     Client *client;
-    struct Transient *next;
+    Transient *next;
 };
 
 struct Client {
@@ -40,16 +40,16 @@ struct Client {
     int wx, wy, ww, wh;     /* Window absolute geometry                 */
     int fx, fy, fw, fh;     /* Frame absolute geometry                  */
     int sfx, sfy, sfw, sfh; /* Saved frame geometry ante fullscreen     */
-    Bool hasTopbar;
-    Bool hasHandles;
-    Bool isBorderVisible;
-    Bool isTopbarVisible;
     int smx, smy, smw, smh; /* Saved frame geometry ante max/minimixed  */
     int shx, shy, shw, shh; /* saved frame geometry ante minimixed      */
     int stx, sty, stw, sth; /* Saved frame geometry ante tiling         */
     int sbw;                /* Saved border width                       */
-    Bool active;
-    Bool tiled;
+    Bool hasTopbar;
+    Bool hasHandles;
+    Bool isBorderVisible;
+    Bool isTopbarVisible;
+    Bool isActive;
+    Bool isTiled;
     int desktop;
     char *name;
     WMClass wmclass;

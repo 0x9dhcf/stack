@@ -10,10 +10,10 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 
-#include "config.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"
+#include "settings.h"
 #include "stack.h"
 #include "x11.h"
 
