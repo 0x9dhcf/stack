@@ -50,6 +50,7 @@ struct Client {
     Bool isTopbarVisible;
     Bool isActive;
     Bool isTiled;
+    int hovered;
     int desktop;
     char *name;
     WMClass wmclass;
@@ -97,7 +98,7 @@ void CenterClient(Client *c);
 void RestoreClient(Client *c);
 void RaiseClient(Client *c);
 void LowerClient(Client *c);
-void RefreshClientButton(Client *c, int button, Bool hovered);
+//void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
 void SetClientTopbarVisible(Client *c, Bool b);

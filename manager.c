@@ -23,7 +23,8 @@
         | SubstructureNotifyMask)
 
 #define FrameEvenMask (\
-          ButtonPressMask\
+          ExposureMask\
+        | ButtonPressMask\
         | EnterWindowMask\
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
@@ -53,6 +54,7 @@ static void OnConfigureRequest(XConfigureRequestEvent *e);
 static void OnMapRequest(XMapRequestEvent *e);
 static void OnUnmapNotify(XUnmapEvent *e);
 static void OnDestroyNotify(XDestroyWindowEvent *e);
+static void OnExpose(XExposeEvent *e);
 static void OnEnter(XCrossingEvent *e);
 static void OnLeave(XCrossingEvent *e);
 static void OnPropertyNotify(XPropertyEvent *e);
@@ -260,6 +262,9 @@ StartEventLoop()
                     case DestroyNotify:
                         OnDestroyNotify(&e.xdestroywindow);
                     break;
+                    case Expose:
+                        OnExpose(&e.xexpose);
+                    break;
                     case ConfigureRequest:
                         OnConfigureRequest(&e.xconfigurerequest);
                     break;
@@ -378,6 +383,7 @@ ManageWindow(Window w, Bool mapped)
     c->hasHandles = decorated && !IsFixed(c->normals);
     c->isActive = False;
     c->isTiled = False;
+    c->hovered = ButtonCount;
     c->desktop = -1;
 
     /* if transient for, register the client we are transient for
@@ -413,7 +419,6 @@ ManageWindow(Window w, Bool mapped)
     c->frame = XCreateWindow(display, root, 0, 0, 1, 1, 0,
             CopyFromParent, InputOutput, CopyFromParent,
             CWEventMask | CWBackingStore, &fattrs);
-    //XMapWindow(display, c->frame);
 
     /* client */
     c->window = w;
@@ -426,8 +431,6 @@ ManageWindow(Window w, Bool mapped)
                 ButtonPressMask, GrabModeSync,
                 GrabModeSync, None, None);
     }
-    //if (! mapped)
-    //    XMapWindow(display, w);
 
     /*
      * windows with EWMH type fixed are neither moveable,
@@ -445,19 +448,17 @@ ManageWindow(Window w, Bool mapped)
         tattrs.event_mask = HandleEventMask;
         tattrs.cursor = cursors[CursorNormal];
         c->topbar = XCreateWindow(display, c->frame, 0, 0, 1, 1, 0,
-                CopyFromParent, InputOutput, CopyFromParent,
+                CopyFromParent, InputOnly, CopyFromParent,
                 CWEventMask | CWCursor, &tattrs);
-        //XMapWindow(display, c->topbar);
 
         /* buttons */
         XSetWindowAttributes battrs = {0};
         battrs.event_mask = ButtonEventMask;
         for (int i = 0; i < ButtonCount; ++i) {
             Window b = XCreateWindow(display, c->topbar, 0, 0, 1, 1, 0,
-                    CopyFromParent, InputOutput, CopyFromParent,
+                    CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &battrs);
             c->buttons[i] = b;
-            //XMapWindow(display, b);
         }
     }
 
@@ -471,7 +472,6 @@ ManageWindow(Window w, Bool mapped)
                     CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &hattrs);
             c->handles[i] = h;
-            //XMapWindow(display, h);
         }
     }
 
@@ -515,7 +515,6 @@ ManageWindow(Window w, Bool mapped)
 
     if (!(c->types & NetWMTypeFixed)) {
         SetActiveClient(c);
-
         /* let anyone interrested in ewmh knows what we honor */
         SetNetWMAllowedActions(w, NetWMActionDefault);
     }
@@ -544,7 +543,7 @@ UnmanageWindow(Window w, Bool destroyed)
         t = p;
     }
 
-    /* if transient for someone unregister this client */
+    /* if transient for someone, unregister this client */
     if (c->transfor) {
         Transient **tc;
         for (tc = &c->transfor->transients;
@@ -881,6 +880,14 @@ void
 OnDestroyNotify(XDestroyWindowEvent *e)
 {
     UnmanageWindow(e->window, True);
+}
+
+void
+OnExpose(XExposeEvent *e)
+{
+    Client *c = LookupClient(e->window);
+    if (!c)
+        RefreshClient(c);
 }
 
 void
@@ -1226,9 +1233,13 @@ OnEnter(XCrossingEvent *e)
                     || c->monitor != activeMonitor))
             SetActiveClient(c);
 
-        for (int i = 0; i < ButtonCount; ++i)
-            if (e->window == c->buttons[i])
-                RefreshClientButton(c, i, True);
+       for (int i = 0; i < ButtonCount; ++i) {
+           if (e->window == c->buttons[i]) {
+                c->hovered = i;
+                RefreshClient(c);
+                break;
+           }
+       }
     }
 }
 
@@ -1236,10 +1247,15 @@ void OnLeave(XCrossingEvent *e)
 {
     Client *c = LookupClient(e->window);
 
-    if (c)
-        for (int i = 0; i < ButtonCount; ++i)
-            if (e->window == c->buttons[i])
-                RefreshClientButton(c, i, False);
+    if (c) {
+        for (int i = 0; i < ButtonCount; ++i) {
+            if (e->window == c->buttons[i]) {
+                c->hovered = ButtonCount;
+                RefreshClient(c);
+                break;
+            }
+        }
+    }
 }
 
 void

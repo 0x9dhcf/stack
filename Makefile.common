@@ -7,7 +7,7 @@ MINOR = 4
 PREFIX ?= /usr/local
 PKG_CONFIG = pkg-config
 
-DEPS = x11 xrandr xinerama xft
+DEPS = x11 xrandr xinerama cairo pangocairo
 
 CPPFLAGS	+= -DVERSION=\"$(MAJOR).$(MINOR)\"
 CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)

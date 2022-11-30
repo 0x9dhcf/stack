@@ -114,7 +114,6 @@ Window root;
 unsigned long numLockMask;
 Atom atoms[AtomCount];
 Cursor cursors[CursorCount];
-XftFont *fonts[FontCount];
 
 void
 SetupX11()
@@ -153,19 +152,12 @@ SetupX11()
     /* initialize cursors */
     for (int i = 0; i < CursorCount; ++i)
         cursors[i] = XCreateFontCursor(display, cursorIds[i]);
-
-    /* initialise fonts */
-    fonts[FontLabel] = XftFontOpenName(display, 0, settings.labelFontname);
-    fonts[FontIcon] = XftFontOpenName(display, 0, settings.iconFontname);
 }
 
 void
 CleanupX11()
 {
     /* release x11 resources */
-    XftFontClose(display, fonts[FontLabel]);
-    XftFontClose(display, fonts[FontIcon]);
-
     for (int i = 0; i < CursorCount; ++i)
         cursors[i] = XFreeCursor(display, cursors[i]);
 

@@ -1,33 +1,31 @@
-#include <X11/Xlib.h>
 #include <string.h>
+#include <math.h>
+#include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <cairo/cairo.h>
+#include <cairo/cairo-xlib.h>
+#include <pango/pangocairo.h>
 
 #include "client.h"
-#include "settings.h"
-#include "log.h"
 #include "hints.h"
+#include "log.h"
 #include "manager.h"
 #include "monitor.h"
+#include "pango/pango-types.h"
+#include "settings.h"
 #include "x11.h"
 
-/* we always use Center and Middle, but we are ready for
- * window name right aligned */
-typedef enum {
-    AlignLeft,
-    AlignCenter,
-    AlignRight
-} HAlign;
-
-typedef enum {
-    AlignTop,
-    AlignMiddle,
-    AlignBottom
-} VAlign;
+/* icons are 40% of the button size */
+#define IconScaleFactor 0.4f
 
 static void ApplyNormalHints(Client *c);
 static void SaveGeometries(Client *c);
-static void WriteText(Drawable d, const char*s, int ft, int color,
-        HAlign ha, VAlign va, int w, int h);
+static void GetTopbarGeometry(Client *c, int *x, int *y, int *w, int *h);
+static void GetButtonGeometry(Client *c, int button, int *x, int *y, int *w, int *h);
+static void SetSourceColor(cairo_t *cairo, int color);
+static void DrawFrame(Client *c, cairo_t *cairo);
+static void WriteTitle(Client *c, cairo_t *cairo);
+static void DrawButton(Client *c, cairo_t *cairo, int button);
 
 void
 HideClient(Client *c)
@@ -54,7 +52,6 @@ ShowClient(Client *c)
     if (c->states & NetWMStateFullscreen)
         RaiseClient(c);
 
-    // XXX: Agrrr
     RefreshClient(c);
 }
 
@@ -481,79 +478,34 @@ KillClient(Client *c)
 }
 
 void
-RefreshClientButton(Client *c, int button, Bool hovered)
-{
-    int bg, fg;
-    /* Select the button colors */
-    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = settings.urgentBackground;
-        fg = settings.urgentForeground;
-    }  else if (c->isActive) {
-        if (hovered) {
-            bg = settings.buttonStyles[button].activeHoveredBackground;
-            fg = settings.buttonStyles[button].activeHoveredForeground;
-        } else {
-            bg = settings.buttonStyles[button].activeBackground;
-            fg = settings.buttonStyles[button].activeForeground;
-        }
-    } else {
-        if (hovered) {
-            bg = settings.buttonStyles[button].inactiveHoveredBackground;
-            fg = settings.buttonStyles[button].inactiveHoveredForeground;
-        } else {
-            bg = settings.buttonStyles[button].inactiveBackground;
-            fg = settings.buttonStyles[button].inactiveForeground;
-        }
-    }
-
-    XSetWindowBackground(display, c->buttons[button], bg);
-    XClearWindow(display, c->buttons[button]);
-    WriteText(c->buttons[button], settings.buttonStyles[button].icon,
-            FontIcon, fg, AlignCenter, AlignMiddle, settings.buttonSize,
-            settings.buttonSize);
-}
-
-void
 RefreshClient(Client *c)
 {
-    int bg, fg;
+    Visual *v;
+    cairo_surface_t *surface;  
+    cairo_t *cairo; 
 
-    /* Do not attempt to refresh non decorated or hidden clients */
+    /* do not attempt to refresh non decorated or hidden clients */
     if ((!c->isTopbarVisible && !c->isBorderVisible)
             || (c->desktop != c->monitor->activeDesktop
                 && !(c->states & NetWMStateSticky)))
         return;
 
-    /* Select the frame colors */
-    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
-        bg = settings.urgentBackground;
-        fg = settings.urgentForeground;
-    }  else if (c->isActive) {
-        bg = c->isTiled ? settings.activeTileBackground
-                : settings.activeBackground;
-        fg = settings.activeForeground;
-    } else {
-        bg = c->isTiled ? settings.inactiveTileBackground
-                : settings.inactiveBackground;
-        fg = settings.inactiveForeground;
-    }
+    v = DefaultVisual(display, DefaultScreen(display));
+    surface = cairo_xlib_surface_create(display, c->frame, v, c->fw, c->fh);
+    cairo = cairo_create(surface);
+    cairo_set_line_cap(cairo, CAIRO_LINE_CAP_ROUND);
 
-    if (c->isBorderVisible) {
-        XSetWindowBackground(display, c->frame, bg);
-        XClearWindow(display, c->frame);
-    }
+    DrawFrame(c, cairo);
 
     if (c->hasTopbar && c->isTopbarVisible) {
-        XSetWindowBackground(display, c->topbar, bg);
-        XClearWindow(display, c->topbar);
-        if (c->name)
-            WriteText(c->topbar, c->name, FontLabel, fg, AlignCenter,
-                    AlignMiddle, c->ww - 2 * settings.borderWidth,
-                    settings.topbarHeight);
-
-        for (int i = 0; i < ButtonCount; ++i)
-            RefreshClientButton(c, i, False);
+        WriteTitle(c, cairo);
+        for (int i = 0; i < ButtonCount; ++i) {
+            DrawButton(c, cairo, i);
+        }
     }
+
+    cairo_destroy(cairo);
+    cairo_surface_destroy(surface);
 }
 
 void
@@ -562,13 +514,13 @@ StackClientAfter(Client *c, Client *after)
     if (c == after)
         return;
 
-    /* remove c */
+    /* Remove c */
     if (c->prev)
           c->prev->next = c->next;
     else
         c->monitor->head = c->next;
 
-    /* change monitor is needed */
+    /* Change monitor is needed */
     c->monitor = after->monitor;
 
     if (c->next)
@@ -592,13 +544,13 @@ StackClientBefore(Client *c, Client *before)
     if (c == before)
         return;
 
-    /* remove c */
+    /* Remove c */
     if (c->prev)
           c->prev->next = c->next;
     else
         c->monitor->head = c->next;
 
-    /* change monitor is needed */
+    /* Change monitor is needed */
     c->monitor = before->monitor;
 
     if (c->next)
@@ -865,7 +817,6 @@ void
 Configure(Client *c)
 {
     int wx, wy, bw;
-    //XConfigureEvent ce;
     XEvent ce;
 
     /* what is the border width */
@@ -879,16 +830,16 @@ Configure(Client *c)
     XMoveResizeWindow(display, c->frame, c->fx, c->fy, c->fw, c->fh);
     XMoveResizeWindow(display, c->window, wx, wy, c->ww, c->wh);
 
-    /* place topbar */
+    /* place the topbar */
     if (c->hasTopbar) {
         if (c->isTopbarVisible) {
-            XMoveResizeWindow(display, c->topbar, bw, bw, c->fw - 2 * bw,
-                    settings.topbarHeight);
-            for (int i = 0; i < ButtonCount; ++i)
-                XMoveResizeWindow(display, c->buttons[i], c->fw - 2 * bw
-                    - ((i+1) * (settings.buttonSize) + i * settings.buttonGap),
-                    (settings.topbarHeight - settings.buttonSize) / 2,
-                    settings.buttonSize, settings.buttonSize);
+            int x, y, w, h;
+            GetTopbarGeometry(c, &x, &y, &w, &h);
+            XMoveResizeWindow(display, c->topbar, x, y, w, h);
+            for (int i = 0; i < ButtonCount; ++i) {
+                GetButtonGeometry(c, i, &x, &y, &w, &h);
+                XMoveResizeWindow(display, c->buttons[i], x, y, w, h); 
+            }
         } else {
             /* move the topbar outside the frame */
             XMoveWindow(display, c->topbar, bw, -(bw + settings.topbarHeight));
@@ -998,48 +949,218 @@ SaveGeometries(Client *c)
 }
 
 void
-WriteText(Drawable d, const char*s, int ft, int color,
-        HAlign ha, VAlign va, int w, int h)
+GetTopbarGeometry(Client *c, int *x, int *y, int *w, int *h)
 {
-    int x, y;
-    XGlyphInfo info;
-    XftColor xftc;
-    XftDraw *draw;
-    Visual *v;
-    Colormap cm;
-    XftFont *f;
+    int bw = c->isBorderVisible ? settings.borderWidth : 0;
+    *x = bw;
+    *y = bw;
+    *w = c->fw - 2 * bw;
+    *h = settings.topbarHeight;
+}
 
-    f = fonts[ft];
-    XftTextExtentsUtf8(display, f, (FcChar8*)s, strlen(s), &info);
-    x = y = 0;
-    switch ((int)ha) {
-        case AlignCenter:
-            x = (w - (info.xOff >= info.width ? info.xOff : info.width)) / 2;
-            break;
-        case AlignRight:
-            x = w - (info.xOff >= info.width ? info.xOff : info.width);
-            break;
+void
+GetButtonGeometry(Client *c, int button, int *x, int *y, int *w, int *h)
+{
+    int bw = c->isBorderVisible ? settings.borderWidth : 0;
+    int bs = settings.buttonSize;
+    int bg = settings.buttonGap;
+    int bh = settings.topbarHeight;
+    *x = c->fw - 2 * bw - ((button+1) * (bs) + (button+1) * bg);
+    *y = bw + (bh - bs) / 2;
+    *w = bs;
+    *h = bs;
+}
+
+void
+SetSourceColor(cairo_t *cairo, int color)
+{
+    double r = ((unsigned char)(color>>16))/255.0;
+    double g = ((unsigned char)(color>>8))/255.0;
+    double b = ((unsigned char)color)/255.0;
+    cairo_set_source_rgb(cairo, r, g, b);
+}
+
+void
+WriteTitle(Client *c, cairo_t *cairo)
+{
+    int fg, bw, x, y, w, h;
+    PangoLayout *layout;
+    PangoFontDescription *desc;
+
+    /* select the frame colors */
+    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+        fg = settings.urgentForeground;
+    }  else if (c->isActive) {
+        fg = settings.activeForeground;
+    } else {
+        fg = settings.inactiveForeground;
     }
-    switch ((int)va) {
-        case AlignTop:
-            y = h + f->ascent + f->descent - f->descent + info.yOff;
-            break;
-        case AlignMiddle:
-            y = (h + f->ascent + f->descent) / 2 - f->descent + info.yOff;
-            break;
+        
+    /* what is the border width */
+    bw = c->isBorderVisible ? settings.borderWidth : 0;
+
+    /* label */
+    layout = pango_cairo_create_layout(cairo);
+    pango_layout_set_text(layout, c->name, -1);
+    desc = pango_font_description_from_string(settings.labelFontname);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+
+    pango_layout_get_size(layout, &w, &h);
+    x = (c->fw - (double)w/PANGO_SCALE) / 2.0;
+    y = bw + (settings.topbarHeight - (double)h/PANGO_SCALE) / 2.0;
+    cairo_move_to(cairo, x, y);
+    SetSourceColor(cairo, fg);
+    pango_cairo_show_layout(cairo, layout);
+    g_object_unref(layout);
+}
+
+void
+DrawFrame(Client *c, cairo_t *cairo)
+{
+    int bg, bc, bw;
+    /* select the frame colors */
+    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+        bg = settings.urgentBackground;
+        bc = settings.urgentBorder;
+    }  else if (c->isActive) {
+        bg = settings.activeBackground;
+        bc = c->isTiled ? settings.activeTileBackground
+                : settings.activeBorder;
+    } else {
+        bg = settings.inactiveBackground;
+        bc = c->isTiled ? settings.inactiveTileBackground
+                : settings.inactiveBorder;
     }
 
-    v = DefaultVisual(display, 0);
-    cm = DefaultColormap(display, 0);
-    draw = XftDrawCreate(display, d, v, cm);
+    /* what is the border width */
+    bw = c->isBorderVisible ? settings.borderWidth : 0;
 
-    char name[] = "#ffffff";
-    snprintf(name, sizeof(name), "#%06X", color);
-    XftColorAllocName(display, DefaultVisual(display,
-                DefaultScreen(display)),
-                DefaultColormap(display, DefaultScreen(display)),
-                name, &xftc);
-    XftDrawStringUtf8(draw, &xftc, f, x, y, (XftChar8 *)s, strlen(s));
-    XftDrawDestroy(draw);
-    XftColorFree(display,v, cm, &xftc);
+    /* background */
+    SetSourceColor(cairo, bg);
+    cairo_rectangle(cairo, bw, bw, c->fw - 2 * bw, c->fh - 2 * bw);  
+    cairo_fill(cairo);
+
+    /* border */
+    if (c->isBorderVisible) {
+        cairo_set_line_width(cairo, 2 * bw);
+        SetSourceColor(cairo, bc);
+        cairo_rectangle(cairo, 0, 0, c->fw, c->fh);  
+        cairo_stroke(cairo);
+    }
+}
+
+void
+DrawButton(Client *c, cairo_t *cairo, int button)
+{
+    int bbg, bfg, bbc;
+    int x, y, w, h;
+
+    /* select the button colors */
+    if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
+        bbg = settings.urgentBackground;
+        bfg = settings.urgentForeground;
+        bbc = settings.urgentForeground;
+    }  else if (c->isActive) {
+        if (button == c->hovered) {
+            bbg = settings.buttonStyles[button].activeHoveredBackground;
+            bfg = settings.buttonStyles[button].activeHoveredForeground;
+            bbc = settings.buttonStyles[button].inactiveHoveredBorder;
+        } else {
+            bbg = settings.buttonStyles[button].activeBackground;
+            bfg = settings.buttonStyles[button].activeForeground;
+            bbc = settings.buttonStyles[button].activeBorder;
+        }
+    } else {
+        if (button == c->hovered) {
+            bbg = settings.buttonStyles[button].inactiveHoveredBackground;
+            bfg = settings.buttonStyles[button].inactiveHoveredForeground;
+            bbc = settings.buttonStyles[button].inactiveHoveredBorder;
+        } else {
+            bbg = settings.buttonStyles[button].inactiveBackground;
+            bfg = settings.buttonStyles[button].inactiveForeground;
+            bbc = settings.buttonStyles[button].inactiveBorder;
+        }
+    }
+    
+    /* draw buttons */
+    GetButtonGeometry(c, button, &x, &y, &w, &h);
+
+    if (settings.buttonShape == ButtonCirle) {
+        /* button background */
+        SetSourceColor(cairo, bbg);
+        cairo_arc(cairo, x+w/2.0, y+h/2.0, w/2.0, 0, 2*M_PI);
+        cairo_fill(cairo);
+        SetSourceColor(cairo, bbc);
+
+        /* button border */
+        cairo_arc(cairo, x+w/2.0, y+h/2.0, w/2.0, 0, 2*M_PI);
+        cairo_set_line_width (cairo, 0.5);
+        cairo_stroke (cairo);
+    } else {
+        /* button background */
+        SetSourceColor(cairo, bbg);
+        cairo_rectangle(cairo, x, y, w, h);
+        cairo_fill(cairo);
+        SetSourceColor(cairo, bbc);
+
+        /* button border */
+        cairo_rectangle(cairo, x, y, w, h);
+        cairo_set_line_width (cairo, 0.5);
+        cairo_stroke (cairo);
+    }
+
+    /* button icon */
+    SetSourceColor(cairo, bfg);
+    if (strlen(settings.buttonStyles[button].icon)) {
+        int tw, th;
+        double dx, dy, dw, dh;
+        PangoLayout *layout;
+        PangoFontDescription *desc;
+
+        layout = pango_cairo_create_layout(cairo);
+        pango_layout_set_text(layout, settings.buttonStyles[button].icon, -1);
+        desc = pango_font_description_from_string(settings.iconFontname);
+        pango_layout_set_font_description(layout, desc);
+        pango_font_description_free(desc);
+
+        pango_layout_get_size(layout, &tw, &th);
+        dw = (double)tw/PANGO_SCALE;
+        dh = (double)th/PANGO_SCALE;
+        dx = (double)x + ((double)w - dw) / 2.0;
+        dy = (double)y + ((double)h - dh) / 2.0;
+        cairo_move_to(cairo, dx, dy);
+        pango_cairo_show_layout(cairo, layout);
+        g_object_unref(layout);
+    } else {
+        cairo_set_line_width (cairo, 1.5);
+        if (button == ButtonClose) {
+            cairo_save(cairo);
+            cairo_translate(cairo, x+w/2.0, y+h/2.0);
+            cairo_scale(cairo, IconScaleFactor, IconScaleFactor);
+            cairo_move_to(cairo, -w/2.0, -h/2.0);
+            cairo_line_to (cairo, w/2.0, h/2.0);
+            cairo_move_to (cairo, w/2.0, -h/2.0);
+            cairo_line_to (cairo, -w/2.0, h/2.0);
+            cairo_restore(cairo);
+            cairo_stroke (cairo);
+        }
+        if (button == ButtonMaximize) {
+            cairo_save(cairo);
+            cairo_translate(cairo, x+w/2.0, y+h/2.0);
+            cairo_scale(cairo, IconScaleFactor, IconScaleFactor);
+            cairo_rectangle(cairo, -w/2.0, -h/2.0, w, h);
+            cairo_restore(cairo);
+            cairo_stroke (cairo);
+        }
+        if (button == ButtonMinimize) {
+            cairo_save(cairo);
+            cairo_translate(cairo, x+w/2.0, y+h/2.0);
+            cairo_scale(cairo, IconScaleFactor, IconScaleFactor);
+            cairo_move_to (cairo, -w/2.0, 0);
+            cairo_line_to (cairo, w/2.0, 0 );
+            cairo_restore(cairo);
+            cairo_stroke (cairo);
+        }
+    }
 }

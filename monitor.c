@@ -210,7 +210,6 @@ SetupMonitors()
         ILog("using xrandr");
         dirty = XRandRScanMonitors();
     } else if (extensions & ExtentionXinerama) {
-    //if (extensions & ExtentionXinerama) {
         ILog("using xinerama");
         dirty = XineramaScanMonitors();
     } else {
@@ -223,7 +222,6 @@ SetupMonitors()
         }
         if (monitors->w != DisplayWidth(display, DefaultScreen(display))
                 || monitors->h != XDisplayHeight(display, DefaultScreen(display))) {
-            //dirty = 1;
             monitors->x = 0;
             monitors->y = 0;
             monitors->w = DisplayWidth(display, DefaultScreen(display));
