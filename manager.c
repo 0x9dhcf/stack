@@ -774,7 +774,7 @@ SetActiveClient(Client *c)
     // XXX: focusable client to be checked
     if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
             //&& toActivate->hints & HintsFocusable
-            && toActivate->types & NetWMTypeNormal
+            && !(toActivate->types & NetWMTypeFixed)
             && !(toActivate->states & NetWMStateHidden)) {
         /* if someone is to be activated do it */
         SetClientActive(toActivate, True);
@@ -886,7 +886,7 @@ void
 OnExpose(XExposeEvent *e)
 {
     Client *c = LookupClient(e->window);
-    if (!c)
+    if (c)
         RefreshClient(c);
 }
 
