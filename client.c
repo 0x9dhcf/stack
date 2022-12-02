@@ -180,7 +180,7 @@ void
 UntileClient(Client *c)
 {
     c->isTiled = False;
-    MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
+    MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, True);
 }
 
 void

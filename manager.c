@@ -806,13 +806,27 @@ OnConfigureRequest(XConfigureRequestEvent *e)
         xwc.sibling = e->above;
         xwc.stack_mode = e->detail;
         XConfigureWindow(display, e->window, e->value_mask, &xwc);
-        XSync(display, False);
     } else {
         if (e->value_mask & CWBorderWidth)
             c->sbw = e->border_width;
 
-        if (e->value_mask & (CWX|CWY|CWWidth|CWHeight)
-                && !(c->states & NetWMStateMaximized)) {
+        if (c->isTiled || c->states & NetWMStateMaximized) {
+            XConfigureEvent ce;
+
+            ce.type = ConfigureNotify;
+            ce.display = display;
+            ce.event = c->window;
+            ce.window = c->window;
+            ce.x = c->wx;
+            ce.y = c->wy;
+            ce.width = c->ww;
+            ce.height = c->wh;
+            ce.border_width = c->sbw;
+            ce.above = None;
+            ce.override_redirect = False;
+            XSendEvent(display, c->window, False,
+                    StructureNotifyMask, (XEvent *)&ce);
+        } else if (e->value_mask & (CWX|CWY|CWWidth|CWHeight)) {
             int x, y, w, h;
 
             x = c->wx;
@@ -829,7 +843,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
             if (e->value_mask & CWHeight)
                 h = e->height;
 
-            MoveResizeClientWindow(c, x, y, w, h, False);
+            MoveResizeClientWindow(c, x, y, w, h, True);
         }
 
         /* as the window is reparented, XRaiseWindow and XLowerWindow
@@ -841,6 +855,7 @@ OnConfigureRequest(XConfigureRequestEvent *e)
                 LowerClient(c);
         }
     }
+    XSync(display, False);
 }
 
 void
