@@ -319,7 +319,7 @@ DetachClientFromMonitor(Monitor *m, Client *c)
                 || c->strut.bottom
                 || (desktop == m->activeDesktop
                     && m->desktops[m->activeDesktop].dynamic)))
-        RestackMonitor(m);
+        RefreshMonitor(m);
 }
 
 void
@@ -337,7 +337,7 @@ ShowDesktop(Monitor *m, int desktop)
         if ((c->states & NetWMStateSticky) || (c->types & NetWMTypeFixed))
             MoveClientToDesktop(c, desktop);
 
-    RestackMonitor(m);
+    RefreshMonitor(m);
     SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
     XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
@@ -365,7 +365,7 @@ ToggleDynamic(Monitor *m)
         for (Client *c = m->head; c; c = c->next)
             if (c->desktop == m->activeDesktop)
                 UntileClient(c);
-    RestackMonitor(m);
+    RefreshMonitor(m);
 }
 
 void
@@ -378,7 +378,7 @@ ToggleTopbar(Monitor *m)
             SetClientTopbarVisible(c, !b);
         RefreshClient(c);
     }
-    RestackMonitor(m);
+    RefreshMonitor(m);
 }
 
 void
@@ -387,12 +387,12 @@ AddMaster(Monitor *m, int nb)
     if (m->desktops[m->activeDesktop].dynamic) {
         m->desktops[m->activeDesktop].masters =
             Max(m->desktops[m->activeDesktop].masters + nb, 1);
-        RestackMonitor(m);
+        RefreshMonitor(m);
     }
 }
 
 void
-RestackMonitor(Monitor *m)
+RefreshMonitor(Monitor *m)
 {
     /* if dynamic mode is enabled re tile the desktop */
     if (m->desktops[m->activeDesktop].dynamic) {

@@ -586,7 +586,7 @@ StackClientDown(Client *c)
 
         if (after) {
             StackClientAfter(c, after);
-            RestackMonitor(c->monitor);
+            RefreshMonitor(c->monitor);
             return;
         }
 
@@ -599,7 +599,7 @@ StackClientDown(Client *c)
 
         if (before) {
             StackClientBefore(c, before);
-            RestackMonitor(c->monitor);
+            RefreshMonitor(c->monitor);
         }
     }
 }
@@ -621,7 +621,7 @@ StackClientUp(Client *c)
 
         if (before) {
             StackClientBefore(c, before);
-            RestackMonitor(activeMonitor);
+            RefreshMonitor(activeMonitor);
             return;
         }
 
@@ -634,7 +634,7 @@ StackClientUp(Client *c)
 
         if (after) {
             StackClientAfter(c, after);
-            RestackMonitor(c->monitor);
+            RefreshMonitor(c->monitor);
         }
     }
 }
@@ -710,7 +710,7 @@ MoveClientToDesktop(Client *c, int desktop)
     c->desktop = desktop;
     if (c->isTiled && !d->dynamic) {
         UntileClient(c);
-        RestackMonitor(c->monitor);
+        RefreshMonitor(c->monitor);
     }
 
     if (!(c->types & NetWMTypeFixed))
@@ -722,7 +722,7 @@ MoveClientToDesktop(Client *c, int desktop)
 
     if (from != -1) { /* it's probably a new window not affected yet */
         SetActiveClient(NULL);
-        RestackMonitor(m);
+        RefreshMonitor(m);
     }
 
     /* finally let the pager know where we are */

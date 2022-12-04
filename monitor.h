@@ -40,6 +40,6 @@ void SwitchToPreviousDesktop(Monitor *m);
 void ToggleDynamic(Monitor *m);
 void ToggleTopbar(Monitor *m);
 void AddMaster(Monitor *m, int nb);
-void RestackMonitor(Monitor *m);
+void RefreshMonitor(Monitor *m);
 
 #endif /* __MONITOR_H__ */

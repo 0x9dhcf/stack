@@ -494,7 +494,7 @@ ManageWindow(Window w, Bool mapped)
         if (c->states & NetWMStateFullscreen)
             FullscreenClient(c);
     } else {
-        RestackMonitor(c->monitor);
+        RefreshMonitor(c->monitor);
     }
 
     /* map */
@@ -651,7 +651,7 @@ ReloadConfig()
             Configure(c);
         }
     }
-    RestackMonitor(activeMonitor);
+    RefreshMonitor(activeMonitor);
 }
 
 void
@@ -1057,7 +1057,7 @@ OnMotionNotify(XMotionEvent *e)
                 || e->window == c->handles[HandleEast]) {
             c->monitor->desktops[c->desktop].split =
                 (e->x_root - c->monitor->x) / (float)c->monitor->w;
-            RestackMonitor(c->monitor);
+            RefreshMonitor(c->monitor);
         }
     } else {
         /* we do not apply normal hints during motion but when button is released
@@ -1330,7 +1330,7 @@ OnKeyRelease(XKeyReleasedEvent *e)
     if (keysym == (ModkeySym) && activeClient && switching) {
         StackClientBefore(activeClient, activeClient->monitor->head);
         if (activeClient->isTiled)
-            RestackMonitor(activeClient->monitor);
+            RefreshMonitor(activeClient->monitor);
         switching = False;
     }
 }

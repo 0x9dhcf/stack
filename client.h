@@ -98,7 +98,6 @@ void CenterClient(Client *c);
 void RestoreClient(Client *c);
 void RaiseClient(Client *c);
 void LowerClient(Client *c);
-//void RefreshClientButton(Client *c, int button, Bool hovered);
 void RefreshClient(Client *c);
 void SetClientActive(Client *c, Bool b);
 void SetClientTopbarVisible(Client *c, Bool b);
