@@ -68,15 +68,16 @@ typedef struct Settings {
     int masters;
     float split;
     /* shortcuts */
-    struct {
+    struct Shortcut {
         unsigned long modifier;
         unsigned long keysym;
-        enum {CV, CC, CCI, CM, CMI} type;
+        enum {CV, CC, CCI, CM, CMC, CMI} type;
         union {
             struct { void (*f)(); } vcb;
             struct { void (*f)(Client *); } ccb;
             struct { void (*f)(Client *, int); int i; } cicb;
             struct { void (*f)(Monitor *); } mcb;
+            struct { void (*f)(Monitor *, Client *); } mccb;
             struct { void (*f)(Monitor *, int); int i; } micb;
         } cb;
     } shortcuts[ShortcutCount];

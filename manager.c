@@ -1294,7 +1294,7 @@ OnKeyPress(XKeyPressedEvent *e)
         }
     }
 
-    /* Warning related to config. Won't work anymore if replacing TAB by
+    /* XXX: warning related to config. Won't work anymore if replacing TAB by
      * something else */
     if (keysym == (XK_Tab)
             && (CleanMask(Modkey) == CleanMask(e->state)
@@ -1303,20 +1303,21 @@ OnKeyPress(XKeyPressedEvent *e)
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
-        if (keysym == (settings.shortcuts[i].keysym) &&
-                CleanMask(settings.shortcuts[i].modifier) == CleanMask(e->state)) {
-            if (settings.shortcuts[i].type == CV)
-                settings.shortcuts[i].cb.vcb.f();
-            if (settings.shortcuts[i].type == CC && activeClient)
-                settings.shortcuts[i].cb.ccb.f(activeClient);
-            if (settings.shortcuts[i].type == CCI && activeClient)
-                settings.shortcuts[i].cb.cicb.f(activeClient,
-                        settings.shortcuts[i].cb.cicb.i);
-            if (settings.shortcuts[i].type == CM && activeMonitor)
-                settings.shortcuts[i].cb.mcb.f(activeMonitor);
-            if (settings.shortcuts[i].type == CMI && activeMonitor)
-                settings.shortcuts[i].cb.micb.f(activeMonitor,
-                        settings.shortcuts[i].cb.micb.i);
+        struct Shortcut *s = &settings.shortcuts[i];
+        if (keysym == (s->keysym)
+                && CleanMask(s->modifier) == CleanMask(e->state)) {
+            if (s->type == CV)
+                s->cb.vcb.f();
+            if (s->type == CC && activeClient)
+                s->cb.ccb.f(activeClient);
+            if (s->type == CCI && activeClient)
+                s->cb.cicb.f(activeClient, s->cb.cicb.i);
+            if (s->type == CM && activeMonitor)
+                s->cb.mcb.f(activeMonitor);
+            if (s->type == CMC && activeMonitor && activeClient)
+                s->cb.mccb.f(activeMonitor, activeClient);
+            if (s->type == CMI && activeMonitor)
+                s->cb.micb.f(activeMonitor, s->cb.micb.i);
         }
     }
 }
@@ -1327,10 +1328,10 @@ OnKeyRelease(XKeyReleasedEvent *e)
     KeySym keysym;
 
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
-    if (keysym == (ModkeySym) && activeClient && switching) {
-        StackClientBefore(activeClient, activeClient->monitor->head);
-        if (activeClient->isTiled)
-            RefreshMonitor(activeClient->monitor);
+    if (keysym == (ModkeySym) && activeClient && switching
+            && activeMonitor->desktops[activeClient->desktop].dynamic) {
+        StackClientBefore(activeMonitor, activeClient, activeMonitor->head);
+        RefreshMonitor(activeClient->monitor);
         switching = False;
     }
 }

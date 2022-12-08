@@ -40,17 +40,13 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
+    Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
+
     if ((c->types & NetWMTypeFixed) || IsFixed(c->normals))
         MoveResizeClientFrame(c, c->fx, c->fy, c->fw, c->fh, False);
     else
-        MoveResizeClientFrame(c,
-                Max(c->fx, c->monitor->desktops[c->desktop].wx),
-                Max(c->fy, c->monitor->desktops[c->desktop].wy),
-                Min(c->fw, c->monitor->desktops[c->desktop].ww),
-                Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
-
-    if (c->states & NetWMStateFullscreen)
-        RaiseClient(c);
+        MoveResizeClientFrame(c, Max(c->fx, d->wx), Max(c->fy, d->wy),
+                Min(c->fw, d->ww), Min(c->fh, d->wh), False);
 
     RefreshClient(c);
 }
@@ -187,10 +183,10 @@ void
 MaximizeClientHorizontally(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
-        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx, c->fy,
-                c->monitor->desktops[c->desktop].ww, c->fh, False);
+        MoveResizeClientFrame(c, d->wx, c->fy, d->ww, c->fh, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -199,10 +195,10 @@ void
 MaximizeClientVertically(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
-        MoveResizeClientFrame(c, c->fx, c->monitor->desktops[c->desktop].wy,
-                c->fw, c->monitor->desktops[c->desktop].wh, False);
+        MoveResizeClientFrame(c, c->fx, d->wy, c->fw, d->wh, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -218,13 +214,11 @@ void
 MaximizeClientLeft(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
-        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-                c->monitor->desktops[c->desktop].wy,
-                c->monitor->desktops[c->desktop].ww / 2,
-                c->monitor->desktops[c->desktop].wh, False);
+        MoveResizeClientFrame(c, d->wx, d->wy, d->ww / 2, d->wh, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -233,15 +227,12 @@ void
 MaximizeClientRight(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedVert;
         c->states &= ~NetWMStateMaximizedHorz;
-        MoveResizeClientFrame(c,
-                c->monitor->desktops[c->desktop].wx
-                    + c->monitor->desktops[c->desktop].ww / 2,
-                c->monitor->desktops[c->desktop].wy,
-                c->monitor->desktops[c->desktop].ww / 2,
-                c->monitor->desktops[c->desktop].wh, False);
+        MoveResizeClientFrame(c, d->wx + d->ww / 2,
+                d->wy, d->ww / 2, d->wh, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -250,13 +241,11 @@ void
 MaximizeClientTop(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
-        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-                c->monitor->desktops[c->desktop].wy,
-                c->monitor->desktops[c->desktop].ww,
-                c->monitor->desktops[c->desktop].wh / 2, False);
+        MoveResizeClientFrame(c, d->wx, d->wy, d->ww, d->wh / 2, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -265,15 +254,12 @@ void
 MaximizeClientBottom(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals) && !c->isTiled) {
+        Desktop *d = &c->monitor->desktops[c->monitor->activeDesktop];
         SaveGeometries(c);
         c->states |= NetWMStateMaximizedHorz;
         c->states &= ~NetWMStateMaximizedVert;
-        MoveResizeClientFrame(c, c->monitor->desktops[c->desktop].wx,
-                c->monitor->desktops[c->desktop].wy
-                    + c->monitor->desktops[c->desktop].wh / 2,
-                c->monitor->desktops[c->desktop].ww,
-                c->monitor->desktops[c->desktop].wh / 2,
-                False);
+        MoveResizeClientFrame(c, d->wx, d->wy + d->wh / 2,
+                d->ww, d->wh / 2, False);
         SetNetWMStates(c->window, c->states);
     }
 }
@@ -434,7 +420,6 @@ SetClientActive(Client *c, Bool b)
                 XGrabButton(display, Button1, Modkey | modifiers[i], c->window,
                         False, ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
                         GrabModeAsync, GrabModeSync, None, None);
-
     }
 
     if (!b && c->isActive) {
@@ -506,167 +491,6 @@ RefreshClient(Client *c)
 
     cairo_destroy(cairo);
     cairo_surface_destroy(surface);
-}
-
-void
-StackClientAfter(Client *c, Client *after)
-{
-    if (c == after)
-        return;
-
-    /* Remove c */
-    if (c->prev)
-          c->prev->next = c->next;
-    else
-        c->monitor->head = c->next;
-
-    /* Change monitor is needed */
-    c->monitor = after->monitor;
-
-    if (c->next)
-        c->next->prev = c->prev;
-    else
-        c->monitor->tail = c->prev;
-
-    if (after == c->monitor->tail) {
-        PushClientBack(c);
-    } else {
-        c->next = after->next;
-        c->prev = after;
-        after->next->prev = c;
-        after->next = c;
-    }
-}
-
-void
-StackClientBefore(Client *c, Client *before)
-{
-    if (c == before)
-        return;
-
-    /* Remove c */
-    if (c->prev)
-          c->prev->next = c->next;
-    else
-        c->monitor->head = c->next;
-
-    /* Change monitor is needed */
-    c->monitor = before->monitor;
-
-    if (c->next)
-        c->next->prev = c->prev;
-    else
-        c->monitor->tail = c->prev;
-
-    if (before == c->monitor->head) {
-        PushClientFront(c);
-    } else {
-        c->next = before;
-        c->prev = before->prev;
-        before->prev->next = c;
-        before->prev = c;
-    }
-}
-
-void
-StackClientDown(Client *c)
-{
-    if (c->transfor)
-        return;
-
-    // XXX: WHY??
-    if (c->monitor->desktops[c->monitor->activeDesktop].dynamic) {
-
-        Client *after = NULL;
-        for (after = c->next;
-                        after && (after->desktop != c->desktop
-                        || !(after->types & NetWMTypeNormal)
-                        ||  after->states & NetWMStateHidden);
-                after = after->next);
-
-        if (after) {
-            StackClientAfter(c, after);
-            RefreshMonitor(c->monitor);
-            return;
-        }
-
-        Client *before = NULL;
-        for (before = c->monitor->head;
-                        before && (before->desktop != c->desktop
-                        || !(before->types & NetWMTypeNormal)
-                        ||  before->states & NetWMStateHidden);
-                before = before->next);
-
-        if (before) {
-            StackClientBefore(c, before);
-            RefreshMonitor(c->monitor);
-        }
-    }
-}
-
-void
-StackClientUp(Client *c)
-{
-    if (c->transfor)
-        return;
-
-    if (c->monitor->desktops[c->monitor->activeDesktop].dynamic) {
-
-        Client *before = NULL;
-        for (before = c->prev;
-                        before && (before->desktop != c->desktop
-                        || !(before->types & NetWMTypeNormal)
-                        ||  before->states & NetWMStateHidden);
-                before = before->prev);
-
-        if (before) {
-            StackClientBefore(c, before);
-            RefreshMonitor(activeMonitor);
-            return;
-        }
-
-        Client *after = NULL;
-        for (after = c->monitor->tail;
-                        after && (after->desktop != c->desktop
-                        || !(after->types & NetWMTypeNormal)
-                        ||  after->states & NetWMStateHidden);
-                after = after->prev);
-
-        if (after) {
-            StackClientAfter(c, after);
-            RefreshMonitor(c->monitor);
-        }
-    }
-}
-
-void
-PushClientFront(Client *c)
-{
-    if (c->monitor->head) {
-        c->next = c->monitor->head;
-        c->monitor->head->prev = c;
-    }
-
-    if (! c->monitor->tail)
-        c->monitor->tail = c;
-
-    c->monitor->head = c;
-    c->prev = NULL;
-}
-
-void
-PushClientBack(Client *c)
-{
-    if (c->monitor->tail) {
-        c->prev = c->monitor->tail;
-        c->monitor->tail->next = c;
-    }
-
-    if (! c->monitor->head)
-        c->monitor->head = c;
-
-    c->monitor->tail = c;
-    c->next = NULL;
 }
 
 void

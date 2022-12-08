@@ -265,14 +265,11 @@ void
 AttachClientToMonitor(Monitor *m, Client *c)
 {
     c->monitor = m;
-    if (c->transfor && c->transfor != m->head) {
-        c->next = c->transfor;
-        c->prev = c->transfor->prev;
-        c->transfor->prev->next = c;
-        c->transfor->prev = c;
-    } else {
-        PushClientFront(c);
-    }
+    if (c->transfor && c->transfor != m->head)
+        StackClientBefore(m, c, c->transfor);
+    else 
+        PushClientFront(m, c);
+
     MoveClientToDesktop(c, m->activeDesktop);
 }
 
@@ -320,6 +317,166 @@ DetachClientFromMonitor(Monitor *m, Client *c)
                 || (desktop == m->activeDesktop
                     && m->desktops[m->activeDesktop].dynamic)))
         RefreshMonitor(m);
+}
+
+void 
+StackClientAfter(Monitor *m, Client *c, Client *after)
+{
+    if (after && (c == after || c->monitor != m || after->monitor != m))
+        return;
+
+    /* Remove c if linked */
+    if (c->prev || c->next) {
+        if (c->prev)
+              c->prev->next = c->next;
+        else
+            m->head = c->next;
+
+        if (c->next)
+            c->next->prev = c->prev;
+        else
+            m->tail = c->prev;
+    }
+
+    if (after == m->tail) {
+        PushClientBack(m, c);
+    } else {
+        c->next = after->next;
+        c->prev = after;
+        after->next->prev = c;
+        after->next = c;
+    }
+}
+
+void
+StackClientBefore(Monitor *m, Client *c, Client *before)
+{
+    DLog();
+    if (before && (c == before || c->monitor != m || before->monitor != m))
+        return;
+
+    DLog();
+    /* remove c if linked */
+    if (c->prev || c->next) {
+        if (c->prev)
+              c->prev->next = c->next;
+        else
+            m->head = c->next;
+
+        if (c->next)
+            c->next->prev = c->prev;
+        else
+            m->tail = c->prev;
+    }
+
+    if (before == c->monitor->head) {
+        PushClientFront(m, c);
+    } else {
+        c->next = before;
+        c->prev = before->prev;
+        before->prev->next = c;
+        before->prev = c;
+    }
+}
+
+void
+StackClientDown(Monitor *m, Client *c)
+{
+    if (c->transfor || c->monitor != m)
+        return;
+
+    Client *after = NULL;
+    for (after = c->next;
+                    after && (after->desktop != c->desktop
+                    || !(after->types & NetWMTypeNormal)
+                    ||  after->states & NetWMStateHidden);
+            after = after->next);
+
+    if (after) {
+        StackClientAfter(m, c, after);
+        RefreshMonitor(c->monitor);
+        return;
+    }
+
+    Client *before = NULL;
+    for (before = c->monitor->head;
+                    before && (before->desktop != c->desktop
+                    || !(before->types & NetWMTypeNormal)
+                    ||  before->states & NetWMStateHidden);
+            before = before->next);
+
+    if (before) {
+        StackClientBefore(m, c, before);
+        RefreshMonitor(c->monitor);
+    }
+}
+
+void
+StackClientUp(Monitor *m, Client *c)
+{
+    if (c->transfor || c->monitor != m)
+        return;
+
+    Client *before = NULL;
+    for (before = c->prev;
+                    before && (before->desktop != c->desktop
+                    || !(before->types & NetWMTypeNormal)
+                    ||  before->states & NetWMStateHidden);
+            before = before->prev);
+
+    if (before) {
+        StackClientBefore(m, c, before);
+        RefreshMonitor(activeMonitor);
+        return;
+    }
+
+    Client *after = NULL;
+    for (after = c->monitor->tail;
+                    after && (after->desktop != c->desktop
+                    || !(after->types & NetWMTypeNormal)
+                    ||  after->states & NetWMStateHidden);
+            after = after->prev);
+
+    if (after) {
+        StackClientAfter(m, c, after);
+        RefreshMonitor(c->monitor);
+    }
+}
+
+void
+PushClientFront(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return;
+
+    if (m->head) {
+        c->next = m->head;
+        m->head->prev = c;
+    }
+
+    if (! m->tail)
+        m->tail = c;
+
+    m->head = c;
+    c->prev = NULL;
+}
+
+void
+PushClientBack(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return;
+
+    if (m->tail) {
+        c->prev = m->tail;
+        m->tail->next = c;
+    }
+
+    if (! m->head)
+        m->head = c;
+
+    m->tail = c;
+    c->next = NULL;
 }
 
 void
@@ -438,7 +595,7 @@ RefreshMonitor(Monitor *m)
                 HideClient(c);
             }
         }
-        /* Avoid having enter notify event changing active client */
+        /* avoid having enter notify event changing active client */
         XSync(display, False);
         while (XCheckMaskEvent(display, EnterWindowMask, &e));
     } else {
