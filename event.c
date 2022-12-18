@@ -577,6 +577,15 @@ OnMessage(XClientMessageEvent *e)
         }
     }
 
+    /* XXX: we should keep track of icccm WMState (Iconic and Normal States)
+     * but we use ewmh hidden state for now */
+    if (e->message_type == atoms[AtomWMChangeState]) {
+        if (c->states & NetWMStateHidden)
+            RestoreClient(c);
+        else
+            MinimizeClient(c);
+    }
+
     if (e->message_type == atoms[AtomNetActiveWindow]) {
         if (c->states & NetWMStateHidden)
             RestoreClient(c);

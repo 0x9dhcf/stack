@@ -11,6 +11,7 @@ typedef enum Extention Extension;
 enum AtomType {
     /* icccm */
     AtomWMState,
+    AtomWMChangeState,
     AtomWMDeleteWindow,
     AtomWMTakeFocus,
     AtomWMProtocols,

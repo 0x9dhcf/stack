@@ -31,7 +31,6 @@ Client *clients = NULL;
 void
 KillClient(Client *c)
 {
-    DLog();
     if (c->protocols & NetWMProtocolDeleteWindow) {
         SendMessage(c->window, atoms[AtomWMDeleteWindow]);
     } else {
@@ -58,7 +57,6 @@ HideClient(Client *c)
 void
 ShowClient(Client *c)
 {
-    DLog();
     int wx, wy, bw;
     XEvent ce;
 
@@ -622,7 +620,6 @@ LowerClient(Client *c)
 void
 MoveClientToDesktop(Client *c, int desktop)
 {
-    DLog();
     int from = c->desktop;
     Monitor *m = c->monitor;
     Desktop *d = &(m->desktops[desktop]);

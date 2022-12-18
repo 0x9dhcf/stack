@@ -11,6 +11,7 @@
 
 static char *atomNames[] =  {
     "WM_STATE",
+    "WM_CHANGE_STATE",
     "WM_DELETE_WINDOW",
     "WM_TAKE_FOCUS",
     "WM_PROTOCOLS",
