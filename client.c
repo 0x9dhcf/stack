@@ -779,7 +779,7 @@ GetButtonGeometry(Client *c, int button, int *x, int *y, int *w, int *h)
     int bg = settings.buttonGap;
     int bh = settings.topbarHeight;
     *x = c->fw - 2 * bw - ((button+1) * (bs) + (button+1) * bg);
-    *y = bw + (bh - bs) / 2;
+    *y = bw + (bh - bs - bw) / 2;
     *w = bs;
     *h = bs;
 }
