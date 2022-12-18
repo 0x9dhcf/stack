@@ -9,10 +9,6 @@
     #define VERSION "0.0.0"
 #endif
 
-// TODO: make it configurable
-#define Modkey Mod1Mask
-#define ModkeySym XK_Alt_L
-
 #define Max(v1, v2) (v1 > v2 ? v1 : v2)
 #define Min(v1, v2) (v1 < v2 ? v1 : v2)
 

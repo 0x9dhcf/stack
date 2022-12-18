@@ -1,7 +1,7 @@
 TARGET = stack
 
 MAJOR = 5
-MINOR = 2
+MINOR = 3
 
 # paths
 PREFIX ?= /usr/local
@@ -13,8 +13,8 @@ CPPFLAGS	+= -DVERSION=\"$(MAJOR).$(MINOR)\"
 CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
 LDFLAGS		+= `$(PKG_CONFIG) --libs ${DEPS}`
 
-SRC = client.c settings.c hints.c main.c manager.c monitor.c x11.c
-HDR = client.h settings.h hints.h log.h manager.h monitor.h stack.h x11.h
+SRC = client.c event.c settings.c hints.c main.c manager.c monitor.c x11.c
+HDR = client.h event.h settings.h hints.h log.h manager.h monitor.h stack.h x11.h
 
 OBJ = ${SRC:.c=.o}
 

@@ -10,6 +10,7 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 
+#include "event.h"
 #include "log.h"
 #include "manager.h"
 #include "monitor.h"

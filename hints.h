@@ -1,7 +1,7 @@
 #ifndef __HINTS_H__
 #define __HINTS_H__
 
-#include <X11/Xlib.h>
+#include "stack.h"
 
 #define IsFixed(n) (\
         n.minw != 0 &&\
@@ -11,17 +11,28 @@
         n.minw == n.maxw &&\
         n.minh == n.maxh)
 
-typedef enum {
+typedef enum WMHints WMHints;
+typedef enum WMProtocols WMProtocols;
+typedef enum NetWMWindowType NetWMWindowType;
+typedef enum NetWMStates NetWMStates;
+typedef enum NetWMActions NetWMActions;
+
+typedef struct WMClass WMClass;
+typedef struct WMNormals WMNormals;
+typedef struct WMStrut WMStrut;
+typedef struct MotifHints MotifHints;
+
+enum WMHints{
     HintsFocusable              = (1<<0),
     HintsUrgent                 = (1<<1)
-} WMHints;
+};
 
-typedef enum {
+enum WMProtocols {
     NetWMProtocolTakeFocus      = (1<<0),
     NetWMProtocolDeleteWindow   = (1<<2)
-} WMProtocols;
+};
 
-typedef enum {
+enum NetWMWindowType {
     NetWMTypeNone               = 0,
     NetWMTypeNormal             = (1<<0),
     NetWMTypeDialog             = (1<<1),
@@ -60,9 +71,9 @@ typedef enum {
                                 | NetWMTypeDropdownMenu
                                 | NetWMTypePopupMenu
                                 | NetWMTypeTooltip
-} NetWMWindowType;
+};
 
-typedef enum {
+enum NetWMStates {
     NetWMStateNone              = 0,
     NetWMStateModal             = (1<<0),
     NetWMStateSticky            = (1<<1),
@@ -90,9 +101,9 @@ typedef enum {
                                 | NetWMStateAbove
                                 | NetWMStateBelow
                                 | NetWMStateDemandsAttention
-} NetWMStates;
+};
 
-typedef enum {
+enum NetWMActions {
     NetWMActionNone             = 0,
     NetWMActionMove             = (1<<0),
     NetWMActionResize           = (1<<2),
@@ -116,35 +127,35 @@ typedef enum {
                                 | NetWMActionClose
                                 | NetWMActionAbove
                                 | NetWMActionBelow
-} NetWMActions;
+};
 
-typedef struct WMClass {
+struct WMClass {
     char *cname;
     char *iname;
-} WMClass;
+};
 
-typedef struct WMNormals {
+struct WMNormals {
     int bw, bh;
     int incw, inch;
     int minw, minh;
     int maxw, maxh;
     float mina, maxa;
-} WMNormals;
+};
 
-typedef struct WMStrut {
+struct WMStrut {
     int top;
     int right;
     int left;
     int bottom;
-} WMStrut;
+};
 
-typedef struct MotifHints {
+struct MotifHints {
     long flags;
     long functions;
     long decorations;
     long input_mode;
     long state;
-} MotifHints;
+};
 
 void GetWMName(Window w, char **name);
 void GetWMHints(Window w, WMHints *h);

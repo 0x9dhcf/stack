@@ -6,6 +6,7 @@
 
 #include "log.h"
 #include "settings.h"
+#include "stack.h"
 #include "x11.h"
 
 static char *atomNames[] =  {

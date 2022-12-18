@@ -4,6 +4,10 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
+typedef enum AtomType AtomType;
+typedef enum CursorType CursorType;
+typedef enum Extention Extension;
+
 enum AtomType {
     /* icccm */
     AtomWMState,

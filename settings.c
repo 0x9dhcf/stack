@@ -21,11 +21,7 @@ static void SetFloatValue(const char *val, void *to);
 static void SetStrValue(const char *val, void *to);
 static void SetColValue(const char *val, void *to);
 
-#define ModShift        Modkey | ShiftMask
-#define ModCtrl         Modkey | ControlMask
-#define ModShiftCtrl    Modkey | ShiftMask | ControlMask
-
-/* default #include settings */
+/* default settings */
 Settings settings = {
     /* Globals */
     .labelFontname  = "Sans 10",
@@ -107,60 +103,67 @@ Settings settings = {
     .decorateTiles  = True,
     .masters        = 1,
     .split          = .6,
-
     .shortcuts = {
-        { ModShift,     XK_q,         CV,   { .vcb={StopEventLoop} } },
-        { ModShift,     XK_r,         CV,   { .vcb={ReloadConfig} } },
-        { ModShift,     XK_k,         CC,   { .ccb={KillClient} } },
-        { ModShift,     XK_h,         CC,   { .ccb={MaximizeClientHorizontally} } },
-        { ModShift,     XK_v,         CC,   { .ccb={MaximizeClientVertically} } },
-        { ModShift,     XK_Left,      CC,   { .ccb={MaximizeClientLeft} } },
-        { ModShift,     XK_Right,     CC,   { .ccb={MaximizeClientRight} } },
-        { ModShift,     XK_Up,        CC,   { .ccb={MaximizeClientTop} } },
-        { ModShift,     XK_Down,      CC,   { .ccb={MaximizeClientBottom} } },
-        { Modkey,       XK_Up,        CC,   { .ccb={MaximizeClient} } },
-        { Modkey,       XK_c,         CC,   { .ccb={CenterClient} } },
-        { ModCtrl,      XK_Left,      CC,   { .ccb={MoveClientLeftmost} } },
-        { ModCtrl,      XK_Up,        CC,   { .ccb={MoveClientTopmost} } },
-        { ModCtrl,      XK_Right,     CC,   { .ccb={MoveClientRightmost} } },
-        { ModCtrl,      XK_Down,      CC,   { .ccb={MoveClientBottommost} } },
-        { Modkey,       XK_Down,      CC,   { .ccb={RestoreClient} } },
-        { Modkey,       XK_Delete,    CC,   { .ccb={MinimizeClient} } },
-        { Modkey,       XK_t,         CC,   { .ccb={ToggleClientTopbar} } },
-        { Modkey,       XK_Tab,       CV,   { .vcb={SwitchToNextClient} } },
-        { Modkey,       XK_Right,     CV,   { .vcb={SwitchToNextClient} } },
-        { ModShift,     XK_Tab,       CV,   { .vcb={SwitchToPreviousClient} } },
-        { Modkey,       XK_Left,      CV,   { .vcb={SwitchToPreviousClient} } },
-        { Modkey,       XK_1,         CMI,  { .micb={ShowDesktop, 0} } },
-        { Modkey,       XK_2,         CMI,  { .micb={ShowDesktop, 1} } },
-        { Modkey,       XK_3,         CMI,  { .micb={ShowDesktop, 2} } },
-        { Modkey,       XK_4,         CMI,  { .micb={ShowDesktop, 3} } },
-        { Modkey,       XK_5,         CMI,  { .micb={ShowDesktop, 4} } },
-        { Modkey,       XK_6,         CMI,  { .micb={ShowDesktop, 5} } },
-        { Modkey,       XK_7,         CMI,  { .micb={ShowDesktop, 6} } },
-        { Modkey,       XK_8,         CMI,  { .micb={ShowDesktop, 7} } },
-        { Modkey,       XK_Page_Down, CM,   { .mcb={SwitchToNextDesktop} } },
-        { Modkey,       XK_Page_Up,   CM,   { .mcb={SwitchToPreviousDesktop} } },
-        { ModShift,     XK_1,         CCI,  { .cicb={MoveClientToDesktop, 0} } },
-        { ModShift,     XK_2,         CCI,  { .cicb={MoveClientToDesktop, 1} } },
-        { ModShift,     XK_3,         CCI,  { .cicb={MoveClientToDesktop, 2} } },
-        { ModShift,     XK_4,         CCI,  { .cicb={MoveClientToDesktop, 3} } },
-        { ModShift,     XK_5,         CCI,  { .cicb={MoveClientToDesktop, 4} } },
-        { ModShift,     XK_6,         CCI,  { .cicb={MoveClientToDesktop, 5} } },
-        { ModShift,     XK_7,         CCI,  { .cicb={MoveClientToDesktop, 6} } },
-        { ModShift,     XK_8,         CCI,  { .cicb={MoveClientToDesktop, 7} } },
-        { ModShift,     XK_Page_Down, CC,   { .ccb={MoveClientToNextDesktop } } },
-        { ModShift,     XK_Page_Up,   CC,   { .ccb={MoveClientToPreviousDesktop } } },
-        { Modkey,       XK_d,         CM,   { .mcb={ToggleDynamic} } },
-        { ModShift,     XK_t,         CM,   { .mcb={ToggleTopbar} } },
-        { Modkey,       XK_equal,     CMI,  { .micb={AddMaster, 1} } },
-        { Modkey,       XK_minus,     CMI,  { .micb={AddMaster, -1} } },
-        { ModShiftCtrl, XK_Right,     CMC,  { .mccb={StackClientDown} } },
-        { ModShiftCtrl, XK_Left,      CMC,  { .mccb={StackClientUp} } },
-        { Modkey,       XK_period,    CV,   { .vcb={SwitchToNextMonitor} } },
-        { Modkey,       XK_comma,     CV,   { .vcb={SwitchToPreviousMonitor} } },
-        { ModShift,     XK_period,    CC,   { .ccb={MoveClientToNextMonitor} } },
-        { ModShift,     XK_comma,     CC,   { .ccb={MoveClientToPreviousMonitor} } }
+        /* manager */
+        { ModCtrlShift, XK_q,           VCB,    { .v_cb={Quit} } },
+        { ModCtrlShift, XK_r,           VCB,    { .v_cb={Reload} } },
+        { ModCtrlShift, XK_x,           CCB,    { .c_cb={KillClient} } },
+        { Mod,          XK_period,      VCB,    { .v_cb={ActivateNextMonitor} } },
+        { Mod,          XK_comma,       VCB,    { .v_cb={ActivatePreviousMonitor} } },
+        { Mod,          XK_Tab,         VCB,    { .v_cb={ActivateNextClient} } },
+        { Mod,          XK_l,           VCB,    { .v_cb={ActivateNextClient} } },
+        { ModShift,     XK_Tab,         VCB,    { .v_cb={ActivatePreviousClient} } },
+        { Mod,          XK_h,           VCB,    { .v_cb={ActivatePreviousClient} } },
+        /* active monitor */
+        { Mod,          XK_1,           MICB,   { .mi_cb={ShowMonitorDesktop, 0} } },
+        { Mod,          XK_2,           MICB,   { .mi_cb={ShowMonitorDesktop, 1} } },
+        { Mod,          XK_3,           MICB,   { .mi_cb={ShowMonitorDesktop, 2} } },
+        { Mod,          XK_4,           MICB,   { .mi_cb={ShowMonitorDesktop, 3} } },
+        { Mod,          XK_5,           MICB,   { .mi_cb={ShowMonitorDesktop, 4} } },
+        { Mod,          XK_6,           MICB,   { .mi_cb={ShowMonitorDesktop, 5} } },
+        { Mod,          XK_7,           MICB,   { .mi_cb={ShowMonitorDesktop, 6} } },
+        { Mod,          XK_8,           MICB,   { .mi_cb={ShowMonitorDesktop, 7} } },
+        { Mod,          XK_Page_Down,   MCB,    { .m_cb={ShowNextMonitorDesktop} } },
+        { Mod,          XK_Page_Up,     MCB,    { .m_cb={ShowPreviousMonitorDesktop} } },
+        { Mod,          XK_d,           MDCB,   { .md_cb={ToggleMonitorDesktopDynamic} } },
+        { Mod,          XK_equal,       MDCB,   { .md_cb={IncreaseMonitorDesktopMasterCount } } },
+        { Mod,          XK_minus,       MDCB,   { .md_cb={DecreaseMonitorDesktopMasterCount} } },
+        { ModShift,     XK_d,           MCB,    { .m_cb={ToggleMonitorDynamic} } },
+        { ModShift,     XK_equal,       MCB,    { .m_cb={IncreaseMonitorMasterCount } } },
+        { ModShift,     XK_minus,       MCB,    { .m_cb={DecreaseMonitorMasterCount} } },
+        { ModShift,     XK_t,           MDCB,   { .md_cb={ToggleMonitorDesktopTopbar} } },
+        { ModCtrlShift, XK_t,           MCB,    { .m_cb={ToggleMonitorTopbar} } },
+        { ModShift,     XK_h,           MCCB,   { .mc_cb={StackClientUp} } },
+        { ModShift,     XK_l,           MCCB,   { .mc_cb={StackClientDown} } },
+        /* active client */
+        { Mod,          XK_t,           CCB,    { .c_cb={ToggleClientTopbar} } },
+        { ModCtrlShift, XK_h,           CCB,    { .c_cb={MaximizeClientHorizontally} } },
+        { ModCtrlShift, XK_v,           CCB,    { .c_cb={MaximizeClientVertically} } },
+        { Mod,          XK_Return,      CCB,    { .c_cb={MaximizeClient} } },
+        { ModCtrlShift, XK_h,           CCB,    { .c_cb={MaximizeClientLeft} } },
+        { ModCtrlShift, XK_l,           CCB,    { .c_cb={MaximizeClientRight} } },
+        { ModCtrlShift, XK_k,           CCB,    { .c_cb={MaximizeClientTop} } },
+        { ModCtrlShift, XK_j,           CCB,    { .c_cb={MaximizeClientBottom} } },
+        { Mod,          XK_Delete,      CCB,    { .c_cb={MinimizeClient} } },
+        { ModCtrl,      XK_h,           CCB,    { .c_cb={MoveClientLeftmost} } },
+        { ModCtrl,      XK_j,           CCB,    { .c_cb={MoveClientTopmost} } },
+        { ModCtrl,      XK_l,           CCB,    { .c_cb={MoveClientRightmost} } },
+        { ModCtrl,      XK_k,           CCB,    { .c_cb={MoveClientBottommost} } },
+        { ModCtrl,      XK_c,           CCB,    { .c_cb={CenterClient} } },
+        { ModShift,     XK_f,           CCB,    { .c_cb={FullscreenClient} } },
+        { ModShift,     XK_Return,      CCB,    { .c_cb={RestoreClient} } },
+        { ModShift,     XK_1,           CICB,   { .ci_cb={MoveClientToDesktop, 0} } },
+        { ModShift,     XK_2,           CICB,   { .ci_cb={MoveClientToDesktop, 1} } },
+        { ModShift,     XK_3,           CICB,   { .ci_cb={MoveClientToDesktop, 2} } },
+        { ModShift,     XK_4,           CICB,   { .ci_cb={MoveClientToDesktop, 3} } },
+        { ModShift,     XK_5,           CICB,   { .ci_cb={MoveClientToDesktop, 4} } },
+        { ModShift,     XK_6,           CICB,   { .ci_cb={MoveClientToDesktop, 5} } },
+        { ModShift,     XK_7,           CICB,   { .ci_cb={MoveClientToDesktop, 6} } },
+        { ModShift,     XK_8,           CICB,   { .ci_cb={MoveClientToDesktop, 7} } },
+        { ModShift,     XK_Page_Down,   CCB,    { .c_cb={MoveClientToNextDesktop } } },
+        { ModShift,     XK_Page_Up,     CCB,    { .c_cb={MoveClientToPreviousDesktop } } },
+        { ModShift,     XK_period,      CCB,    { .c_cb={MoveClientToNextMonitor} } },
+        { ModShift,     XK_comma,       CCB,    { .c_cb={MoveClientToPreviousMonitor} } }
     },
 };
 
@@ -359,6 +362,7 @@ LoadConfigFile()
 
     free(line);
     fclose(stream);
+
     return;
 }
 

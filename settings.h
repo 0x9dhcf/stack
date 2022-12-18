@@ -5,26 +5,26 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
-#ifndef VERSION
-    #define VERSION "0.0.0"
-#endif
+#include "stack.h"
 
-// TODO: make it configurable
-#define Modkey Mod1Mask
-#define ModkeySym XK_Alt_L
 
-#define Max(v1, v2) (v1 > v2 ? v1 : v2)
-#define Min(v1, v2) (v1 < v2 ? v1 : v2)
+#define Mod             Mod1Mask
+#define ModSym          XK_Alt_L
+#define ModShift        Mod | ShiftMask
+#define ModCtrl         Mod | ControlMask
+#define ModCtrlShift    Mod | ShiftMask | ControlMask
+#define ShortcutCount   57
+
+typedef enum ButtonShape ButtonShape;
 
 typedef struct Monitor Monitor;
 typedef struct Client Client;
 
-enum {
+enum ButtonShape {
     ButtonRectangle,
     ButtonCirle
 };
 
-#define ShortcutCount 52
 typedef struct Settings {
     /* style */
     char labelFontname[128];
@@ -71,14 +71,15 @@ typedef struct Settings {
     struct Shortcut {
         unsigned long modifier;
         unsigned long keysym;
-        enum {CV, CC, CCI, CM, CMC, CMI} type;
+        enum {VCB, CCB, MCB, CICB, MICB, MDCB, MCCB} type;
         union {
-            struct { void (*f)(); } vcb;
-            struct { void (*f)(Client *); } ccb;
-            struct { void (*f)(Client *, int); int i; } cicb;
-            struct { void (*f)(Monitor *); } mcb;
-            struct { void (*f)(Monitor *, Client *); } mccb;
-            struct { void (*f)(Monitor *, int); int i; } micb;
+            struct { void (*f)();                       } v_cb;
+            struct { void (*f)(Client *);               } c_cb;
+            struct { void (*f)(Monitor *);              } m_cb;
+            struct { void (*f)(Client *, int); int i;   } ci_cb;
+            struct { void (*f)(Monitor *, int); int i;  } mi_cb;
+            struct { void (*f)(Monitor *, int);         } md_cb;
+            struct { void (*f)(Monitor *, Client*);     } mc_cb;
         } cb;
     } shortcuts[ShortcutCount];
 } Settings;

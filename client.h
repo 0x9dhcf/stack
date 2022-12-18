@@ -1,11 +1,17 @@
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 
+#include <X11/Xlib.h>
+
 #include "hints.h"
 
-typedef struct Monitor Monitor;
-typedef struct Transient Transient;
+typedef enum Handles Handles;
+typedef enum Buttons Buttons;
+typedef enum NetWMActions NetWMActions;
+
 typedef struct Client Client;
+typedef struct Transient Transient;
+typedef struct Monitor Monitor;
 
 enum Handles {
     HandleNorthEast,
@@ -50,8 +56,6 @@ struct Client {
     Bool isTopbarVisible;
     Bool isActive;
     Bool isTiled;
-    int hovered;
-    int desktop;
     char *name;
     WMClass wmclass;
     WMNormals normals;
@@ -64,23 +68,39 @@ struct Client {
     Transient *transients;
     MotifHints motifs;
     Monitor *monitor;
-    Client *prev;
+    int desktop;
+    int hovered;
     Client *next;
+    Client *snext;
+    Client *sprev;
 };
 
-void Configure(Client *c);
-void SynchronizeFrameGeometry(Client *c);
-void SynchronizeWindowGeometry(Client *c);
+extern Client *clients; 
+
+void KillClient(Client *c);
+
 void HideClient(Client *c);
 void ShowClient(Client *c);
+void SetClientActive(Client *c, Bool b);
+void RefreshClient(Client *c);
+void SetClientTopbarVisible(Client *c, Bool b);
+void ToggleClientTopbar(Client *c);
+
+void SaveGeometries(Client *c);
+void SynchronizeFrameGeometry(Client *c);
+void SynchronizeWindowGeometry(Client *c);
+
 void MoveClientWindow(Client *c, int x, int y);
 void ResizeClientWindow(Client *c, int w, int h, Bool sh);
 void MoveResizeClientWindow(Client *c, int x, int y, int w, int h, Bool sh);
+
 void MoveClientFrame(Client *c, int x, int y);
 void ResizeClientFrame(Client *c, int w, int h, Bool sh);
 void MoveResizeClientFrame(Client *c, int x, int y, int w, int h, Bool sh);
+
 void TileClient(Client *c, int x, int y, int w, int h);
 void UntileClient(Client *c);
+
 void MaximizeClientHorizontally(Client *c);
 void MaximizeClientVertically(Client *c);
 void MaximizeClient(Client *c);
@@ -89,23 +109,21 @@ void MaximizeClientRight(Client *c);
 void MaximizeClientTop(Client *c);
 void MaximizeClientBottom(Client *c);
 void MinimizeClient(Client *c);
-void FullscreenClient(Client *c);
 void MoveClientLeftmost(Client *c);
 void MoveClientRightmost(Client *c);
 void MoveClientTopmost(Client *c);
 void MoveClientBottommost(Client *c);
 void CenterClient(Client *c);
+void FullscreenClient(Client *c);
 void RestoreClient(Client *c);
+
 void RaiseClient(Client *c);
 void LowerClient(Client *c);
-void RefreshClient(Client *c);
-void SetClientActive(Client *c, Bool b);
-void SetClientTopbarVisible(Client *c, Bool b);
-void ToggleClientTopbar(Client *c);
-void KillClient(Client *c);
-void MoveClientToDesktop(Client *c, int d);
+
+void MoveClientToDesktop(Client *c, int desktop);
 void MoveClientToNextDesktop(Client *c);
 void MoveClientToPreviousDesktop(Client *c);
+
 void MoveClientToMonitor(Client *c, Monitor *m);
 void MoveClientToNextMonitor(Client *c);
 void MoveClientToPreviousMonitor(Client *c);
