@@ -65,8 +65,6 @@ void StackClientAfter(Monitor *m, Client *c, Client *after);
 void StackClientBefore(Monitor *m, Client *c, Client *before);
 void StackClientDown(Monitor *m, Client *c);
 void StackClientUp(Monitor *m, Client *c);
-void StackClientFront(Monitor *m, Client *c);
-void StackClientBack(Monitor *m, Client *c);
 
 void RefreshMonitor(Monitor *m);
 

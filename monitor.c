@@ -17,6 +17,8 @@ static Bool IsXineramaScreenUnique(XineramaScreenInfo *unique, size_t n, Xineram
 static Bool IsXRandRScreenUnique(XRRCrtcInfo *unique, size_t n, XRRCrtcInfo *info);
 static Bool XineramaScanMonitors();
 static Bool XRandRScanMonitors();
+static void StackClientFront(Monitor *m, Client *c);
+static void StackClientBack(Monitor *m, Client *c);
 
 Monitor *monitors = NULL;
 
@@ -435,43 +437,6 @@ StackClientUp(Monitor *m, Client *c)
 }
 
 void
-StackClientFront(Monitor *m, Client *c)
-{
-    if (c->monitor != m)
-        return;
-
-    if (m->head) {
-        c->snext = m->head;
-        m->head->sprev = c;
-    }
-
-    if (! m->tail)
-        m->tail = c;
-
-    m->head = c;
-    c->sprev = NULL;
-}
-
-void
-StackClientBack(Monitor *m, Client *c)
-{
-    if (c->monitor != m)
-        return;
-
-    if (m->tail) {
-        c->sprev = m->tail;
-        m->tail->snext = c;
-    }
-
-    if (! m->head)
-        m->head = c;
-
-    m->tail = c;
-    c->snext = NULL;
-}
-
-
-void
 RefreshMonitor(Monitor *m)
 {
     /* if isDynamic mode is enabled re tile the desktop */
@@ -709,3 +674,40 @@ XRandRScanMonitors()
     free(unique);
     return dirty;
 }
+
+void
+StackClientFront(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return;
+
+    if (m->head) {
+        c->snext = m->head;
+        m->head->sprev = c;
+    }
+
+    if (! m->tail)
+        m->tail = c;
+
+    m->head = c;
+    c->sprev = NULL;
+}
+
+void
+StackClientBack(Monitor *m, Client *c)
+{
+    if (c->monitor != m)
+        return;
+
+    if (m->tail) {
+        c->sprev = m->tail;
+        m->tail->snext = c;
+    }
+
+    if (! m->head)
+        m->head = c;
+
+    m->tail = c;
+    c->snext = NULL;
+}
+
