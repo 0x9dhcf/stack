@@ -7,10 +7,10 @@
 
 #include "client.h"
 #include "log.h"
+#include "macros.h"
 #include "manager.h"
 #include "monitor.h"
 #include "settings.h"
-#include "stack.h"
 #include "x11.h"
 
 static Bool IsXineramaScreenUnique(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info);
@@ -18,7 +18,7 @@ static Bool IsXRandRScreenUnique(XRRCrtcInfo *unique, size_t n, XRRCrtcInfo *inf
 static Bool XineramaScanMonitors();
 static Bool XRandRScanMonitors();
 
-static Monitor *monitors = NULL;
+Monitor *monitors = NULL;
 
 Bool
 SetupMonitors()
@@ -80,11 +80,11 @@ CleanupMonitors()
     monitors = NULL;
 }
 
-Monitor *
-MainMonitor()
-{
-    return monitors;
-}
+//Monitor *
+//MainMonitor()
+//{
+//    return monitors;
+//}
 
 Monitor *
 NextMonitor(Monitor *m)
@@ -176,7 +176,7 @@ ShowMonitorDesktop(Monitor *m, int desktop)
     if (desktop < 0 || desktop >= DesktopCount || m->activeDesktop == desktop)
         return;
 
-    m->desktops[m->activeDesktop].activeOnLeave = ActiveClient();
+    m->desktops[m->activeDesktop].activeOnLeave = activeClient;
     m->activeDesktop = desktop;
 
     /* assign all stickies to this desktop */
@@ -302,14 +302,14 @@ void
 SetMonitorTopbar(Monitor *m, Bool b)
 {
     for (int i = 0; i < DesktopCount; ++i)
-        SetMonitorDesktopDynamic(m, i, b);
+        SetMonitorDesktopTopbar(m, i, b);
 }
 
 void
 ToggleMonitorTopbar(Monitor *m)
 {
     for (int i = 0; i < DesktopCount; ++i)
-        ToggleMonitorDesktopDynamic(m, i);
+        ToggleMonitorDesktopTopbar(m, i);
 }
 
 void 
@@ -378,9 +378,9 @@ StackClientDown(Monitor *m, Client *c)
 
     Client *after = NULL;
     for (after = c->snext;
-                    after && (after->desktop != c->desktop
-                    || !(after->types & NetWMTypeNormal)
-                    ||  after->states & NetWMStateHidden);
+            after && (after->desktop != c->desktop
+                || !(after->types & NetWMTypeNormal)
+                ||  after->states & NetWMStateHidden);
             after = after->snext);
 
     if (after) {
@@ -391,9 +391,9 @@ StackClientDown(Monitor *m, Client *c)
 
     Client *before = NULL;
     for (before = c->monitor->head;
-                    before && (before->desktop != c->desktop
-                    || !(before->types & NetWMTypeNormal)
-                    ||  before->states & NetWMStateHidden);
+            before && (before->desktop != c->desktop
+                || !(before->types & NetWMTypeNormal)
+                ||  before->states & NetWMStateHidden);
             before = before->snext);
 
     if (before) {
@@ -609,7 +609,7 @@ XineramaScanMonitors()
                 DetachClientFromMonitor(m, c);
                 AttachClientToMonitor(monitors, c);
             }
-            if (m == ActiveMonitor())
+            if (m == activeMonitor)
                 SetActiveMonitor(monitors);
 
             if (m == monitors) {
@@ -693,7 +693,7 @@ XRandRScanMonitors()
                 DetachClientFromMonitor(m, c);
                 AttachClientToMonitor(monitors, c);
             }
-            if (m == ActiveMonitor())
+            if (m == activeMonitor)
                 SetActiveMonitor(monitors);
 
             if (m == monitors) {

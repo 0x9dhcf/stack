@@ -6,6 +6,9 @@
 typedef struct Client Client;
 typedef struct Monitor Monitor;
 
+extern Monitor *activeMonitor;
+extern Client *activeClient;
+
 void SetupWindowManager();
 void CleanupWindowManager();
 
@@ -16,12 +19,10 @@ Client *LookupClient(Window w);
 void Quit();
 void Reload();
 
-Monitor *ActiveMonitor();
 void SetActiveMonitor(Monitor *m);
 void ActivateNextMonitor();
 void ActivatePreviousMonitor();
 
-Client *ActiveClient();
 void SetActiveClient(Client *c);
 void ActivateNextClient();
 void ActivatePreviousClient();

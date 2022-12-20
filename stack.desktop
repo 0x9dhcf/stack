@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Stack ;)
-Comment=This session logs you into stack session
-Exec=/usr/local/bin/stack
+Comment=Stack session
+Exec=env -u SESSION_MANAGER LC_ALL=en_US.UTF-8 NO_AT_BRIDGE=1 /usr/local/bin/stack
 TryExec=/usr/local/bin/stack
 Type=Application

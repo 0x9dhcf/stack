@@ -28,10 +28,11 @@ struct Monitor {
     Monitor *next;
 };
 
+extern  Monitor *monitors;
+
 Bool SetupMonitors();
 void CleanupMonitors();
 
-Monitor *MainMonitor();
 Monitor *NextMonitor(Monitor *m);
 Monitor *PreviousMonitor(Monitor *m);
 Monitor *MonitorContaining(int x, int y);

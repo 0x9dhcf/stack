@@ -1,7 +1,7 @@
 #ifndef __HINTS_H__
 #define __HINTS_H__
 
-#include "stack.h"
+#include <X11/Xlib.h>
 
 #define IsFixed(n) (\
         n.minw != 0 &&\

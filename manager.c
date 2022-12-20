@@ -12,10 +12,10 @@
 #include "event.h"
 #include "hints.h"
 #include "log.h"
+#include "macros.h"
 #include "manager.h"
 #include "monitor.h"
 #include "settings.h"
-#include "stack.h"
 #include "x11.h"
 
 #define RootEventMask (\
@@ -45,9 +45,10 @@ static void AttachClient(Client *c);
 static void DetachClient(Client *c);
 
 static Window supportingWindow;
-static Monitor *activeMonitor;
-static Client *activeClient;
 static Client *lastActiveClient = NULL;
+
+Monitor *activeMonitor = NULL;
+Client *activeClient = NULL;
 
 void
 SetupWindowManager()
@@ -68,7 +69,7 @@ SetupWindowManager()
     XSync(display, False);
 
     /* Setup */
-    activeMonitor = MainMonitor();
+    activeMonitor = monitors;
     if (! activeMonitor)
         FLog("no monitor detected.");
 
@@ -487,7 +488,7 @@ void
 Reload()
 {
     LoadConfigFile();
-    for (Monitor *m = MainMonitor(); m; m = m->next) {
+    for (Monitor *m = monitors; m; m = m->next) {
         for (int i = 0; i < DesktopCount; ++i) {
             m->desktops[i].masters = settings.masters;
             m->desktops[i].split = settings.split;
@@ -502,19 +503,13 @@ Reload()
     RefreshMonitor(activeMonitor);
 }
 
-Monitor *
-ActiveMonitor()
-{
-    return activeMonitor;
-}
-
 void
 SetActiveMonitor(Monitor *m)
 {
     if (m)
         activeMonitor = m;
     else
-        activeMonitor = MainMonitor();
+        activeMonitor = monitors;
     SetActiveClient(NULL);
 }
 
@@ -532,80 +527,53 @@ ActivatePreviousMonitor()
     SetActiveClient(NULL);
 }
 
-Client *
-ActiveClient()
-{
-    return activeClient;
-}
-
 void
 SetActiveClient(Client *c)
 {
-    Client *toActivate = c;
+    Client *n = c;
 
-    if (activeClient && activeClient == toActivate)
+    if (activeClient && activeClient == n)
         return;
 
-    if (!toActivate) {
-        /* we need to find a new one to activate */
+    /* we need to find a new one to activate */
+    if (!n)  {
         if (lastActiveClient
-                && lastActiveClient->monitor == activeMonitor
                 && lastActiveClient->desktop == activeMonitor->activeDesktop
-                && !(lastActiveClient->states & NetWMStateHidden)) {
-            /*
-             * if the last active client is on the
-             * active monitor's active desktop
-             * then use it
-             */
-            toActivate = lastActiveClient;
-        } else {
-            /*
-             * try to find a new one to activate, the next  normal non hidden
-             * in the stack of the active monitor's active desktop
-             */
-            Client *head = activeClient && activeClient->monitor == activeMonitor ?
-                activeClient : activeMonitor->head;
-            if ((toActivate = head)) {
-                do {
-                    if (toActivate->desktop == activeMonitor->activeDesktop
-                                && toActivate->types & NetWMTypeNormal
-                                && !(toActivate->states & NetWMStateHidden))
-                        break;
-                    toActivate = toActivate->next ?
-                        toActivate->next : toActivate->monitor->head;
-                } while (toActivate != head);
-            }
-        }
+                && lastActiveClient->types & NetWMTypeNormal
+                && !(lastActiveClient->types & NetWMTypeFixed)
+                && !(lastActiveClient->states & NetWMStateHidden)
+                && !IsFixed(lastActiveClient->normals))
+            n = lastActiveClient;
+        else if (activeMonitor->head)
+            for (n = activeMonitor->head;
+                    n && (n->desktop != activeMonitor->activeDesktop
+                        || !(n->types & NetWMTypeNormal)
+                        || n->types & NetWMTypeFixed
+                        || n->states & NetWMStateHidden
+                        || IsFixed(n->normals));
+                    n = n->snext);
     }
 
     /* the last active is now the current active (could be NULL) */
     lastActiveClient = activeClient;
 
-    /* the current active, if exists, should no more be active */
+    /* the current active, if exists, should not be active anymore */
     if (activeClient) {
         SetClientActive(activeClient, False);
-        //activeClient->states |= NetWMStateBelow;
-        //activeClient->states &= ~NetWMStateAbove;
-        SetNetWMStates(activeClient->window, activeClient->states);
-        activeClient = NULL;
     }
+    activeClient = NULL;
 
-    // XXX: focusable client to be checked
-    if (toActivate && toActivate->desktop == activeMonitor->activeDesktop
-            //&& toActivate->hints & HintsFocusable
-            && !(toActivate->types & NetWMTypeFixed)
-            && !(toActivate->states & NetWMStateHidden)) {
+    if (n) {
         /* if someone is to be activated do it */
-        SetClientActive(toActivate, True);
-        activeClient = toActivate;
+        SetClientActive(n, True);
+        activeClient = n;
         RaiseClient(activeClient);
-        if (toActivate->monitor != activeMonitor)
-            SetActiveMonitor(toActivate->monitor);
+        if (n->monitor != activeMonitor)
+            SetActiveMonitor(n->monitor);
         XChangeProperty(display, root, atoms[AtomNetActiveWindow],
-                XA_WINDOW, 32, PropModeReplace,
-                (unsigned char *) &toActivate->window, 1);
+                XA_WINDOW, 32, PropModeReplace, (unsigned char *) &n->window, 1);
     } else {
-        /* otherwise let anybody know  there's no more active client */
+        /* otherwise let anybody know there's no more active client */
         XDeleteProperty(display, root, atoms[AtomNetActiveWindow]);
     }
 }
@@ -613,32 +581,43 @@ SetActiveClient(Client *c)
 void
 ActivateNextClient()
 {
-    Client *c = activeClient;
-    Monitor *m = activeClient->monitor;
-    for (Client *it = c ? c->snext ? c->snext : m->head : c;
-            it != c; it = it->snext ? it->snext : m->head) {
-        if (it->desktop == c->desktop && it->types & NetWMTypeNormal) {
-            if (it->states & NetWMStateHidden)
-                RestoreClient(it);
-            SetActiveClient(it);
-            break;
+    Client *h = activeClient ? activeClient : activeMonitor->head;
+    Client *n = NULL;
+    for (n = h ? h->snext ? h->snext : h->monitor->head : h;
+            n && n != h &&
+                (n->desktop != h->desktop
+                || !(n->types & NetWMTypeNormal)
+                || n->types & NetWMTypeFixed
+                || IsFixed(n->normals));
+            n = n->snext ? n->snext : n->monitor->head);
+
+    if (n) {
+        if (n->states & NetWMStateHidden) {
+            RestoreClient(n);
         }
+        SetActiveClient(n);
     }
 }
 
 void
 ActivatePreviousClient()
 {
-    Client *c = activeClient;
-    Monitor *m = activeClient->monitor;
-    for (Client *it = c ? c->sprev ? c->sprev : m->tail : c;
-            it != c; it = it->sprev ? it->sprev : m->tail) {
-        if (it->desktop == c->desktop && it->types & NetWMTypeNormal) {
-            if (it->states & NetWMStateHidden)
-                RestoreClient(it);
-            SetActiveClient(it);
-            break;
+    Client *h = activeClient ? activeClient : activeMonitor->head;
+    Client *p = NULL;
+
+    for (p = h ? h->sprev ? h->sprev : h->monitor->tail : h;
+            p && p != h &&
+                (p->desktop != h->desktop
+                || !(p->types & NetWMTypeNormal)
+                || p->types & NetWMTypeFixed
+                || IsFixed(p->normals));
+            p = p->sprev ? p->sprev : p->monitor->tail);
+
+    if (p) {
+        if (p->states & NetWMStateHidden) {
+            RestoreClient(p);
         }
+        SetActiveClient(p);
     }
 }
 

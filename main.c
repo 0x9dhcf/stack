@@ -15,8 +15,11 @@
 #include "manager.h"
 #include "monitor.h"
 #include "settings.h"
-#include "stack.h"
 #include "x11.h"
+
+#ifndef VERSION
+    #define VERSION "0.0.0"
+#endif
 
 static void TrapSignal(int sig);
 

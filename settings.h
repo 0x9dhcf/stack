@@ -5,9 +5,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xft/Xft.h>
 
-#include "stack.h"
-
-
 #define Mod             Mod1Mask
 #define ModSym          XK_Alt_L
 #define ModShift        Mod | ShiftMask

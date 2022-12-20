@@ -486,7 +486,7 @@ OnMessage(XClientMessageEvent *e)
 {
     if (e->window == root) {
         if (e->message_type == atoms[AtomNetCurrentDesktop])
-            ShowMonitorDesktop(ActiveMonitor(), e->data.l[0]);
+            ShowMonitorDesktop(activeMonitor, e->data.l[0]);
 
         /*
          * specs say message MUST be send to root but it seems
@@ -635,7 +635,7 @@ OnEnter(XCrossingEvent *e)
         if (e->window == c->frame
                 && (settings.focusFollowsPointer
                     ||  c->isTiled
-                    || c->monitor != ActiveMonitor()))
+                    || c->monitor != activeMonitor))
             SetActiveClient(c);
 
        for (int i = 0; i < ButtonCount; ++i) {
@@ -700,18 +700,18 @@ OnKeyPress(XKeyPressedEvent *e)
                 && CleanMask(s->modifier) == CleanMask(e->state)) {
             if (s->type == VCB)
                 s->cb.v_cb.f();
-            if (s->type == CCB && ActiveClient())
-                s->cb.c_cb.f(ActiveClient());
-            if (s->type == MCB && ActiveMonitor())
-                s->cb.m_cb.f(ActiveMonitor());
-            if (s->type == CICB && ActiveClient())
-                s->cb.ci_cb.f(ActiveClient(), s->cb.ci_cb.i);
-            if (s->type == MICB && ActiveMonitor())
-                s->cb.mi_cb.f(ActiveMonitor(), s->cb.mi_cb.i);
-            if (s->type == MDCB && ActiveMonitor())
-                s->cb.md_cb.f(ActiveMonitor(), ActiveMonitor()->activeDesktop);
-            if (s->type == MCCB && ActiveClient())
-                s->cb.mc_cb.f(ActiveClient()->monitor, ActiveClient());
+            if (s->type == CCB && activeClient)
+                s->cb.c_cb.f(activeClient);
+            if (s->type == MCB && activeMonitor)
+                s->cb.m_cb.f(activeMonitor);
+            if (s->type == CICB && activeClient)
+                s->cb.ci_cb.f(activeClient, s->cb.ci_cb.i);
+            if (s->type == MICB && activeMonitor)
+                s->cb.mi_cb.f(activeMonitor, s->cb.mi_cb.i);
+            if (s->type == MDCB && activeMonitor)
+                s->cb.md_cb.f(activeMonitor, activeMonitor->activeDesktop);
+            if (s->type == MCCB && activeClient)
+                s->cb.mc_cb.f(activeClient->monitor, activeClient);
         }
     }
 }
@@ -722,9 +722,9 @@ OnKeyRelease(XKeyReleasedEvent *e)
     KeySym keysym;
 
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
-    if (keysym == (ModSym) && ActiveClient() && switching) {
-        StackClientBefore(ActiveMonitor(), ActiveClient(), ActiveMonitor()->head);
-        RefreshMonitor(ActiveClient()->monitor);
+    if (keysym == (ModSym) && activeClient && switching) {
+        StackClientBefore(activeMonitor, activeClient, activeMonitor->head);
+        RefreshMonitor(activeClient->monitor);
         switching = False;
     }
 }

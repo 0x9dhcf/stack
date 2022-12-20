@@ -10,6 +10,7 @@
 #include "event.h"
 #include "hints.h"
 #include "log.h"
+#include "macros.h"
 #include "manager.h"
 #include "monitor.h"
 #include "settings.h"
@@ -391,7 +392,7 @@ void
 UntileClient(Client *c)
 {
     c->isTiled = False;
-    MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, True);
+    MoveResizeClientFrame(c, c->stx, c->sty, c->stw, c->sth, False);
 }
 
 void
@@ -493,6 +494,8 @@ MinimizeClient(Client *c)
         c->states |= NetWMStateHidden;
         MoveResizeClientFrame(c, m->x, m->y + m->h, c->fw, c->fw, False);
         SetNetWMStates(c->window, c->states);
+        if (c->isActive)
+            SetActiveClient(NULL);
     }
 }
 
@@ -630,7 +633,10 @@ MoveClientToDesktop(Client *c, int desktop)
     /* remove ourself from previous desktop if any */
     if (c->desktop >= 0) {
         Desktop *pd = &m->desktops[c->desktop];
-        if (c->strut.right || c->strut.left || c->strut.top || c->strut.bottom) {
+        if (c->strut.right
+                || c->strut.left
+                || c->strut.top
+                || c->strut.bottom) {
             pd->wx = m->x;
             pd->wy = m->y;
             pd->ww = m->w;
@@ -639,8 +645,10 @@ MoveClientToDesktop(Client *c, int desktop)
                 if (mc != c && mc->desktop == c->desktop) {
                     pd->wx = Max(pd->wx, m->x + mc->strut.left);
                     pd->wy = Max(pd->wy, m->y + mc->strut.top);
-                    pd->ww = Min(pd->ww, m->w - (mc->strut.right + mc->strut.left));
-                    pd->wh = Min(pd->wh, m->h - (mc->strut.top + mc->strut.bottom));
+                    pd->ww = Min(pd->ww, m->w -
+                            (mc->strut.right + mc->strut.left));
+                    pd->wh = Min(pd->wh, m->h -
+                            (mc->strut.top + mc->strut.bottom));
                 }
             }
         }
@@ -675,8 +683,8 @@ MoveClientToDesktop(Client *c, int desktop)
     }
 
     /* finally let the pager know where we are */
-    XChangeProperty(display, c->window, atoms[AtomNetWMDesktop], XA_CARDINAL, 32,
-            PropModeReplace, (unsigned char*)&c->desktop, 1);
+    XChangeProperty(display, c->window, atoms[AtomNetWMDesktop],
+            XA_CARDINAL, 32, PropModeReplace, (unsigned char*)&c->desktop, 1);
 }
 
 void
