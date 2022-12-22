@@ -344,17 +344,17 @@ ManageWindow(Window w, Bool mapped)
     XMapWindow(display, c->frame);
     if (! mapped)
         XMapWindow(display, w);
+
     if (!(c->types & NetWMTypeFixed)) {
         XMapWindow(display, c->topbar);
         for (int i = 0; i < ButtonCount; ++i) {
             XMapWindow(display, c->buttons[i]);
         }
     }
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
-        for (int i = 0; i < HandleCount; ++i) {
+
+    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
+        for (int i = 0; i < HandleCount; ++i)
             XMapWindow(display, c->handles[i]);
-        }
-    }
 
     if (!(c->types & NetWMTypeFixed)) {
         SetActiveClient(c);
@@ -541,16 +541,14 @@ SetActiveClient(Client *c)
                 && lastActiveClient->desktop == activeMonitor->activeDesktop
                 && lastActiveClient->types & NetWMTypeNormal
                 && !(lastActiveClient->types & NetWMTypeFixed)
-                && !(lastActiveClient->states & NetWMStateHidden)
-                && !IsFixed(lastActiveClient->normals))
+                && !(lastActiveClient->states & NetWMStateHidden))
             n = lastActiveClient;
         else if (activeMonitor->head)
             for (n = activeMonitor->head;
                     n && (n->desktop != activeMonitor->activeDesktop
                         || !(n->types & NetWMTypeNormal)
                         || n->types & NetWMTypeFixed
-                        || n->states & NetWMStateHidden
-                        || IsFixed(n->normals));
+                        || n->states & NetWMStateHidden);
                     n = n->snext);
     }
 
@@ -587,8 +585,7 @@ ActivateNextClient()
             n && n != h &&
                 (n->desktop != h->desktop
                 || !(n->types & NetWMTypeNormal)
-                || n->types & NetWMTypeFixed
-                || IsFixed(n->normals));
+                || n->types & NetWMTypeFixed);
             n = n->snext ? n->snext : n->monitor->head);
 
     if (n) {
@@ -609,8 +606,7 @@ ActivatePreviousClient()
             p && p != h &&
                 (p->desktop != h->desktop
                 || !(p->types & NetWMTypeNormal)
-                || p->types & NetWMTypeFixed
-                || IsFixed(p->normals));
+                || p->types & NetWMTypeFixed);
             p = p->sprev ? p->sprev : p->monitor->tail);
 
     if (p) {

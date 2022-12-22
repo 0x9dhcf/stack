@@ -82,12 +82,6 @@ CleanupMonitors()
     monitors = NULL;
 }
 
-//Monitor *
-//MainMonitor()
-//{
-//    return monitors;
-//}
-
 Monitor *
 NextMonitor(Monitor *m)
 {
@@ -439,6 +433,12 @@ StackClientUp(Monitor *m, Client *c)
 void
 RefreshMonitor(Monitor *m)
 {
+
+    /* hide all clients, might requires an extra loop
+     * but avoid unclean visual effect */
+    for (Client *c = m->head; c; c = c->snext)
+        HideClient(c);
+
     /* if isDynamic mode is enabled re tile the desktop */
     if (m->desktops[m->activeDesktop].isDynamic) {
         XEvent e;
@@ -449,7 +449,7 @@ RefreshMonitor(Monitor *m)
             if (c->desktop == m->activeDesktop
                     && !(c->types & NetWMTypeFixed)
                     && !c->transfor) {
-                /* restore hidden client isDynamic
+                /* restore hidden client dynamic
                  * is our window switcher */
                 if (c->states & NetWMStateHidden)
                     RestoreClient(c);
@@ -478,9 +478,7 @@ RefreshMonitor(Monitor *m)
                         ty += c->fh;
                 }
                 i++;
-            } else if (!(c->types & NetWMTypeFixed)) {
-                HideClient(c);
-            }
+            } 
         }
         /* avoid having enter notify event changing active client */
         XSync(display, False);
@@ -489,8 +487,6 @@ RefreshMonitor(Monitor *m)
         for (Client *c = m->head; c; c = c->snext)
             if (c->desktop == m->activeDesktop)
                 ShowClient(c);
-            else
-                HideClient(c);
     }
 }
 
