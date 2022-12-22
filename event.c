@@ -445,9 +445,22 @@ OnMotionNotify(XMotionEvent *e)
          * to make the resizing visually smoother. Some client apply normals by
          * themselves anway (e.g gnome-terminal) */
         if (e->window == c->topbar || e->window == c->window
-                || moveMessageType == HandleCount)
+                || moveMessageType == HandleCount) {
+            //Desktop *d = &c->monitor->desktops[c->desktop];
+            //int lgap = motionStartX + vx - d->wx;
+            //int rgap = d->wx + d->ww - motionStartX + c->fw + vx;
+            //DLog("lg %d, rg %d", lgap, rgap);
+            //if (lgap > 0 && lgap < 20)
+            //    vx -= lgap;
+            //if (rgap > 0 && rgap < 20)
+            //    vx += rgap;
+            //    vx += d->wx + d->ww - motionStartX + c->fw + vx;
+            //if (d->wy - motionStartY + vy < 20)
+            //    vy += d->wy - motionStartY + vy;
+            //if (d->wy + d->wh - motionStartY + c->fh + vy < 20)
+            //    vy += d->wy + d->wh - motionStartY + c->fh + vy;
             MoveClientFrame(c, motionStartX + vx, motionStartY + vy);
-        else if (e->window == c->handles[HandleNorth]
+        } else if (e->window == c->handles[HandleNorth]
                 || moveMessageType == HandleNorth)
             MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
                     motionStartW, motionStartH - vy , False);
