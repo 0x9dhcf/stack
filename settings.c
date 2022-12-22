@@ -294,7 +294,10 @@ FindFile(const char *name, char *dest)
         "%s/.%s:"
         "%s/.config/stack/%s:"
         "/usr/local/etc/%s:"
-        "/etc/%s";
+        "/etc/%s:"
+        "%s/.local/share/stack/%s:"
+        "/usr/local/share/stack/%s:"
+        "/usr/share/stack/%s";
     char *paths = NULL;
     char *token = NULL;
 
@@ -381,7 +384,7 @@ ExecAutostartFile()
     if (stat(rcFile, &st) == 0 && st.st_mode & S_IXUSR) {
         char cmd[512];
         sprintf(cmd, "sh -c %s &", rcFile);
-        ILog("execute: %s.", rcFile);
+        ILog("executing: %s", rcFile);
         system(cmd);
     } else {
         ELog("rc file is not executable.");
