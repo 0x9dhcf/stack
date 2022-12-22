@@ -233,6 +233,7 @@ ManageWindow(Window w, Bool mapped)
     c->hasHandles = decorated && !IsFixed(c->normals);
     c->isActive = False;
     c->isTiled = False;
+    c->isVisible = False;
     c->hovered = ButtonCount;
     c->desktop = -1;
 

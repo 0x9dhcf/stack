@@ -48,6 +48,8 @@ KillClient(Client *c)
 void
 HideClient(Client *c)
 {
+    c->isVisible = False;
+
     /* move all windows off screen without changing anything */
     XMoveWindow(display, c->frame, -c->fw, c->fy);
     if (c->hasHandles)
@@ -60,6 +62,8 @@ ShowClient(Client *c)
 {
     int wx, wy, bw;
     XEvent ce;
+
+    c->isVisible = True;
 
     /* what is the border width */
     bw = c->isBorderVisible ? settings.borderWidth : 0;

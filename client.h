@@ -56,6 +56,7 @@ struct Client {
     Bool isTopbarVisible;
     Bool isActive;
     Bool isTiled;
+    Bool isVisible;
     char *name;
     WMClass wmclass;
     WMNormals normals;

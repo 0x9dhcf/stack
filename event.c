@@ -43,6 +43,9 @@ static void OnMotionNotify(XMotionEvent *e);
 static void OnMessage(XClientMessageEvent *e);
 static void OnKeyPress(XKeyPressedEvent *e);
 static void OnKeyRelease(XKeyReleasedEvent *e);
+static void SnapClientMove(Client *c, int *x, int *y, int *w, int *h);
+static void SnapMove(int rx, int ry, int rw, int rh,
+        int *x, int *y, int *w, int *h, int snap);
 
 static XErrorHandler defaultErrorHandler = NULL;
 static char *terminal[] = {"st", NULL};
@@ -441,56 +444,64 @@ OnMotionNotify(XMotionEvent *e)
             RefreshMonitor(c->monitor);
         }
     } else {
+        int x = c->fx;
+        int y = c->fy;
+        int w = c->fw;
+        int h = c->fh;
         /* we do not apply normal hints during motion but when button is released
          * to make the resizing visually smoother. Some client apply normals by
          * themselves anway (e.g gnome-terminal) */
         if (e->window == c->topbar || e->window == c->window
                 || moveMessageType == HandleCount) {
-            //Desktop *d = &c->monitor->desktops[c->desktop];
-            //int lgap = motionStartX + vx - d->wx;
-            //int rgap = d->wx + d->ww - motionStartX + c->fw + vx;
-            //DLog("lg %d, rg %d", lgap, rgap);
-            //if (lgap > 0 && lgap < 20)
-            //    vx -= lgap;
-            //if (rgap > 0 && rgap < 20)
-            //    vx += rgap;
-            //    vx += d->wx + d->ww - motionStartX + c->fw + vx;
-            //if (d->wy - motionStartY + vy < 20)
-            //    vy += d->wy - motionStartY + vy;
-            //if (d->wy + d->wh - motionStartY + c->fh + vy < 20)
-            //    vy += d->wy + d->wh - motionStartY + c->fh + vy;
-            MoveClientFrame(c, motionStartX + vx, motionStartY + vy);
+            x = motionStartX + vx;
+            y = motionStartY + vy;
+            SnapClientMove(c, &x, &y, &w, &h);
         } else if (e->window == c->handles[HandleNorth]
-                || moveMessageType == HandleNorth)
-            MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
-                    motionStartW, motionStartH - vy , False);
-        else if (e->window == c->handles[HandleWest]
-                || moveMessageType == HandleWest)
-            ResizeClientFrame(c, motionStartW + vx, motionStartH, False);
-        else if (e->window == c->handles[HandleSouth]
-                || moveMessageType == HandleSouth)
-            ResizeClientFrame(c, motionStartW, motionStartH + vy, False);
-        else if (e->window == c->handles[HandleEast]
-                || moveMessageType == HandleEast)
-            MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
-                    motionStartW - vx, motionStartH, False);
-        else if (e->window == c->handles[HandleNorthEast]
-                || moveMessageType == HandleNorthEast)
-            MoveResizeClientFrame(c, motionStartX + vx, motionStartY + vy,
-                    motionStartW - vx, motionStartH - vy, False);
-        else if (e->window == c->handles[HandleNorthWest]
-                || moveMessageType == HandleNorthWest)
-            MoveResizeClientFrame(c, motionStartX, motionStartY + vy,
-                    motionStartW + vx, motionStartH - vy, False);
-        else if (e->window == c->handles[HandleSouthWest]
-                || moveMessageType == HandleSouthWest)
-            ResizeClientFrame(c, motionStartW + vx, motionStartH + vy, False);
-        else if (e->window == c->handles[HandleSouthEast]
-                || moveMessageType == HandleSouthEast)
-            MoveResizeClientFrame(c, motionStartX + vx, motionStartY,
-                    motionStartW - vx, motionStartH + vy, False);
-        else
+                || moveMessageType == HandleNorth) {
+            x = motionStartX;
+            y = motionStartY + vy;
+            w = motionStartW;
+            h = motionStartH - vy;
+        } else if (e->window == c->handles[HandleWest]
+                || moveMessageType == HandleWest) {
+            w = motionStartW + vx,
+            h = motionStartH;
+        } else if (e->window == c->handles[HandleSouth]
+                || moveMessageType == HandleSouth) {
+            w = motionStartW,
+            h = motionStartH + vy;
+        } else if (e->window == c->handles[HandleEast]
+                || moveMessageType == HandleEast) {
+            x = motionStartX + vx;
+            y = motionStartY;
+            w = motionStartW - vx;
+            h = motionStartH;
+        } else if (e->window == c->handles[HandleNorthEast]
+                || moveMessageType == HandleNorthEast) {
+            x = motionStartX + vx;
+            y = motionStartY + vy;
+            w = motionStartW - vx;
+            h = motionStartH - vy;
+        } else if (e->window == c->handles[HandleNorthWest]
+                || moveMessageType == HandleNorthWest) {
+            x = motionStartX;
+            y = motionStartY + vy;
+            w = motionStartW + vx;
+            h = motionStartH - vy;
+        } else if (e->window == c->handles[HandleSouthWest]
+                || moveMessageType == HandleSouthWest) {
+            w = motionStartW + vx,
+            h = motionStartH + vy;
+        } else if (e->window == c->handles[HandleSouthEast]
+                || moveMessageType == HandleSouthEast) {
+            x = motionStartX + vx;
+            y = motionStartY;
+            w = motionStartW - vx;
+            h = motionStartH + vy;
+        } else {
           return;
+        }
+        MoveResizeClientFrame(c, x, y, w, h, False);
     }
 }
 
@@ -742,3 +753,32 @@ OnKeyRelease(XKeyReleasedEvent *e)
     }
 }
 
+void
+SnapMove(int rx, int ry, int rw, int rh,
+        int *x, int *y, int *w, int *h, int snap)
+{
+    int lg = rx - *x;
+    int rg = (rx + rw) - (*x + *w);
+    int tg = ry - *y;
+    int bg = (ry + rh) - (*y + *h);
+
+    if (abs(lg) < snap || abs(rg) < snap) {
+        if (abs(lg) > abs(rg)) *x += rg; else *x += lg;
+    }
+    if (abs(tg) < snap || abs(bg) < snap) {
+        if (abs(tg) > abs(bg)) *y += bg; else *y += tg;
+    }
+}
+
+void
+SnapClientMove(Client *c, int *x, int *y, int *w, int *h)
+{
+    /* first snap to desktop */
+    Desktop *d = &c->monitor->desktops[c->desktop];
+    SnapMove(d->wx, d->wy, d->ww, d->wh, x, y, w, h, 20);
+
+    /* then all non hidden window of the desktop */
+    for (Client *it = c->monitor->head; it; it = it->snext) 
+        if (it->desktop == c->desktop && it->isVisible)
+            SnapMove(it->fx, it->fy, it->fw, it->fh, x, y, w, h, 20);
+}
