@@ -59,8 +59,9 @@ typedef struct Settings {
         int inactiveHoveredBorder;
     } buttonStyles[3];
     /* global */
-    int focusFollowsPointer;
+    int snapping;
     /* dynamic */
+    int focusFollowsPointer;
     int decorateTiles;
     int masters;
     float split;

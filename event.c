@@ -43,9 +43,6 @@ static void OnMotionNotify(XMotionEvent *e);
 static void OnMessage(XClientMessageEvent *e);
 static void OnKeyPress(XKeyPressedEvent *e);
 static void OnKeyRelease(XKeyReleasedEvent *e);
-static void SnapClientMove(Client *c, int *x, int *y, int *w, int *h);
-static void SnapMove(int rx, int ry, int rw, int rh,
-        int *x, int *y, int *w, int *h, int snap);
 
 static XErrorHandler defaultErrorHandler = NULL;
 static char *terminal[] = {"st", NULL};
@@ -453,9 +450,27 @@ OnMotionNotify(XMotionEvent *e)
          * themselves anway (e.g gnome-terminal) */
         if (e->window == c->topbar || e->window == c->window
                 || moveMessageType == HandleCount) {
+            int lg, rg, tg , bg , alg , arg , atg , abg;
+
             x = motionStartX + vx;
             y = motionStartY + vy;
-            SnapClientMove(c, &x, &y, &w, &h);
+
+            /* simple desktop borders snapping */
+            Desktop *d = &c->monitor->desktops[c->desktop];
+            lg = d->wx - x;
+            rg = (d->wx + d->ww) - (x + w);
+            tg = d->wy - y;
+            bg = (d->wy + d->wh) - (y + h);
+            alg = abs(lg);
+            arg = abs(rg);
+            atg = abs(tg);
+            abg = abs(bg);
+            if (alg < settings.snapping || arg < settings.snapping) {
+                if (alg > arg) x += rg; else x += lg;
+            }
+            if (atg < settings.snapping || abg < settings.snapping) {
+                if (atg > abg) y += bg; else y += tg;
+            }
         } else if (e->window == c->handles[HandleNorth]
                 || moveMessageType == HandleNorth) {
             x = motionStartX;
@@ -499,7 +514,7 @@ OnMotionNotify(XMotionEvent *e)
             w = motionStartW - vx;
             h = motionStartH + vy;
         } else {
-          return;
+            return;
         }
         MoveResizeClientFrame(c, x, y, w, h, False);
     }
@@ -751,34 +766,4 @@ OnKeyRelease(XKeyReleasedEvent *e)
         RefreshMonitor(activeClient->monitor);
         switching = False;
     }
-}
-
-void
-SnapMove(int rx, int ry, int rw, int rh,
-        int *x, int *y, int *w, int *h, int snap)
-{
-    int lg = rx - *x;
-    int rg = (rx + rw) - (*x + *w);
-    int tg = ry - *y;
-    int bg = (ry + rh) - (*y + *h);
-
-    if (abs(lg) < snap || abs(rg) < snap) {
-        if (abs(lg) > abs(rg)) *x += rg; else *x += lg;
-    }
-    if (abs(tg) < snap || abs(bg) < snap) {
-        if (abs(tg) > abs(bg)) *y += bg; else *y += tg;
-    }
-}
-
-void
-SnapClientMove(Client *c, int *x, int *y, int *w, int *h)
-{
-    /* first snap to desktop */
-    Desktop *d = &c->monitor->desktops[c->desktop];
-    SnapMove(d->wx, d->wy, d->ww, d->wh, x, y, w, h, 20);
-
-    /* then all non hidden window of the desktop */
-    for (Client *it = c->monitor->head; it; it = it->snext) 
-        if (it->desktop == c->desktop && it->isVisible)
-            SnapMove(it->fx, it->fy, it->fw, it->fh, x, y, w, h, 20);
 }

@@ -98,8 +98,9 @@ Settings settings = {
     },
 
     /* global */
-    .focusFollowsPointer = False,
+    .snapping = 20,
     /* dynamic desktops */
+    .focusFollowsPointer = False,
     .decorateTiles  = True,
     .masters        = 1,
     .split          = .6,
@@ -230,6 +231,7 @@ static struct {
     {"MinimizeInactiveHoveredBackground",   (void*)&settings.buttonStyles[2].inactiveHoveredBackground, SetColValue},
     {"MinimizeInactiveHoveredForeground",   (void*)&settings.buttonStyles[2].inactiveHoveredForeground, SetColValue},
     {"MinimizeInactiveHoveredBorder",       (void*)&settings.buttonStyles[2].inactiveHoveredBorder,     SetColValue},
+    {"Snapping",                            (void*)&settings.snapping,                                  SetIntValue},
     {"FocusFollowsPointer",                 (void*)&settings.focusFollowsPointer,                       SetIntValue},
     {"Masters",                             (void*)&settings.masters,                                   SetIntValue},
     {"Split",                               (void*)&settings.split,                                     SetFloatValue},
@@ -314,7 +316,8 @@ FindFile(const char *name, char *dest)
         return;
     }
 
-    if (sprintf(paths, format, name, home, name, home, name, name, name) < 0) {
+    if (sprintf(paths, format, name, home, name, home, name,
+                name, name, home, name, name, name) < 0) {
          ELog("Can't format path.");
         return;
     }
@@ -333,7 +336,7 @@ FindFile(const char *name, char *dest)
 void
 LoadConfigFile()
 {
-    char configFile[256];
+    char configFile[1024];
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
