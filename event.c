@@ -43,6 +43,8 @@ static void OnMotionNotify(XMotionEvent *e);
 static void OnMessage(XClientMessageEvent *e);
 static void OnKeyPress(XKeyPressedEvent *e);
 static void OnKeyRelease(XKeyReleasedEvent *e);
+static void Snap(int x, int y, int w, int h, int *xp,
+        int *yp, int *wp, int *hp, int snap);
 
 static XErrorHandler defaultErrorHandler = NULL;
 static char *terminal[] = {"st", NULL};
@@ -450,27 +452,17 @@ OnMotionNotify(XMotionEvent *e)
          * themselves anway (e.g gnome-terminal) */
         if (e->window == c->topbar || e->window == c->window
                 || moveMessageType == HandleCount) {
-            int lg, rg, tg , bg , alg , arg , atg , abg;
 
             x = motionStartX + vx;
             y = motionStartY + vy;
 
-            /* simple desktop borders snapping */
+            /* border snapping */
             Desktop *d = &c->monitor->desktops[c->desktop];
-            lg = d->wx - x;
-            rg = (d->wx + d->ww) - (x + w);
-            tg = d->wy - y;
-            bg = (d->wy + d->wh) - (y + h);
-            alg = abs(lg);
-            arg = abs(rg);
-            atg = abs(tg);
-            abg = abs(bg);
-            if (alg < settings.snapping || arg < settings.snapping) {
-                if (alg > arg) x += rg; else x += lg;
-            }
-            if (atg < settings.snapping || abg < settings.snapping) {
-                if (atg > abg) y += bg; else y += tg;
-            }
+            Snap(d->wx, d->wy, d->ww, d->wh, &x, &y, &w, &h, settings.snapping);
+            for (Client *it = c->monitor->head; it; it = it->snext)
+                if (it != c && it->desktop == c->desktop && it->isVisible)
+                    Snap(it->fx, it->fy, it->fw, it->fh,
+                            &x, &y, &w, &h, settings.snapping);
         } else if (e->window == c->handles[HandleNorth]
                 || moveMessageType == HandleNorth) {
             x = motionStartX;
@@ -765,5 +757,72 @@ OnKeyRelease(XKeyReleasedEvent *e)
         StackClientBefore(activeMonitor, activeClient, activeMonitor->head);
         RefreshMonitor(activeClient->monitor);
         switching = False;
+    }
+}
+
+void
+Snap(int x, int y, int w, int h, int *xp,
+        int *yp, int *wp, int *hp, int snap)
+{
+    /* boundaries */
+    int l1 = x;
+    int l2 = *xp;
+    int r1 = x + w;
+    int r2 = *xp + *wp;
+    int t1 = y;
+    int t2 = *yp;
+    int b1 = y + h;
+    int b2 = *yp + *hp;
+
+    /* gaps */
+    int ll = l1 - l2;
+    int lr = l1 - r2;
+    int rr = r1 - r2;
+    int rl = r1 - l2;
+    int tt = t1 - t2;
+    int tb = t1 - b2;
+    int bb = b1 - b2;
+    int bt = b1 - t2;
+    int all = abs(ll);
+    int alr = abs(lr);
+    int arl = abs(rl);
+    int arr = abs(rr);
+    int att = abs(tt);
+    int atb = abs(tb);
+    int abb = abs(bb);
+    int abt = abs(bt);
+
+    /* included */
+    if (l1 < l2 && r1 > r2 && t1 < t2 && b1 > b2) {
+        if (all < snap || arr < snap) {
+            if (all > arr) *xp += rr; else *xp += ll;
+        }
+        if (att < snap || abb < snap) {
+            if (att > abb) *yp += bb; else *yp += tt;
+        }
+    }
+
+    /* disjoint aligned horizontally */
+    if (((t1 < t2 && b1 > t2) || (t1 < b2 && b1 > b2))
+            || ((t1 > t2) && (b1 < b2))
+            || ((t1 < t2) && (b1 > b2))) {
+        if (alr < snap) {
+            *xp += lr; 
+        }
+        if (arl < snap) {
+            *xp += rl; 
+        }
+    }
+
+    /* disjoint aligned vertically */
+    if (((l1 < l2 && r1 > l2) || (l1 < r2 && r1 > r2))
+            || ((l1 > l2) && (r1 < r2))
+            || ((l1 < l2) && (r1 > r2))) {
+        if (atb < snap) {
+            *yp += tb; 
+        }
+        if (abt < snap) {
+            *yp += bt; 
+        }
     }
 }
