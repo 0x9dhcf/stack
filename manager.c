@@ -337,8 +337,6 @@ ManageWindow(Window w, Bool mapped)
             MaximizeClientVertically(c);
         if (c->states & NetWMStateFullscreen)
             FullscreenClient(c);
-    } else {
-        RefreshMonitor(c->monitor);
     }
 
     /* map */
@@ -363,9 +361,15 @@ ManageWindow(Window w, Bool mapped)
         SetNetWMAllowedActions(w, NetWMActionDefault);
     }
 
+    if (activeMonitor->desktops[activeMonitor->activeDesktop].isDynamic)
+        RefreshMonitor(c->monitor);
+    else 
+        ShowClient(c);
+
     /* update the client list */
     XChangeProperty(display, root, atoms[AtomNetClientList], XA_WINDOW,
             32, PropModeAppend, (unsigned char *) &(w), 1);
+
 }
 
 void
