@@ -671,7 +671,7 @@ MoveClientToDesktop(Client *c, int desktop)
 
     if (c->isTiled && !d->isDynamic) {
         UntileClient(c);
-        RefreshMonitor(c->monitor);
+        //RefreshMonitor(c->monitor);
     }
 
     if (!(c->types & NetWMTypeFixed))

@@ -345,13 +345,6 @@ OnButtonPress(XButtonEvent *e)
     motionStartW = c->fw;
     motionStartH = c->fh;
 
-    DLog("lastSeenPointerX: %d", lastSeenPointerX);
-    DLog("lastSeenPointerY: %d", lastSeenPointerY);
-    DLog("motionStartX: %d", motionStartX);
-    DLog("motionStartY: %d", motionStartY);
-    DLog("motionStartW: %d", motionStartW);
-    DLog("motionStartH: %d", motionStartH);
-
     if (!c->isTiled) {
         if (e->window == c->topbar
                 || (e->window == c->window && e->state == Mod)) {
@@ -454,10 +447,6 @@ OnMotionNotify(XMotionEvent *e)
         int y = c->fy;
         int w = c->fw;
         int h = c->fh;
-        DLog("x: %d", x);
-        DLog("y: %d", y);
-        DLog("w: %d", w);
-        DLog("h: %d", h);
         /* we do not apply normal hints during motion but when button is released
          * to make the resizing visually smoother. Some client apply normals by
          * themselves anway (e.g gnome-terminal) */
@@ -496,7 +485,6 @@ OnMotionNotify(XMotionEvent *e)
             h = motionStartH;
         } else if (e->window == c->handles[HandleNorthEast]
                 || moveMessageType == HandleNorthEast) {
-            DLog("OK");
             x = motionStartX + vx;
             y = motionStartY + vy;
             w = motionStartW - vx;
@@ -520,10 +508,6 @@ OnMotionNotify(XMotionEvent *e)
         } else {
             return;
         }
-        DLog("x after: %d", x);
-        DLog("y after: %d", y);
-        DLog("w after: %d", w);
-        DLog("h after: %d", h);
         MoveResizeClientFrame(c, x, y, w, h, False);
     }
 }
@@ -648,11 +632,6 @@ OnMessage(XClientMessageEvent *e)
         MinimizeClient(c);
         SetActiveClient(c);
     }
-
-    //if (e->message_type == atoms[AtomNetMoveresizeWindow]) {
-    //    MoveResizeClientWindow(c, e->data.l[1], e->data.l[2],
-    //            e->data.l[3], e->data.l[4], True);
-    //}
 
     if (e->message_type == atoms[AtomNetWMMoveresize]) {
         lastSeenPointerX = e->data.l[0];

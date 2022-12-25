@@ -286,7 +286,7 @@ ManageWindow(Window w, Bool mapped)
     /* Windows with EWMH type fixed are neither moveable,
      * resizable nor decorated. While windows fixed by ICCCM normals
      * are decorated and moveable but not resizable */
-    if (!(c->types & NetWMTypeFixed)) {
+    if (c->hasTopbar) {
         long state[] = {NormalState, None};
         XChangeProperty(display, w, atoms[AtomWMState],
                 atoms[AtomWMState], 32, PropModeReplace,
@@ -311,16 +311,15 @@ ManageWindow(Window w, Bool mapped)
         }
     }
 
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals)) {
-        /* handles */
+    /* handles */
+    if (c->hasHandles) {
         XSetWindowAttributes hattrs = {0};
         hattrs.event_mask = HandleEventMask;
         for (int i = 0; i < HandleCount; ++i) {
             hattrs.cursor = cursors[CursorResizeNorthEast + i];
-            Window h = XCreateWindow(display, root, 0, 0, 1, 1, 0,
+            c->handles[i] = XCreateWindow(display, root, 0, 0, 1, 1, 0,
                     CopyFromParent, InputOnly, CopyFromParent,
                     CWEventMask | CWCursor, &hattrs);
-            c->handles[i] = h;
         }
     }
 
@@ -328,9 +327,10 @@ ManageWindow(Window w, Bool mapped)
     AttachClient(c);
     SynchronizeFrameGeometry(c);
     AttachClientToMonitor(activeMonitor, c);
+    ShowClient(c);
 
-    /* Place the window. We can only apply states once attached */
-    if (! activeMonitor->desktops[activeMonitor->activeDesktop].isDynamic) {
+    /* honor states */
+    if (! c->monitor->desktops[c->desktop].isDynamic) {
         if (c->states & NetWMStateMaximizedHorz)
             MaximizeClientHorizontally(c);
         if (c->states & NetWMStateMaximizedVert)
@@ -344,14 +344,14 @@ ManageWindow(Window w, Bool mapped)
     if (! mapped)
         XMapWindow(display, w);
 
-    if (!(c->types & NetWMTypeFixed)) {
+    if (c->hasTopbar) {
         XMapWindow(display, c->topbar);
         for (int i = 0; i < ButtonCount; ++i) {
             XMapWindow(display, c->buttons[i]);
         }
     }
 
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
+    if (c->hasHandles)
         for (int i = 0; i < HandleCount; ++i)
             XMapWindow(display, c->handles[i]);
 
@@ -361,15 +361,13 @@ ManageWindow(Window w, Bool mapped)
         SetNetWMAllowedActions(w, NetWMActionDefault);
     }
 
-    if (activeMonitor->desktops[activeMonitor->activeDesktop].isDynamic)
+    /* if dynamic we need to refresh the tiling */
+    if (c->monitor->desktops[c->desktop].isDynamic)
         RefreshMonitor(c->monitor);
-    else 
-        ShowClient(c);
 
     /* update the client list */
     XChangeProperty(display, root, atoms[AtomNetClientList], XA_WINDOW,
             32, PropModeAppend, (unsigned char *) &(w), 1);
-
 }
 
 void

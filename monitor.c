@@ -6,6 +6,7 @@
 #include <X11/extensions/Xinerama.h>
 
 #include "client.h"
+#include "hints.h"
 #include "log.h"
 #include "macros.h"
 #include "manager.h"
@@ -381,7 +382,8 @@ StackClientDown(Monitor *m, Client *c)
 
     if (after) {
         StackClientAfter(m, c, after);
-        RefreshMonitor(c->monitor);
+        if (m->desktops[c->desktop].isDynamic)
+            RefreshMonitor(c->monitor);
         return;
     }
 
@@ -394,7 +396,8 @@ StackClientDown(Monitor *m, Client *c)
 
     if (before) {
         StackClientBefore(m, c, before);
-        RefreshMonitor(c->monitor);
+        if (m->desktops[c->desktop].isDynamic)
+            RefreshMonitor(c->monitor);
     }
 }
 
@@ -413,7 +416,8 @@ StackClientUp(Monitor *m, Client *c)
 
     if (before) {
         StackClientBefore(m, c, before);
-        RefreshMonitor(m);
+        if (m->desktops[c->desktop].isDynamic)
+            RefreshMonitor(m);
         return;
     }
 
@@ -426,20 +430,22 @@ StackClientUp(Monitor *m, Client *c)
 
     if (after) {
         StackClientAfter(m, c, after);
-        RefreshMonitor(c->monitor);
+        if (m->desktops[c->desktop].isDynamic)
+            RefreshMonitor(c->monitor);
     }
 }
 
 void
 RefreshMonitor(Monitor *m)
 {
+    /* hide clients */
+    for (Client *c = m->tail; c; c = c->sprev)
+        if (c->desktop != m->activeDesktop)
+            HideClient(c);
+        else
+            ShowClient(c);
 
-    /* hide all clients, might requires an extra loop
-     * but avoid unclean visual effect */
-    for (Client *c = m->head; c; c = c->snext)
-        HideClient(c);
-
-    /* if isDynamic mode is enabled re tile the desktop */
+    /* if isDynamic mode is enabled re-tile the desktop */
     if (m->desktops[m->activeDesktop].isDynamic) {
         XEvent e;
         Client *c;
@@ -451,12 +457,12 @@ RefreshMonitor(Monitor *m)
                     && !c->transfor) {
                 /* restore hidden client dynamic
                  * is our window switcher */
-                if (c->states & NetWMStateHidden)
+                if (! c->isVisible)
                     RestoreClient(c);
                 n++;
             }
 
-        Desktop *d =  &m->desktops[m->activeDesktop];
+        Desktop *d = &m->desktops[m->activeDesktop];
         if (n > d->masters)
             mw = d->masters ? d->ww * d->split : 0;
         else
@@ -465,6 +471,7 @@ RefreshMonitor(Monitor *m)
         for (c = m->head; c; c = c->snext) {
             if (c->desktop == m->activeDesktop
                     && !(c->types & NetWMTypeFixed)
+                    && !(IsFixed(c->normals))
                     && !c->transfor) {
                 if (i < d->masters) {
                     int w = (mw - mx) / (Min(n, d->masters) - i);
@@ -478,16 +485,12 @@ RefreshMonitor(Monitor *m)
                         ty += c->fh;
                 }
                 i++;
-            } 
+            }
         }
         /* avoid having enter notify event changing active client */
         XSync(display, False);
         while (XCheckMaskEvent(display, EnterWindowMask, &e));
-    } else {
-        for (Client *c = m->head; c; c = c->snext)
-            if (c->desktop == m->activeDesktop)
-                ShowClient(c);
-    }
+    } 
 }
 
 Bool
