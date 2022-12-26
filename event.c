@@ -788,7 +788,7 @@ Snap(int x, int y, int w, int h, int *xp,
     int abt = abs(bt);
 
     /* included */
-    if (l1 < l2 && r1 > r2 && t1 < t2 && b1 > b2) {
+    if (l1 - snap < l2 && r1 + snap > r2 && t1 - snap < t2 && b1 + snap > b2) {
         if (all < snap || arr < snap) {
             if (all > arr) *xp += rr; else *xp += ll;
         }
