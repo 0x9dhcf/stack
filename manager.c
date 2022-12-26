@@ -541,16 +541,12 @@ SetActiveClient(Client *c)
     /* we need to find a new one to activate */
     if (!n)  {
         if (lastActiveClient
-                && lastActiveClient->desktop == activeMonitor->activeDesktop
-                && lastActiveClient->types & NetWMTypeNormal
-                && !(lastActiveClient->types & NetWMTypeFixed)
+                && IsClientActivable(lastActiveClient)
                 && !(lastActiveClient->states & NetWMStateHidden))
             n = lastActiveClient;
         else if (activeMonitor->head)
             for (n = activeMonitor->head;
-                    n && (n->desktop != activeMonitor->activeDesktop
-                        || !(n->types & NetWMTypeNormal)
-                        || n->types & NetWMTypeFixed
+                    n && (!IsClientActivable(n)
                         || n->states & NetWMStateHidden);
                     n = n->snext);
     }
@@ -559,12 +555,11 @@ SetActiveClient(Client *c)
     lastActiveClient = activeClient;
 
     /* the current active, if exists, should not be active anymore */
-    if (activeClient) {
+    if (activeClient)
         SetClientActive(activeClient, False);
-    }
     activeClient = NULL;
 
-    if (n) {
+    if (n && IsClientActivable(n)) {
         /* if someone is to be activated do it */
         SetClientActive(n, True);
         activeClient = n;
@@ -572,7 +567,7 @@ SetActiveClient(Client *c)
         if (n->monitor != activeMonitor)
             SetActiveMonitor(n->monitor);
         XChangeProperty(display, root, atoms[AtomNetActiveWindow],
-                XA_WINDOW, 32, PropModeReplace, (unsigned char *) &n->window, 1);
+                XA_WINDOW, 32, PropModeReplace, (unsigned char *)&n->window, 1);
     } else {
         /* otherwise let anybody know there's no more active client */
         XDeleteProperty(display, root, atoms[AtomNetActiveWindow]);
@@ -585,16 +580,12 @@ ActivateNextClient()
     Client *h = activeClient ? activeClient : activeMonitor->head;
     Client *n = NULL;
     for (n = h ? h->snext ? h->snext : h->monitor->head : h;
-            n && n != h &&
-                (n->desktop != h->desktop
-                || !(n->types & NetWMTypeNormal)
-                || n->types & NetWMTypeFixed);
+            n && n != h && !IsClientActivable(n);
             n = n->snext ? n->snext : n->monitor->head);
 
-    if (n) {
-        if (n->states & NetWMStateHidden) {
+    if (n && IsClientActivable(n)) {
+        if (!n->isVisible)
             RestoreClient(n);
-        }
         SetActiveClient(n);
     }
 }
@@ -606,16 +597,12 @@ ActivatePreviousClient()
     Client *p = NULL;
 
     for (p = h ? h->sprev ? h->sprev : h->monitor->tail : h;
-            p && p != h &&
-                (p->desktop != h->desktop
-                || !(p->types & NetWMTypeNormal)
-                || p->types & NetWMTypeFixed);
+            p && p != h && !IsClientActivable(p);
             p = p->sprev ? p->sprev : p->monitor->tail);
 
-    if (p) {
-        if (p->states & NetWMStateHidden) {
+    if (p && IsClientActivable(p)) {
+        if (!p->isVisible)
             RestoreClient(p);
-        }
         SetActiveClient(p);
     }
 }

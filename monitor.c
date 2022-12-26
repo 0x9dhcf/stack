@@ -62,11 +62,12 @@ SetupMonitors()
         }
     }
     for (Monitor *it = monitors; it; it = it->next)
-        ILog("monitor %d: (%d, %d) [%d x %d]", it->id, it->x, it->y, it->w, it->h);
+        ILog("monitor %d: (%d, %d) [%d x %d]",
+                it->id, it->x, it->y, it->w, it->h);
 
-    if (dirty) {
+    if (dirty)
         SetActiveMonitor(monitors);
-    }
+
     return dirty;
 }
 
@@ -178,11 +179,11 @@ ShowMonitorDesktop(Monitor *m, int desktop)
 
     /* assign all stickies to this desktop */
     for (Client *c = clients; c; c = c->next)
-        if ((c->states & NetWMStateSticky) || (c->types & NetWMTypeFixed))
+        if (c->states & NetWMStateSticky)
             MoveClientToDesktop(c, desktop);
 
-    RefreshMonitor(m);
     SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
+    RefreshMonitor(m);
     XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
 

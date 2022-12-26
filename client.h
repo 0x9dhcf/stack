@@ -82,6 +82,7 @@ void KillClient(Client *c);
 
 void HideClient(Client *c);
 void ShowClient(Client *c);
+Bool IsClientActivable(Client *c);
 void SetClientActive(Client *c, Bool b);
 void RefreshClient(Client *c);
 void SetClientTopbarVisible(Client *c, Bool b);

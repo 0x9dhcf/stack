@@ -143,6 +143,15 @@ ShowClient(Client *c)
     XSync(display, False);
 }
 
+Bool
+IsClientActivable(Client *c)
+{
+    return c
+        && c->monitor == activeMonitor
+        && c->desktop == c->monitor->activeDesktop
+        && c->types & NetWMTypeActivable;
+}
+
 void
 SetClientActive(Client *c, Bool b)
 {
@@ -167,7 +176,7 @@ SetClientActive(Client *c, Bool b)
 
     if (!b && c->isActive) {
         c->isActive = b;
-        if (!(c->types & NetWMTypeFixed))
+        if (c->hasTopbar)
             for (int i = 0; i < 4; i++)
                 XUngrabButton(display, Button1, Mod| modifiers[i], c->window);
     }
