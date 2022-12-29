@@ -502,10 +502,9 @@ void
 MinimizeClient(Client *c)
 {
     if (!(c->types & NetWMTypeFixed) && !c->isTiled) {
-        Monitor *m = c->monitor;
         SaveGeometries(c);
         c->states |= NetWMStateHidden;
-        MoveResizeClientFrame(c, m->x, m->y + m->h, c->fw, c->fw, False);
+        HideClient(c);
         SetNetWMStates(c->window, c->states);
         if (c->isActive)
             SetActiveClient(NULL);
