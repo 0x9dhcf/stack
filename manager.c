@@ -385,6 +385,7 @@ UnmanageWindow(Window w, Bool destroyed)
     t = c->transients;
     while (t) {
         Transient *p = t->next;
+        t->client->transfor = NULL;
         free(t);
         t = p;
     }
@@ -394,8 +395,7 @@ UnmanageWindow(Window w, Bool destroyed)
         Transient **tc;
         for (tc = &c->transfor->transients;
                 *tc && (*tc)->client != c; tc = &(*tc)->next);
-        if (*tc)
-            *tc = (*tc)->next;
+        *tc = (*tc)->next;
 
         /* we want the next active to be the transient for */
         lastActiveClient = c->transfor;
