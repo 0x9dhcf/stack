@@ -795,7 +795,7 @@ GetButtonGeometry(Client *c, int button, int *x, int *y, int *w, int *h)
     int bs = settings.buttonSize;
     int bg = settings.buttonGap;
     int bh = settings.topbarHeight;
-    *x = c->fw - 2 * bw - ((button+1) * (bs) + (button+1) * bg);
+    *x = c->fw - 2 * bw - ((button + 1) * (bs) + (button) * bg);
     *y = bw + (bh - bs - bw) / 2;
     *w = bs;
     *h = bs;
@@ -804,9 +804,9 @@ GetButtonGeometry(Client *c, int button, int *x, int *y, int *w, int *h)
 void
 SetSourceColor(cairo_t *cairo, int color)
 {
-    double r = ((unsigned char)(color>>16))/255.0;
-    double g = ((unsigned char)(color>>8))/255.0;
-    double b = ((unsigned char)color)/255.0;
+    double r = ((unsigned char)(color>>16)) / 255.0;
+    double g = ((unsigned char)(color>>8)) / 255.0;
+    double b = ((unsigned char)color) / 255.0;
     cairo_set_source_rgb(cairo, r, g, b);
 }
 
