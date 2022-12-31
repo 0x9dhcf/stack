@@ -249,10 +249,6 @@ ManageWindow(Window w, Bool mapped)
                 tc->client = c;
                 tc->next = c->transfor->transients;
                 c->transfor->transients = tc;
-                /* center to the current center of the client
-                 * we are transient for */
-                wx = c->transfor->fx + (c->transfor->fw - ww) / 2;
-                wy = c->transfor->fy + (c->transfor->fh - wh) / 2;
             } else {
                 ELog("can't find transient for.");
                 free(tc);
@@ -337,6 +333,13 @@ ManageWindow(Window w, Bool mapped)
             MaximizeClientVertically(c);
         if (c->states & NetWMStateFullscreen)
             FullscreenClient(c);
+    }
+
+    /* if transient for someone center ourself */
+    if (c->transfor) {
+        MoveClientFrame(c,
+            c->transfor->fx + (c->transfor->fw - ww) / 2,
+            c->transfor->fy + (c->transfor->fh - wh) / 2);
     }
 
     /* map */
