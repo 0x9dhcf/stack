@@ -606,14 +606,14 @@ RaiseClient(Client *c)
     c->states |= NetWMStateAbove;
     c->states &= ~NetWMStateBelow;
     XRaiseWindow(display, c->frame);
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
+    if (c->hasHandles)
         for (int i = 0; i < HandleCount; ++i)
             XRaiseWindow(display, c->handles[i]);
+    SetNetWMStates(c->window, c->states);
 
     for (Transient *tc = c->transients; tc; tc = tc->next)
         RaiseClient(tc->client);
 
-    SetNetWMStates(c->window, c->states);
 }
 
 void
@@ -622,7 +622,7 @@ LowerClient(Client *c)
     c->states |= NetWMStateBelow;
     c->states &= ~NetWMStateAbove;
     XLowerWindow(display, c->frame);
-    if (!(c->types & NetWMTypeFixed) && !IsFixed(c->normals))
+    if (c->hasHandles)
         for (int i = 0; i < HandleCount; ++i)
             XLowerWindow(display, c->handles[i]);
 

@@ -358,7 +358,7 @@ ManageWindow(Window w, Bool mapped)
         for (int i = 0; i < HandleCount; ++i)
             XMapWindow(display, c->handles[i]);
 
-    if (!(c->types & NetWMTypeFixed)) {
+    if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
         SetActiveClient(c);
         /* let anyone interrested in ewmh knows what we honor */
         SetNetWMAllowedActions(w, NetWMActionDefault);
@@ -440,13 +440,13 @@ UnmanageWindow(Window w, Bool destroyed)
         XUngrabServer(display);
     }
 
-    if (!(c->types & NetWMTypeFixed)) {
+    if (c->hasTopbar) {
         for (int i = 0; i < ButtonCount; ++i)
             XDestroyWindow(display, c->buttons[i]);
         XDestroyWindow(display, c->topbar);
     }
 
-    if (!(c->types & NetWMTypeFixed) && ! IsFixed(c->normals))
+    if (c->hasHandles)
         for (int i = 0; i < HandleCount; ++i)
             XDestroyWindow(display, c->handles[i]);
 
@@ -563,17 +563,17 @@ SetActiveClient(Client *c)
         SetClientActive(activeClient, False);
     activeClient = NULL;
 
+    /* if someone is to be activated do it */
     if (n && IsClientActivable(n)) {
-        /* if someone is to be activated do it */
         SetClientActive(n, True);
         activeClient = n;
-        RaiseClient(activeClient);
+        RaiseClient(n);
         if (n->monitor != activeMonitor)
             SetActiveMonitor(n->monitor);
         XChangeProperty(display, root, atoms[AtomNetActiveWindow],
                 XA_WINDOW, 32, PropModeReplace, (unsigned char *)&n->window, 1);
     } else {
-        /* otherwise let anybody know there's no more active client */
+        /* otherwise let everybody know there's no more active client */
         XDeleteProperty(display, root, atoms[AtomNetActiveWindow]);
     }
 }
@@ -584,7 +584,7 @@ ActivateNextClient()
     Client *h = activeClient ? activeClient : activeMonitor->head;
     Client *n = NULL;
     for (n = h ? h->snext ? h->snext : h->monitor->head : h;
-            n && n != h && !IsClientActivable(n);
+            n && n != h && (!IsClientActivable(n) || n->transfor);
             n = n->snext ? n->snext : n->monitor->head);
 
     if (n && IsClientActivable(n)) {
@@ -601,7 +601,7 @@ ActivatePreviousClient()
     Client *p = NULL;
 
     for (p = h ? h->sprev ? h->sprev : h->monitor->tail : h;
-            p && p != h && !IsClientActivable(p);
+            p && p != h && (!IsClientActivable(p) || p->transfor);
             p = p->sprev ? p->sprev : p->monitor->tail);
 
     if (p && IsClientActivable(p)) {

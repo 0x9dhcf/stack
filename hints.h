@@ -49,8 +49,7 @@ enum NetWMWindowType {
     NetWMTypePopupMenu          = (1<<12),
     NetWMTypeTooltip            = (1<<13),
     NetWMTypeActivable          = NetWMTypeNormal
-                                | NetWMTypeDialog
-                                | NetWMTypeSplash,
+                                | NetWMTypeDialog,
     NetWMTypeFixed              = NetWMTypeDesktop
                                 | NetWMTypeDock
                                 | NetWMTypeSplash,
@@ -59,7 +58,8 @@ enum NetWMWindowType {
                                 | NetWMTypeNotification
                                 | NetWMTypeDropdownMenu
                                 | NetWMTypePopupMenu
-                                | NetWMTypeTooltip,
+                                | NetWMTypeTooltip
+                                | NetWMTypeSplash,
     NetWMTypeAny                = NetWMTypeNormal
                                 | NetWMTypeDialog
                                 | NetWMTypeDesktop
