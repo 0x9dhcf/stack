@@ -18,8 +18,10 @@ static void FindFile(const char *name, char *dest);
 static void SplitLine(char *str, char **key, char **val);
 static void SetIntValue(const char *val, void *to);
 static void SetFloatValue(const char *val, void *to);
+static void SetBoolValue(const char *val, void *to);
 static void SetStrValue(const char *val, void *to);
 static void SetColValue(const char *val, void *to);
+static void SetShapeValue(const char *val, void *to);
 
 /* default settings */
 Settings settings = {
@@ -33,7 +35,7 @@ Settings settings = {
     .handleWidth    = 6,
     .buttonSize     = 16,
     .buttonGap      = 8,
-    .buttonShape    = ButtonRectangle,
+    .buttonShape    = ButtonSquare,
     .activeTileBackground               = 0x005577,
     .inactiveTileBackground             = 0x444444,
     .activeBackground                   = 0xE0E0E0,
@@ -100,10 +102,10 @@ Settings settings = {
     /* global */
     .snapping = 20,
     /* dynamic desktops */
-    .focusFollowsPointer = False,
-    .decorateTiles  = True,
-    .masters        = 1,
-    .split          = .6,
+    .focusFollowsPointer    = False,
+    .decorateTiles          = True,
+    .masters                = 1,
+    .split                  = .6,
     .shortcuts = {
         /* manager */
         { ModCtrlShift, XK_q,           VCB,    { .v_cb={Quit} } },
@@ -180,7 +182,7 @@ static struct {
     {"HandleWidth",                         (void*)&settings.handleWidth,                               SetIntValue},
     {"ButtonSize",                          (void*)&settings.buttonSize,                                SetIntValue},
     {"ButtonGap",                           (void*)&settings.buttonGap,                                 SetIntValue},
-    {"ButtonShape",                         (void*)&settings.buttonShape,                               SetIntValue},
+    {"ButtonShape",                         (void*)&settings.buttonShape,                               SetShapeValue},
     {"ActiveBackground",                    (void*)&settings.activeBackground,                          SetColValue},
     {"ActiveForeground",                    (void*)&settings.activeForeground,                          SetColValue},
     {"ActiveBorder",                        (void*)&settings.activeBorder,                              SetColValue},
@@ -232,10 +234,10 @@ static struct {
     {"MinimizeInactiveHoveredForeground",   (void*)&settings.buttonStyles[2].inactiveHoveredForeground, SetColValue},
     {"MinimizeInactiveHoveredBorder",       (void*)&settings.buttonStyles[2].inactiveHoveredBorder,     SetColValue},
     {"Snapping",                            (void*)&settings.snapping,                                  SetIntValue},
-    {"FocusFollowsPointer",                 (void*)&settings.focusFollowsPointer,                       SetIntValue},
+    {"FocusFollowsPointer",                 (void*)&settings.focusFollowsPointer,                       SetBoolValue},
+    {"DecorateTiles",                       (void*)&settings.decorateTiles,                             SetBoolValue},
     {"Masters",                             (void*)&settings.masters,                                   SetIntValue},
-    {"Split",                               (void*)&settings.split,                                     SetFloatValue},
-    {"DecorateTiles",                       (void*)&settings.decorateTiles,                             SetIntValue}
+    {"Split",                               (void*)&settings.split,                                     SetFloatValue}
 };
 
 void
@@ -285,6 +287,23 @@ void
 SetColValue(const char *val, void *to)
 {
     *(int*)to = (int)strtol(val, NULL, 16);
+}
+
+void
+SetBoolValue(const char *val, void *to)
+{
+    *(Bool*)to = False;
+    if (! strcmp(val, "1")
+            && ! strcasecmp(val, "true")
+            && ! strcasecmp(val, "yes"))
+        *(Bool*)to = True;
+}
+void
+SetShapeValue(const char *val, void *to)
+{
+    *(int*)to = ButtonSquare; 
+    if (! strcasecmp(val, "round"))
+        *(int*)to = ButtonRound; 
 }
 
 void

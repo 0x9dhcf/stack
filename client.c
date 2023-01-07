@@ -916,7 +916,7 @@ DrawButton(Client *c, cairo_t *cairo, int button)
     /* draw buttons */
     GetButtonGeometry(c, button, &x, &y, &w, &h);
 
-    if (settings.buttonShape == ButtonCirle) {
+    if (settings.buttonShape == ButtonRound) {
         /* button background */
         SetSourceColor(cairo, bbg);
         cairo_arc(cairo, x+w/2.0, y+h/2.0, w/2.0, 0, 2*M_PI);

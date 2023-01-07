@@ -47,7 +47,7 @@ static void Snap(int x, int y, int w, int h, int *xp,
         int *yp, int *wp, int *hp, int snap);
 
 static XErrorHandler defaultErrorHandler = NULL;
-static char *terminal[] = {"st", NULL};
+static char *terminal[] = {"xterm", NULL};
 static int lastSeenPointerX = -1;
 static int lastSeenPointerY = -1;
 static Time lastSeenPointerTime = 0;

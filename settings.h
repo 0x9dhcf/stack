@@ -18,8 +18,8 @@ typedef struct Monitor Monitor;
 typedef struct Client Client;
 
 enum ButtonShape {
-    ButtonRectangle,
-    ButtonCirle
+    ButtonSquare,
+    ButtonRound
 };
 
 typedef struct Settings {
@@ -61,8 +61,8 @@ typedef struct Settings {
     /* global */
     int snapping;
     /* dynamic */
-    int focusFollowsPointer;
-    int decorateTiles;
+    Bool focusFollowsPointer;
+    Bool decorateTiles;
     int masters;
     float split;
     /* shortcuts */
