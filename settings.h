@@ -22,6 +22,12 @@ enum ButtonShape {
     ButtonRound
 };
 
+enum PlacementStrategy {
+    StrategyNone,
+    StrategyCenter,
+    StrategyPointer
+};
+
 typedef struct Settings {
     /* style */
     char labelFontname[128];
@@ -60,6 +66,7 @@ typedef struct Settings {
     } buttonStyles[3];
     /* global */
     int snapping;
+    int placement;
     /* dynamic */
     Bool focusFollowsPointer;
     Bool decorateTiles;

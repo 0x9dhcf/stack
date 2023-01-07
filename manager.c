@@ -342,6 +342,20 @@ ManageWindow(Window w, Bool mapped)
             c->transfor->fy + (c->transfor->fh - wh) / 2);
     }
 
+    /* honor placement strategy if any */
+    if (settings.placement == StrategyCenter) {
+        Desktop *d = &c->monitor->desktops[c->desktop];
+        MoveClientFrame(c, d->wx + (d->ww - ww) / 2, d->wy + (d->wh - wh) / 2);
+    }
+    if (settings.placement == StrategyPointer) {
+        Window rr, cr;
+        int rx, ry, wx, wy;
+        unsigned int mr;
+        if (XQueryPointer(display, w, &rr, &cr, &rx, &ry, &wx, &wy, &mr))
+            MoveClientFrame(c, rx - ww / 2, ry - wh / 2);
+    }
+
+
     /* map */
     XMapWindow(display, c->frame);
     if (! mapped)

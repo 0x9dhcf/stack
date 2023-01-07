@@ -22,6 +22,7 @@ static void SetBoolValue(const char *val, void *to);
 static void SetStrValue(const char *val, void *to);
 static void SetColValue(const char *val, void *to);
 static void SetShapeValue(const char *val, void *to);
+static void SetPlacementValue(const char *val, void *to);
 
 /* default settings */
 Settings settings = {
@@ -101,6 +102,7 @@ Settings settings = {
 
     /* global */
     .snapping = 20,
+    .placement = StrategyNone,
     /* dynamic desktops */
     .focusFollowsPointer    = False,
     .decorateTiles          = True,
@@ -234,6 +236,7 @@ static struct {
     {"MinimizeInactiveHoveredForeground",   (void*)&settings.buttonStyles[2].inactiveHoveredForeground, SetColValue},
     {"MinimizeInactiveHoveredBorder",       (void*)&settings.buttonStyles[2].inactiveHoveredBorder,     SetColValue},
     {"Snapping",                            (void*)&settings.snapping,                                  SetIntValue},
+    {"Placement",                            (void*)&settings.placement,                                  SetPlacementValue},
     {"FocusFollowsPointer",                 (void*)&settings.focusFollowsPointer,                       SetBoolValue},
     {"DecorateTiles",                       (void*)&settings.decorateTiles,                             SetBoolValue},
     {"Masters",                             (void*)&settings.masters,                                   SetIntValue},
@@ -304,6 +307,16 @@ SetShapeValue(const char *val, void *to)
     *(int*)to = ButtonSquare; 
     if (! strcasecmp(val, "round"))
         *(int*)to = ButtonRound; 
+}
+
+void
+SetPlacementValue(const char *val, void *to)
+{
+    *(int*)to = StrategyNone; 
+    if (! strcasecmp(val, "center"))
+        *(int*)to = StrategyCenter; 
+    else if (! strcasecmp(val, "pointer"))
+        *(int*)to = StrategyPointer; 
 }
 
 void
