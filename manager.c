@@ -325,14 +325,42 @@ ManageWindow(Window w, Bool mapped)
     AttachClientToMonitor(activeMonitor, c);
     ShowClient(c);
 
-    /* honor states */
+    /* place the window */
     if (! c->monitor->desktops[c->desktop].isDynamic) {
-        if (c->states & NetWMStateMaximizedHorz)
-            MaximizeClientHorizontally(c);
-        if (c->states & NetWMStateMaximizedVert)
-            MaximizeClientVertically(c);
-        if (c->states & NetWMStateFullscreen)
-            FullscreenClient(c);
+        if (c->states & (NetWMStateMaximized|NetWMStateFullscreen)) {
+            /* honor states */
+            if (c->states & NetWMStateMaximizedHorz)
+                MaximizeClientHorizontally(c);
+            if (c->states & NetWMStateMaximizedVert)
+                MaximizeClientVertically(c);
+            if (c->states & NetWMStateFullscreen)
+                FullscreenClient(c);
+        } else {
+            /* honor placement strategy if any */
+            Desktop *d = &c->monitor->desktops[c->desktop];
+            int nx = c->fx;
+            int ny = c->fy;
+            int nw = Min(c->fw, d->ww); 
+            int nh = Min(c->fh, d->wh);
+            if (settings.placement == StrategyCenter) {
+                nx =  d->wx + (d->ww - nw) / 2;
+                ny =  d->wy + (d->wh - nh) / 2;
+            }
+            if (settings.placement == StrategyPointer) {
+                Window rr, cr;
+                int rx, ry, wx, wy;
+                unsigned int mr;
+                if (XQueryPointer(display, w, &rr, &cr, &rx, &ry,
+                            &wx, &wy, &mr)) {
+                    nx = rx - nw / 2;
+                    ny = ry - nh / 2;
+                }
+            }
+            /* be sure to be fully visible */
+            nx = Max(d->wx, Min(d->wx + d->ww - nw , nx));
+            ny = Max(d->wy, Min(d->wy + d->wh - nh , ny));
+            MoveResizeClientFrame(c, nx, ny, nw, nh, False);
+        }
     }
 
     /* if transient for someone center ourself */
@@ -341,20 +369,6 @@ ManageWindow(Window w, Bool mapped)
             c->transfor->fx + (c->transfor->fw - ww) / 2,
             c->transfor->fy + (c->transfor->fh - wh) / 2);
     }
-
-    /* honor placement strategy if any */
-    if (settings.placement == StrategyCenter) {
-        Desktop *d = &c->monitor->desktops[c->desktop];
-        MoveClientFrame(c, d->wx + (d->ww - ww) / 2, d->wy + (d->wh - wh) / 2);
-    }
-    if (settings.placement == StrategyPointer) {
-        Window rr, cr;
-        int rx, ry, wx, wy;
-        unsigned int mr;
-        if (XQueryPointer(display, w, &rr, &cr, &rx, &ry, &wx, &wy, &mr))
-            MoveClientFrame(c, rx - ww / 2, ry - wh / 2);
-    }
-
 
     /* map */
     XMapWindow(display, c->frame);
