@@ -326,7 +326,9 @@ ManageWindow(Window w, Bool mapped)
     ShowClient(c);
 
     /* place the window */
-    if (! c->monitor->desktops[c->desktop].isDynamic) {
+    if (! c->monitor->desktops[c->desktop].isDynamic
+            && ! (c->types & NetWMTypeFixed)
+            && ! (IsFixed(c->normals))) {
         if (c->states & (NetWMStateMaximized|NetWMStateFullscreen)) {
             /* honor states */
             if (c->states & NetWMStateMaximizedHorz)
