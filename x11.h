@@ -32,9 +32,9 @@ enum AtomType {
     AtomNetVirtualRoots,            /* unused */
     AtomNetDesktopLayout,           /* unused */
     AtomNetShowingDesktop,          /* unused */
-    AtomNetCloseWindow,             /* unused */
+    AtomNetCloseWindow,
     AtomNetMoveresizeWindow,        /* unused */
-    AtomNetWMMoveresize,            /* unused */
+    AtomNetWMMoveresize,
     AtomNetRestackWindow,           /* unused */
     AtomNetRequestFrameExtents,     /* unused */
     AtomNetWMName,

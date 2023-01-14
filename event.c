@@ -750,7 +750,8 @@ OnKeyRelease(XKeyReleasedEvent *e)
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
     if (keysym == (ModSym) && activeClient && switching) {
         StackClientBefore(activeMonitor, activeClient, activeMonitor->head);
-        RefreshMonitor(activeClient->monitor);
+        if (activeMonitor->desktops[activeClient->desktop].isDynamic)
+            RefreshMonitor(activeClient->monitor);
         switching = False;
     }
 }

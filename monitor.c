@@ -178,7 +178,7 @@ ShowMonitorDesktop(Monitor *m, int desktop)
     m->activeDesktop = desktop;
 
     /* assign all stickies to this desktop */
-    for (Client *c = clients; c; c = c->next)
+    for (Client *c = m->head; c; c = c->snext)
         if (c->states & NetWMStateSticky)
             MoveClientToDesktop(c, desktop);
 
@@ -440,11 +440,8 @@ void
 RefreshMonitor(Monitor *m)
 {
     /* hide clients */
-    for (Client *c = m->tail; c; c = c->sprev)
-        if (c->desktop != m->activeDesktop)
-            HideClient(c);
-        else
-            ShowClient(c);
+    for (Client *c = m->head; c; c = c->snext)
+        HideClient(c);
 
     /* if isDynamic mode is enabled re-tile the desktop */
     if (m->desktops[m->activeDesktop].isDynamic) {
@@ -487,11 +484,15 @@ RefreshMonitor(Monitor *m)
                 }
                 i++;
             }
-        }
+        } 
         /* avoid having enter notify event changing active client */
         XSync(display, False);
         while (XCheckMaskEvent(display, EnterWindowMask, &e));
-    } 
+    } else {
+        for (Client *c = m->tail; c; c = c->sprev)
+            if (c->desktop == m->activeDesktop)
+                ShowClient(c);
+    }
 }
 
 Bool
