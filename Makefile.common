@@ -39,16 +39,15 @@ clean:
 
 install: ${TARGET}
 	mkdir -p ${PREFIX}/bin
-	mkdir -p ${PREFIX}/etc
 	mkdir -p ${PREFIX}/share/stack
 	cp -f ${TARGET} ${PREFIX}/bin
-	cp -f stack.conf ${PREFIX}/etc
+	cp -f stack.conf ${PREFIX}/share/stack
 	cp -f stackrc ${PREFIX}/share/stack
 	cp -f stack.desktop ${PREFIX}/share/xsessions
 
 uninstall:
 	rm -f ${PREFIX}/bin/${TARGET}
-	rm -f ${PREFIX}/etc/stack.conf
+	rm -f ${PREFIX}/share/stack/stack.conf
 	rm -f ${PREFIX}/share/stack/stackrc
 	rm -f ${PREFIX}/share/xsessions/stack.desktop
 
