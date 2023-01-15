@@ -316,12 +316,6 @@ OnPropertyNotify(XPropertyEvent *e)
             RefreshClient(c);
         }
     }
-
-    /* A Client wishing to change the state of a window MUST send a
-     * _NET_WM_STATE client message to the root window
-    if (e->atom == atoms[AtomNetWMState])
-        UpdateClientState(c);
-    */
 }
 
 void
@@ -349,7 +343,7 @@ OnButtonPress(XButtonEvent *e)
         if (e->window == c->topbar
                 || (e->window == c->window && e->state == Mod)) {
             int delay = e->time - lastClickPointerTime;
-            if (delay > 150 && delay < 350) {
+            if (delay > 150 && delay < 450) {
                 if ((c->states & NetWMStateMaximized)) {
                     RestoreClient(c);
                 } else {
@@ -749,7 +743,7 @@ OnKeyRelease(XKeyReleasedEvent *e)
 
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
     if (keysym == (ModSym) && activeClient && switching) {
-        StackClientBefore(activeMonitor, activeClient, activeMonitor->head);
+        StackClientTop(activeMonitor, activeClient);
         if (activeMonitor->desktops[activeClient->desktop].isDynamic)
             RefreshMonitor(activeClient->monitor);
         switching = False;

@@ -437,11 +437,30 @@ StackClientUp(Monitor *m, Client *c)
 }
 
 void
+StackClientTop(Monitor *m, Client *c)
+{
+    if (c->transfor || c->monitor != m)
+        return;
+    StackClientBefore(m, c, m->head);
+}
+
+void
+StackClientBottom(Monitor *m, Client *c)
+{
+    if (c->transfor || c->monitor != m)
+        return;
+    StackClientAfter(m, c, m->tail);
+}
+
+void
 RefreshMonitor(Monitor *m)
 {
     /* hide clients */
     for (Client *c = m->head; c; c = c->snext)
-        HideClient(c);
+        if (c->desktop != m->activeDesktop)
+            HideClient(c);
+        //else
+        //    ShowClient(c);
 
     /* if isDynamic mode is enabled re-tile the desktop */
     if (m->desktops[m->activeDesktop].isDynamic) {
@@ -449,16 +468,18 @@ RefreshMonitor(Monitor *m)
         Client *c;
         int n = 0, mw = 0, i = 0, mx = 0, ty = 0;
 
-        for (c = m->head; c; c = c->snext)
+        for (c = m->head; c; c = c->snext) {
             if (c->desktop == m->activeDesktop
+                    && !(c->states & NetWMStateHidden)
                     && !(c->types & NetWMTypeFixed)
                     && !c->transfor) {
-                /* restore hidden client dynamic
-                 * is our window switcher */
-                if (! c->isVisible)
-                    RestoreClient(c);
+                ///* restore hidden client dynamic
+                // * is our window switcher */
+                //if (! c->isVisible)
+                //    RestoreClient(c);
                 n++;
             }
+        }
 
         Desktop *d = &m->desktops[m->activeDesktop];
         if (n > d->masters)
@@ -468,6 +489,7 @@ RefreshMonitor(Monitor *m)
 
         for (c = m->head; c; c = c->snext) {
             if (c->desktop == m->activeDesktop
+                    && !(c->states & NetWMStateHidden)
                     && !(c->types & NetWMTypeFixed)
                     && !(IsFixed(c->normals))
                     && !c->transfor) {
@@ -484,13 +506,20 @@ RefreshMonitor(Monitor *m)
                 }
                 i++;
             }
+            if (c->desktop == m->activeDesktop
+                    || (c->types & NetWMTypeFixed)
+                    || (IsFixed(c->normals))
+                    || c->transfor) {
+                ShowClient(c);
+            }
         } 
         /* avoid having enter notify event changing active client */
         XSync(display, False);
         while (XCheckMaskEvent(display, EnterWindowMask, &e));
     } else {
-        for (Client *c = m->tail; c; c = c->sprev)
-            if (c->desktop == m->activeDesktop)
+        for (Client *c = m->head; c; c = c->snext)
+            if (c->desktop == m->activeDesktop
+                    && !(c->states & NetWMStateHidden))
                 ShowClient(c);
     }
 }
