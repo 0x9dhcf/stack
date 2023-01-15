@@ -30,6 +30,10 @@
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
 
+#define WindowEvenMask (\
+        PropertyChangeMask\
+        )
+
 #define HandleEventMask (\
           ButtonPressMask\
         | ButtonReleaseMask\
@@ -271,6 +275,9 @@ ManageWindow(Window w, Bool mapped)
     c->window = w;
     XReparentWindow(display, w, c->frame, 0, 0);
     XSetWindowBorderWidth(display, w, 0);
+    XSetWindowAttributes wattrs = {0};
+    wattrs.event_mask = WindowEvenMask;
+    XChangeWindowAttributes(display, w, CWEventMask, &wattrs);
     if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
         /* allows activation on click */
         XUngrabButton(display, AnyButton, AnyModifier, c->window);
