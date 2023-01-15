@@ -470,13 +470,10 @@ RefreshMonitor(Monitor *m)
 
         for (c = m->head; c; c = c->snext) {
             if (c->desktop == m->activeDesktop
-                    && !(c->states & NetWMStateHidden)
                     && !(c->types & NetWMTypeFixed)
                     && !c->transfor) {
-                ///* restore hidden client dynamic
-                // * is our window switcher */
-                //if (! c->isVisible)
-                //    RestoreClient(c);
+                if (c->states & NetWMStateHidden)
+                    RestoreClient(c);
                 n++;
             }
         }
@@ -489,7 +486,6 @@ RefreshMonitor(Monitor *m)
 
         for (c = m->head; c; c = c->snext) {
             if (c->desktop == m->activeDesktop
-                    && !(c->states & NetWMStateHidden)
                     && !(c->types & NetWMTypeFixed)
                     && !(IsFixed(c->normals))
                     && !c->transfor) {
