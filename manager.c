@@ -8,6 +8,7 @@
 #include <X11/Xatom.h>
 #include <X11/XKBlib.h>
 
+#include "X11/X.h"
 #include "client.h"
 #include "event.h"
 #include "hints.h"
@@ -25,14 +26,14 @@
 
 #define FrameEvenMask (\
           ExposureMask\
+        | PropertyChangeMask\
         | ButtonPressMask\
         | EnterWindowMask\
         | SubstructureRedirectMask\
         | SubstructureNotifyMask)
 
 #define WindowEvenMask (\
-        PropertyChangeMask\
-        )
+        PropertyChangeMask)
 
 #define HandleEventMask (\
           ButtonPressMask\
@@ -60,9 +61,9 @@ SetupWindowManager()
     XSetWindowAttributes wa;
     XErrorHandler h;
     Window *wins,  w0, w1, rwin, cwin;
+    KeyCode code;
     unsigned int nwins, mask;
     int rx, ry, wx, wy;
-    KeyCode code;
     unsigned int modifiers[] = { 0, LockMask, numLockMask, numLockMask | LockMask };
 
     /* check for existing wm */
@@ -153,14 +154,10 @@ SetupWindowManager()
     XUngrabKey(display, AnyKey, AnyModifier, root);
 
     /* terminal */
-    if ((code = XKeysymToKeycode(display, XK_Return)))
-        for (int j = 0; j < 4; ++j)
-            XGrabKey(display, code, ModCtrlShift | modifiers[j],
-                    root, True, GrabModeAsync, GrabModeAsync);
-
-    /* switching XXX: hardcoded */
-    if ((code = XKeysymToKeycode(display, ModSym)))
-        XGrabKey(display, code, 0, root, True, GrabModeAsync, GrabModeAsync);
+    //if ((code = XKeysymToKeycode(display, XK_Return)))
+    //    for (int j = 0; j < 4; ++j)
+    //        XGrabKey(display, code, ModCtrlShift | modifiers[j],
+    //                root, True, GrabModeAsync, GrabModeAsync);
 
     /* shortcuts */
     // XXX: (some) shortcuts could be grab on the client like buttons

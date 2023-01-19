@@ -706,12 +706,16 @@ OnKeyPress(XKeyPressedEvent *e)
         }
     }
 
-    /* XXX: warning related to config. Won't work anymore if replacing TAB by
-     * something else */
+    // Switching should not be managed by grabbing it shadows app keys
+    ///* XXX: warning related to config. Won't work anymore if replacing TAB by
+    // * something else */
     if (keysym == (XK_Tab)
             && (CleanMask(Mod) == CleanMask(e->state)
-                || CleanMask(ModShift) == CleanMask(e->state)))
+                || CleanMask(ModShift) == CleanMask(e->state))
+            && ! switching) {
         switching = True;
+        XGrabKeyboard(display, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+    }
 
     /* shortcuts */
     for (int i = 0; i < ShortcutCount; ++i) {
@@ -739,6 +743,7 @@ OnKeyPress(XKeyPressedEvent *e)
 void
 OnKeyRelease(XKeyReleasedEvent *e)
 {
+    DLog("%ld", e->window);
     KeySym keysym;
 
     keysym = XkbKeycodeToKeysym(display, e->keycode, 0, 0);
@@ -747,6 +752,7 @@ OnKeyRelease(XKeyReleasedEvent *e)
         if (activeMonitor->desktops[activeClient->desktop].isDynamic)
             RefreshMonitor(activeClient->monitor);
         switching = False;
+        XUngrabKeyboard(display, CurrentTime);
     }
 }
 
