@@ -19,12 +19,12 @@ Client *LookupClient(Window w);
 void Quit();
 void Reload();
 
-void SetActiveMonitor(Monitor *m);
-void ActivateNextMonitor();
-void ActivatePreviousMonitor();
+void SetFocusedMonitor(Monitor *m);
+void FocusNextMonitor();
+void FocusPreviousMonitor();
 
-void SetActiveClient(Client *c);
-void ActivateNextClient();
-void ActivatePreviousClient();
+void SetFocusedClient(Client *c);
+void FocusNextClient();
+void FocusPreviousClient();
 
 #endif /* __MANAGER_H__ */

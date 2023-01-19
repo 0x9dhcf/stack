@@ -144,20 +144,20 @@ ShowClient(Client *c)
 }
 
 Bool
-IsClientActivable(Client *c)
+IsClientFocusable(Client *c)
 {
     return c
         && c->monitor == activeMonitor
         && c->desktop == c->monitor->activeDesktop
-        && c->types & NetWMTypeActivable;
+        && c->types & NetWMTypeFocusable;
 }
 
 void
-SetClientActive(Client *c, Bool b)
+FocusClient(Client *c, Bool b)
 {
     unsigned int modifiers[] = { 0, LockMask, numLockMask, numLockMask|LockMask };
 
-    if (b && !c->isActive) {
+    if (b && !c->isFocused) {
         if (c->hints & HintsFocusable)
             XSetInputFocus(display, c->window, RevertToPointerRoot, CurrentTime);
         else if (c->protocols & NetWMProtocolTakeFocus)
@@ -165,7 +165,7 @@ SetClientActive(Client *c, Bool b)
 
         c->states &= ~NetWMStateDemandsAttention;
         c->hints &= ~HintsUrgent;
-        c->isActive = b;
+        c->isFocused = b;
 
         if (!(c->types & NetWMTypeFixed))
             for (int i = 0; i < 4; ++i)
@@ -174,8 +174,8 @@ SetClientActive(Client *c, Bool b)
                         GrabModeAsync, GrabModeSync, None, None);
     }
 
-    if (!b && c->isActive) {
-        c->isActive = b;
+    if (!b && c->isFocused) {
+        c->isFocused = b;
         if (c->hasTopbar)
             for (int i = 0; i < 4; i++)
                 XUngrabButton(display, Button1, Mod| modifiers[i], c->window);
@@ -506,8 +506,8 @@ MinimizeClient(Client *c)
         c->states |= NetWMStateHidden;
         HideClient(c);
         SetNetWMStates(c->window, c->states);
-        if (c->isActive)
-            SetActiveClient(NULL);
+        if (c->isFocused)
+            SetFocusedClient(NULL);
     }
 }
 
@@ -690,7 +690,7 @@ MoveClientToDesktop(Client *c, int desktop)
                 Min(c->fh, c->monitor->desktops[c->desktop].wh), False);
 
     if (from != -1) { /* it's probably a new window not affected yet */
-        SetActiveClient(NULL);
+        SetFocusedClient(NULL);
         RefreshMonitor(m);
     }
 
@@ -720,7 +720,7 @@ MoveClientToMonitor(Client *c, Monitor *m)
     DetachClientFromMonitor(c->monitor, c);
     AttachClientToMonitor(m, c);
     MoveClientFrame(c, x, y);
-    SetActiveClient(NULL);
+    SetFocusedClient(NULL);
 }
 
 void
@@ -820,7 +820,7 @@ WriteTitle(Client *c, cairo_t *cairo)
     /* select the frame colors */
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
         fg = settings.urgentForeground;
-    }  else if (c->isActive) {
+    }  else if (c->isFocused) {
         fg = settings.activeForeground;
     } else {
         fg = settings.inactiveForeground;
@@ -853,7 +853,7 @@ DrawFrame(Client *c, cairo_t *cairo)
     if (c->states & NetWMStateDemandsAttention || c->hints & HintsUrgent) {
         bg = settings.urgentBackground;
         bc = settings.urgentBorder;
-    }  else if (c->isActive) {
+    }  else if (c->isFocused) {
         bg = settings.activeBackground;
         bc = c->isTiled ? settings.activeTileBackground
                 : settings.activeBorder;
@@ -891,7 +891,7 @@ DrawButton(Client *c, cairo_t *cairo, int button)
         bbg = settings.urgentBackground;
         bfg = settings.urgentForeground;
         bbc = settings.urgentForeground;
-    }  else if (c->isActive) {
+    }  else if (c->isFocused) {
         if (button == c->hovered) {
             bbg = settings.buttonStyles[button].activeHoveredBackground;
             bfg = settings.buttonStyles[button].activeHoveredForeground;

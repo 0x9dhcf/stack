@@ -54,7 +54,7 @@ struct Client {
     Bool hasHandles;
     Bool isBorderVisible;
     Bool isTopbarVisible;
-    Bool isActive;
+    Bool isFocused;
     Bool isTiled;
     Bool isVisible;
     char *name;
@@ -82,8 +82,8 @@ void KillClient(Client *c);
 
 void HideClient(Client *c);
 void ShowClient(Client *c);
-Bool IsClientActivable(Client *c);
-void SetClientActive(Client *c, Bool b);
+Bool IsClientFocusable(Client *c);
+void FocusClient(Client *c, Bool b);
 void RefreshClient(Client *c);
 void SetClientTopbarVisible(Client *c, Bool b);
 void ToggleClientTopbar(Client *c);

@@ -232,7 +232,7 @@ ManageWindow(Window w, Bool mapped)
     c->isTopbarVisible = decorated;
     c->hasTopbar = decorated && !(c->types & NetWMTypeNoTopbar);
     c->hasHandles = decorated && !IsFixed(c->normals);
-    c->isActive = False;
+    c->isFocused = False;
     c->isTiled = False;
     c->isVisible = False;
     c->hovered = ButtonCount;
@@ -393,7 +393,7 @@ ManageWindow(Window w, Bool mapped)
             XMapWindow(display, c->handles[i]);
 
     if (c->hints & HintsFocusable && !(c->types & NetWMTypeFixed)) {
-        SetActiveClient(c);
+        SetFocusedClient(c);
         /* let anyone interrested in ewmh knows what we honor */
         SetNetWMAllowedActions(w, NetWMActionDefault);
     }
@@ -498,7 +498,7 @@ UnmanageWindow(Window w, Bool destroyed)
                 PropModeAppend, (unsigned char *) &it->window, 1);
 
     if (! activeClient)
-        SetActiveClient(NULL);
+        SetFocusedClient(NULL);
 }
 
 Client *
@@ -545,31 +545,31 @@ Reload()
 }
 
 void
-SetActiveMonitor(Monitor *m)
+SetFocusedMonitor(Monitor *m)
 {
     if (m)
         activeMonitor = m;
     else
         activeMonitor = monitors;
-    SetActiveClient(NULL);
+    SetFocusedClient(NULL);
 }
 
 void
-ActivateNextMonitor()
+FocusNextMonitor()
 {
-    SetActiveMonitor(NextMonitor(activeMonitor));
-    SetActiveClient(NULL);
+    SetFocusedMonitor(NextMonitor(activeMonitor));
+    SetFocusedClient(NULL);
 }
 
 void
-ActivatePreviousMonitor()
+FocusPreviousMonitor()
 {
-    SetActiveMonitor(PreviousMonitor(activeMonitor));
-    SetActiveClient(NULL);
+    SetFocusedMonitor(PreviousMonitor(activeMonitor));
+    SetFocusedClient(NULL);
 }
 
 void
-SetActiveClient(Client *c)
+SetFocusedClient(Client *c)
 {
     Client *n = c;
 
@@ -579,12 +579,12 @@ SetActiveClient(Client *c)
     /* we need to find a new one to activate */
     if (!n)  {
         if (lastActiveClient
-                && IsClientActivable(lastActiveClient)
+                && IsClientFocusable(lastActiveClient)
                 && !(lastActiveClient->states & NetWMStateHidden))
             n = lastActiveClient;
         else if (activeMonitor->head)
             for (n = activeMonitor->head;
-                    n && (!IsClientActivable(n)
+                    n && (!IsClientFocusable(n)
                         || n->states & NetWMStateHidden);
                     n = n->snext);
     }
@@ -594,16 +594,16 @@ SetActiveClient(Client *c)
 
     /* the current active, if exists, should not be active anymore */
     if (activeClient)
-        SetClientActive(activeClient, False);
+        FocusClient(activeClient, False);
     activeClient = NULL;
 
     /* if someone is to be activated do it */
-    if (n && IsClientActivable(n)) {
-        SetClientActive(n, True);
+    if (n && IsClientFocusable(n)) {
+        FocusClient(n, True);
         activeClient = n;
         RaiseClient(n);
         if (n->monitor != activeMonitor)
-            SetActiveMonitor(n->monitor);
+            SetFocusedMonitor(n->monitor);
         XChangeProperty(display, root, atoms[AtomNetActiveWindow],
                 XA_WINDOW, 32, PropModeReplace, (unsigned char *)&n->window, 1);
     } else {
@@ -613,35 +613,35 @@ SetActiveClient(Client *c)
 }
 
 void
-ActivateNextClient()
+FocusNextClient()
 {
     Client *h = activeClient ? activeClient : activeMonitor->head;
     Client *n = NULL;
     for (n = h ? h->snext ? h->snext : h->monitor->head : h;
-            n && n != h && (!IsClientActivable(n) || n->transfor);
+            n && n != h && (!IsClientFocusable(n) || n->transfor);
             n = n->snext ? n->snext : n->monitor->head);
 
-    if (n && IsClientActivable(n)) {
+    if (n && IsClientFocusable(n)) {
         if (!n->isVisible)
             RestoreClient(n);
-        SetActiveClient(n);
+        SetFocusedClient(n);
     }
 }
 
 void
-ActivatePreviousClient()
+FocusPreviousClient()
 {
     Client *h = activeClient ? activeClient : activeMonitor->head;
     Client *p = NULL;
 
     for (p = h ? h->sprev ? h->sprev : h->monitor->tail : h;
-            p && p != h && (!IsClientActivable(p) || p->transfor);
+            p && p != h && (!IsClientFocusable(p) || p->transfor);
             p = p->sprev ? p->sprev : p->monitor->tail);
 
-    if (p && IsClientActivable(p)) {
+    if (p && IsClientFocusable(p)) {
         if (!p->isVisible)
             RestoreClient(p);
-        SetActiveClient(p);
+        SetFocusedClient(p);
     }
 }
 

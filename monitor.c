@@ -66,7 +66,7 @@ SetupMonitors()
                 it->id, it->x, it->y, it->w, it->h);
 
     if (dirty)
-        SetActiveMonitor(monitors);
+        SetFocusedMonitor(monitors);
 
     return dirty;
 }
@@ -182,7 +182,7 @@ ShowMonitorDesktop(Monitor *m, int desktop)
         if (c->states & NetWMStateSticky)
             MoveClientToDesktop(c, desktop);
 
-    SetActiveClient(m->desktops[m->activeDesktop].activeOnLeave);
+    SetFocusedClient(m->desktops[m->activeDesktop].activeOnLeave);
     RefreshMonitor(m);
     XChangeProperty(display, root, atoms[AtomNetCurrentDesktop],
             XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&desktop, 1);
@@ -601,7 +601,7 @@ XineramaScanMonitors()
                 AttachClientToMonitor(monitors, c);
             }
             if (m == activeMonitor)
-                SetActiveMonitor(monitors);
+                SetFocusedMonitor(monitors);
 
             if (m == monitors) {
                 monitors = monitors->next;
@@ -685,7 +685,7 @@ XRandRScanMonitors()
                 AttachClientToMonitor(monitors, c);
             }
             if (m == activeMonitor)
-                SetActiveMonitor(monitors);
+                SetFocusedMonitor(monitors);
 
             if (m == monitors) {
                 monitors = monitors->next;

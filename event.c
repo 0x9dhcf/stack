@@ -324,7 +324,7 @@ OnButtonPress(XButtonEvent *e)
     Client *c = NULL;
 
     if (e->window == root) {
-        SetActiveMonitor(MonitorContaining(e->x_root, e->y_root));
+        SetFocusedMonitor(MonitorContaining(e->x_root, e->y_root));
         return;
     }
 
@@ -364,7 +364,7 @@ OnButtonPress(XButtonEvent *e)
 
         if (e->window == c->buttons[ButtonMinimize]) {
             MinimizeClient(c);
-            SetActiveClient(NULL);
+            SetFocusedClient(NULL);
         }
     }
 
@@ -372,7 +372,7 @@ OnButtonPress(XButtonEvent *e)
         KillClient(c);
 
     if (e->window != c->buttons[ButtonClose] && e->window != c->buttons[ButtonMinimize])
-        SetActiveClient(c);
+        SetFocusedClient(c);
 
     if (e->window == c->window)
         XAllowEvents(display, ReplayPointer, CurrentTime);
@@ -518,9 +518,8 @@ OnMessage(XClientMessageEvent *e)
          * most pagers send to the client
          */
         if (e->message_type == atoms[AtomNetActiveWindow]) {
-            Client *toActivate = LookupClient(e->window);
-            if (toActivate)
-                SetActiveClient(toActivate);
+            Client *c = LookupClient(e->window);
+            if (c) SetFocusedClient(c);
         }
         return;
     }
@@ -614,17 +613,17 @@ OnMessage(XClientMessageEvent *e)
     if (e->message_type == atoms[AtomNetActiveWindow]) {
         if (c->states & NetWMStateHidden)
             RestoreClient(c);
-        SetActiveClient(c);
+        SetFocusedClient(c);
     }
 
     if (e->message_type == atoms[AtomNetCloseWindow]) {
         KillClient(c);
-        SetActiveClient(NULL);
+        SetFocusedClient(NULL);
     }
 
     if (e->message_type == atoms[AtomNetWMActionMinimize]) {
         MinimizeClient(c);
-        SetActiveClient(c);
+        SetFocusedClient(c);
     }
 
     if (e->message_type == atoms[AtomNetWMMoveresize]) {
@@ -656,7 +655,7 @@ OnEnter(XCrossingEvent *e)
                 && (settings.focusFollowsPointer
                     ||  c->isTiled
                     || c->monitor != activeMonitor))
-            SetActiveClient(c);
+            SetFocusedClient(c);
 
        for (int i = 0; i < ButtonCount; ++i) {
            if (e->window == c->buttons[i]) {
