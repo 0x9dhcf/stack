@@ -152,15 +152,6 @@ SetupWindowManager()
 
     /* grab shortcuts */
     XUngrabKey(display, AnyKey, AnyModifier, root);
-
-    /* terminal */
-    //if ((code = XKeysymToKeycode(display, XK_Return)))
-    //    for (int j = 0; j < 4; ++j)
-    //        XGrabKey(display, code, ModCtrlShift | modifiers[j],
-    //                root, True, GrabModeAsync, GrabModeAsync);
-
-    /* shortcuts */
-    // XXX: (some) shortcuts could be grab on the client like buttons
     for (int i = 0; i < ShortcutCount; ++i) {
         if ((code = XKeysymToKeycode(display, settings.shortcuts[i].keysym))) {
             for (int j = 0; j < 4; ++j)
