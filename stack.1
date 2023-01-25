@@ -1,0 +1,201 @@
+.TH STACK 1 stack\-VERSION
+.SH NAME
+stack \- Stacking window manager with dynamic tiling capabilities.
+.SH SYNOPSIS
+.BR stack\ [\fIOPTION\fR...]
+.SH DESCRIPTION
+Stack is a stacking window manager that can turn any of its desktops into a
+dynamic tiling working area. Windows layout of tiled desktops is similar to
+the
+.B dwm (1)
+one, splitting the screen in two areas, a nh\-stack one on the left hand side and
+a nv\-stack one on the right.
+
+.SH OPTIONS
+.TP
+.BR \-v, \-\-version
+prints version information to standard output, then exits.
+.SH USAGE
+Stack does only window management. It does not provide any bar, menu or window
+chooser (dynamic mode is our window chooser). There is no key bindind either,
+only the keyboard shortcuts related to window management are provided.
+
+.SS Mouse commands
+.TP
+.B Button1
+Focus clicked client. Move or resize window while draging either topbar or
+handles.
+.TP
+.B Mod1\-Button1
+Move or resize window while dragging. (useful is topar is hidden)
+
+.SS Keyboard commands
+.TP
+.B Mod1\-Control\-Shift\-q
+Exit
+.TP
+.B Mod1\-Control\-Shift\-r
+Reload config file
+.TP
+.B Mod1\-Control\-Shift\-x
+Kill active client
+.TP
+.BR Mod1\-.
+Focus next monitor
+.TP
+.B Mod1\-,
+Focus previous monitor
+.TP
+.B Mod1\-Tab
+Switch to next client. The latest active client will be stack front on Mod1
+released
+.TP
+.B Mod1\-l
+Focus next client. Clients stack is left unchanged
+.TP
+.B Mod1\-Shit\-Tab
+Switch to previous client. The latest active client will be stack front on Mod1
+released
+.TP
+.B Mod1\-h
+Focus previous client. Clients stack is left unchanged
+.TP
+.B Mod1\-[1..n]
+Show nth desktop
+.TP
+.B Mod1\-PageDown
+Show next desktop
+.TP
+.B Mod1\-PageUp
+Show previous desktop
+.TP
+.B Mod1\-d
+Toggle dynamic behavior for active desktop
+.TP
+.B Mod1\-=
+Increase main area windows count
+.TP
+.B Mod1\--
+Decrease main area windows count
+.TP
+.B Mod1\-Shift\-t
+Toggle topbar visibility for active desktop
+.TP
+.B Mod1\-Control\-Shift\-t
+Toggle topbar visibility for active monitor
+.TP
+.B Mod1\-Shift\-h
+Stack active client up
+.TP
+.B Mod1\-Shift\-l
+Stack active client down
+.TP
+.B Mod1\-t
+Toggle active client topbar visibility
+.TP
+.B Mod1\-Control\-Shift\-h
+Maximize active client horizontally
+.TP
+.B Mod1\-Control\-Shift\-v
+Maximize active client vertically
+.TP
+.B Mod1\-Return
+Maximize active client
+.TP
+.B Mod1\-Control\-Shift\-h
+Maximize active client left
+.TP
+.B Mod1\-Control\-Shift\-l
+Maximize active client right
+.TP
+.B Mod1\-Control\-Shift\-k
+Maximize active client top
+.TP
+.B Mod1\-Control\-Shift\-j
+Maximize active client bottom
+.TP
+.B Mod1\-Delete
+Minimize active client
+.TP
+.B Mod1\-Control\-h
+Snap active client to the left
+.TP
+.B Mod1\-Control\-l
+Snap active client to the right
+.TP
+.B Mod1\-Control\-k
+Snap active client to the top
+.TP
+.B Mod1\-Control\-j
+Snap active client to the bottom
+.TP
+.B Mod1\-Control\-c
+Center active client
+.TP
+.B Mod1\-Shift\-f
+Fullscreen active client
+.TP
+.B Mod1\-Shift\-Return
+Restore active client
+.TP
+.B Mod1\-Shift\-[1..n]
+Move active client to the nth desktop
+.TP
+.B Mod1\-Shift\-PageDown
+Move active client to next desktop
+.TP
+.B Mod1\-Shift\-PageUp
+Move active client to previous desktop
+.TP
+.B Mod1\-Shift\-.
+Move active client to next monitor
+.TP
+.B Mod1\-Shift\-,
+Move active client to previous monitor.
+
+.SH STARTUP
+
+.B stack
+provides a
+.B stack.desktop
+file compliant with most session manager or can be started thanks to usual xinitrc
+or xsession files.
+
+At start,
+.B stack
+will execute any executable sh script named stackrc it finds in the following order:
+.IP
+\./stackrc
+.IP
+$HOME/.stackrc
+.IP
+$HOME/.local/share/stack/stackrc
+.IP
+/usr/local/share/stack/stackrc
+.IP
+/usr/share/stack/stackrc
+
+.SH CONFIGURATION
+
+.B stack
+can be configured thanks to a simple text file named stack.conf. It will
+look for such a file in the following order:
+.IP
+\./stack.conf
+.IP
+$HOME/.stack.conf
+.IP
+$HOME/.config/stack/stack.conf
+.IP
+/usr/local/etc/stack.conf
+.IP
+/etc/stack.conf
+
+see
+.B stack.conf(5)
+for detail about configuration.
+
+.SH AUTHOR
+Written by 0x9dhcf.
+.SH SEE ALSO
+.BR stack.conf (5),

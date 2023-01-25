@@ -5,6 +5,7 @@
 #include <X11/extensions/Xrandr.h>
 #include <X11/extensions/Xinerama.h>
 
+#include "X11/Xlib.h"
 #include "client.h"
 #include "hints.h"
 #include "log.h"
@@ -456,11 +457,11 @@ void
 RefreshMonitor(Monitor *m)
 {
     /* hide clients */
+    XGrabServer(display);
     for (Client *c = m->head; c; c = c->snext)
         if (c->desktop != m->activeDesktop)
             HideClient(c);
-        //else
-        //    ShowClient(c);
+    XUngrabServer(display);
 
     /* if isDynamic mode is enabled re-tile the desktop */
     if (m->desktops[m->activeDesktop].isDynamic) {

@@ -1,0 +1,27 @@
+# DESCRIPTION
+
+A simple stacking window manager with dynamic tiling capabilities.
+
+ - Not as friendly as a full DE ;
+ - Not as compliant with EWMH as lots existing WMs ;
+ - Not as lean as a pure tiling WMs ;
+
+But mixes floating and tiling modes smoothly with user
+experience closest to usual.
+
+# INSTALL
+
+bash
+```
+[PREFIX=PATH] NDEBUG=1 [sudo] make install
+```
+
+tcsh
+```
+( setenv [PREFIX PATH] NDEBUG 1 ; [doas] make install )
+```
+
+# DOCUMENTATION
+
+See stack(1) and stack.conf(5)
+

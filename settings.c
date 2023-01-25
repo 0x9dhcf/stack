@@ -150,10 +150,10 @@ Settings settings = {
         { ModCtrlShift, XK_k,           CCB,    { .c_cb={MaximizeClientTop} } },
         { ModCtrlShift, XK_j,           CCB,    { .c_cb={MaximizeClientBottom} } },
         { Mod,          XK_Delete,      CCB,    { .c_cb={MinimizeClient} } },
-        { ModCtrl,      XK_h,           CCB,    { .c_cb={MoveClientLeftmost} } },
-        { ModCtrl,      XK_k,           CCB,    { .c_cb={MoveClientTopmost} } },
-        { ModCtrl,      XK_l,           CCB,    { .c_cb={MoveClientRightmost} } },
-        { ModCtrl,      XK_j,           CCB,    { .c_cb={MoveClientBottommost} } },
+        { ModCtrl,      XK_h,           CCB,    { .c_cb={SnapClientLeft} } },
+        { ModCtrl,      XK_k,           CCB,    { .c_cb={SnapClientTop} } },
+        { ModCtrl,      XK_l,           CCB,    { .c_cb={SnapClientRight} } },
+        { ModCtrl,      XK_j,           CCB,    { .c_cb={SnapClientBottom} } },
         { ModCtrl,      XK_c,           CCB,    { .c_cb={CenterClient} } },
         { ModShift,     XK_f,           CCB,    { .c_cb={FullscreenClient} } },
         { ModShift,     XK_Return,      CCB,    { .c_cb={RestoreClient} } },
@@ -391,9 +391,10 @@ LoadConfigFile()
 
     while ((nread = getline(&line, &len, stream)) != -1) {
         char *key, * val;
+        long unsigned int i;
         SplitLine(line, &key, &val);
         if (key && val)
-            for (long unsigned int i = 0; i < sizeof(callbacks)/sizeof(callbacks[0]); i++)
+            for (i = 0; i < sizeof(callbacks)/sizeof(callbacks[0]); i++)
                 if (!strcmp(callbacks[i].key, key))
                     callbacks[i].set(val, callbacks[i].to);
     }

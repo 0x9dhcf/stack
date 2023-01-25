@@ -10,45 +10,56 @@ PKG_CONFIG = pkg-config
 DEPS = x11 xrandr xinerama cairo pangocairo
 
 CPPFLAGS	+= -DVERSION=\"$(MAJOR).$(MINOR)\"
-CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags ${DEPS}` $(CPPFLAGS)
-LDFLAGS		+= `$(PKG_CONFIG) --libs ${DEPS}`
+CFLAGS		+= -Wall -Wextra `$(PKG_CONFIG) --cflags $(DEPS)` $(CPPFLAGS)
+LDFLAGS		+= `$(PKG_CONFIG) --libs $(DEPS)`
 
 SRC = client.c event.c settings.c hints.c main.c manager.c monitor.c x11.c
 HDR = client.h event.h settings.h hints.h log.h manager.h monitor.h macros.h x11.h
+DAT = BSDmakefile GNUmakefile Makefile.common LICENSE README stack.conf stack.desktop stackrc stack.1 stack.conf.5
 
-OBJ = ${SRC:.c=.o}
+OBJ = $(SRC:.c=.o)
 
-all: options ${TARGET}
+all: options stack
 
 options:
 	@echo build options:
-	@echo "CPPLAGS  = ${CPPFLAGS}"
-	@echo "CFLAGS   = ${CFLAGS}"
-	@echo "LDFLAGS  = ${LDFLAGS}"
+	@echo "CPPLAGS  = $(CPPFLAGS)"
+	@echo "CFLAGS   = $(CFLAGS)"
+	@echo "LDFLAGS  = $(LDFLAGS)"
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 
-${OBJ}: ${HDR}
+$(OBJ): $(HDR)
 
-${TARGET}: ${OBJ}
-	$(CC) -o $@ ${OBJ} $(LDFLAGS)
+stack: $(OBJ)
+	$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 clean:
-	rm -f stack ${OBJ}
+	rm -f stack $(OBJ)
 
-install: ${TARGET}
-	mkdir -p ${PREFIX}/bin
-	mkdir -p ${PREFIX}/share/stack
-	cp -f ${TARGET} ${PREFIX}/bin
-	cp -f stack.conf ${PREFIX}/share/stack
-	cp -f stackrc ${PREFIX}/share/stack
-	cp -f stack.desktop ${PREFIX}/share/xsessions
+dist: clean
+	mkdir -p stack-$(MAJOR).$(MINOR)
+	cp -R $(SRC) $(HDR) $(DAT) stack-$(MAJOR).$(MINOR)
+	tar -zcf stack-$(MAJOR).$(MINOR).tar.gz stack-$(MAJOR).$(MINOR)
+	rm -rf stack-$(MAJOR).$(MINOR)
+
+install: stack
+	mkdir -p $(PREFIX)/bin
+	mkdir -p $(PREFIX)/share/stack
+	cp -f stack $(PREFIX)/bin
+	cp -f stack.conf $(PREFIX)/share/stack
+	cp -f stackrc $(PREFIX)/share/stack
+	cp -f stack.desktop $(PREFIX)/share/xsessions
+	sed "s/VERSION/$(MAJOR).$(MINOR)/g" < stack.1 > $(PREFIX)/share/man/man1/stack.1
+	sed "s/VERSION/$(MAJOR).$(MINOR)/g" < stack.conf.5 > $(PREFIX)/share/man/man5/stack.conf.5
 
 uninstall:
-	rm -f ${PREFIX}/bin/${TARGET}
-	rm -f ${PREFIX}/share/stack/stack.conf
-	rm -f ${PREFIX}/share/stack/stackrc
-	rm -f ${PREFIX}/share/xsessions/stack.desktop
+	rm -f $(PREFIX)/bin/stack
+	rm -f $(PREFIX)/share/stack/stack.conf
+	rm -f $(PREFIX)/share/stack/stackrc
+	rm -f $(PREFIX)/share/xsessions/stack.desktop
+	rm -f $(PREFIX)/share/man1/stack.1
+	rm -f $(PREFIX)/share/man5/stack.conf.5
 
 .PHONY: all clean install uninstall

@@ -512,7 +512,7 @@ MinimizeClient(Client *c)
 }
 
 void
-MoveClientLeftmost(Client *c)
+SnapClientLeft(Client *c)
 {
     if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
             && !(c->types & NetWMTypeFixed) && !c->isTiled) {
@@ -522,7 +522,7 @@ MoveClientLeftmost(Client *c)
 }
 
 void
-MoveClientRightmost(Client *c)
+SnapClientRight(Client *c)
 {
     if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
             && !(c->types & NetWMTypeFixed) && !c->isTiled) {
@@ -532,7 +532,7 @@ MoveClientRightmost(Client *c)
 }
 
 void
-MoveClientTopmost(Client *c)
+SnapClientTop(Client *c)
 {
     if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
             && !(c->types & NetWMTypeFixed) && !c->isTiled) {
@@ -542,7 +542,7 @@ MoveClientTopmost(Client *c)
 }
 
 void
-MoveClientBottommost(Client *c)
+SnapClientBottom(Client *c)
 {
     if (!(c->states & (NetWMStateMaximized | NetWMStateFullscreen))
             && !(c->types & NetWMTypeFixed) && !c->isTiled) {

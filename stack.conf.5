@@ -1,0 +1,155 @@
+.TH STACK 1 stack\-VERSION
+.SH NAME
+stack.conf \- Stack window manager configuration file.
+.SH DESCRIPTION
+Stack configuration file is a simple text file of key value pairs
+blanks separated. None of the keys is mandatory, any key defined 
+will overrides default value.
+.TP
+keys expect values like:
+    \fIinteger\fP: an int value
+    \fIfloat\fP: a float value dot seperated
+    \fIstring\fP: a regular string
+    \fIname\fP: a font name understood by pango (e.g: Noto Sans 11)
+    \fIsize\fP: a integer value expressing a number of pixels
+    \fIcolor\fP: an hexa color (without # e.g 005577)
+    \fIbool\fP: 1, true, yes (case unsensitive) to set to true
+    \fIshape\fP: round or square (case unsensitive) 
+    \fIplacement\fP: center or pointer (case unsensitive) 
+.TP
+An sample file can be found under PREFIX/share/stack/stack.conf
+
+.SH KEYS
+.TP
+\fBLabelFont \fIname\fP
+.TP
+\fBIconFont \fIname\f
+.TP
+\fBBorderWidth \fIsize\fP
+.TP
+\fBTopbarHeight \fIsize\fP
+.TP
+\fBHandleWidth \fIsize\fP
+.TP
+\fBButtonSize \fIsize\fP
+.TP
+\fBButtonGap \fIsize\fP
+.TP
+\fBButtonShape \fIshape\fP
+.TP
+\fBActiveBackground \fIcolor\fP
+.TP
+\fBActiveForeground \fIcolor\fP
+.TP
+\fBActiveBorder \fIcolor\fP
+.TP
+\fBInactiveBackground \fIcolor\fP
+.TP
+\fBInactiveForeground \fIcolor\fP
+.TP
+\fBInactiveBorder \fIcolor\fP
+.TP
+\fBUrgentBackground \fIcolor\fP
+.TP
+\fBUrgentForeground \fIcolor\fP
+.TP
+\fBUrgentBorder \fIcolor\fP
+.TP
+\fBActiveTileBackground \fIcolor\fP
+.TP
+\fBInactiveTileBackground  \fIcolor\fP
+.TP
+\fBCloseIcon \fIstring\fP
+.TP
+\fBCloseActiveBackground \fIcolor\fP
+.TP
+\fBCloseActiveForeground \fIcolor\fP
+.TP
+\fBCloseActiveBorder \fIcolor\fP
+.TP
+\fBCloseInactiveBackground \fIcolor\fP
+.TP
+\fBCloseInactiveForeground \fIcolor\fP
+.TP
+\fBCloseInactiveBorder \fIcolor\fP
+.TP
+\fBCloseActiveHoveredBackground \fIcolor\fP
+.TP
+\fBCloseActiveHoveredForeground \fIcolor\fP
+.TP
+\fBCloseActiveHoveredBorder \fIcolor\fP
+.TP
+\fBCloseInactiveHoveredBackground \fIcolor\fP
+.TP
+\fBCloseInactiveHoveredForeground \fIcolor\fP
+.TP
+\fBCloseInactiveHoveredBorder \fIcolor\fP
+.TP
+\fBMaximizeIcon \fIstring\fP
+.TP
+\fBMaximizeActiveBackground \fIcolor\fP
+.TP
+\fBMaximizeActiveForeground \fIcolor\fP
+.TP
+\fBMaximizeActiveBorder \fIcolor\fP
+.TP
+\fBMaximizeInactiveBackground \fIcolor\fP
+.TP
+\fBMaximizeInactiveForeground \fIcolor\fP
+.TP
+\fBMaximizeInactiveBorder \fIcolor\fP
+.TP
+\fBMaximizeActiveHoveredBackground \fIcolor\fP
+.TP
+\fBMaximizeActiveHoveredForeground \fIcolor\fP
+.TP
+\fBMaximizeActiveHoveredBorder \fIcolor\fP
+.TP
+\fBMaximizeInactiveHoveredBackground \fIcolor\fP
+.TP
+\fBMaximizeInactiveHoveredForeground \fIcolor\fP
+.TP
+\fBMaximizeInactiveHoveredBorder \fIcolor\fP
+.TP
+\fBMinimizeIcon \fIstring\fP
+.TP
+\fBMinimizeActiveBackground \fIcolor\fP
+.TP
+\fBMinimizeActiveForeground \fIcolor\fP
+.TP
+\fBMinimizeActiveBorder \fIcolor\fP
+.TP
+\fBMinimizeInactiveBackground \fIcolor\fP
+.TP
+\fBMinimizeInactiveForeground \fIcolor\fP
+.TP
+\fBMinimizeInactiveBorder \fIcolor\fP
+.TP
+\fBMinimizeActiveHoveredBackground \fIcolor\fP
+.TP
+\fBMinimizeActiveHoveredForeground \fIcolor\fP
+.TP
+\fBMinimizeActiveHoveredBorder \fIcolor\fP
+.TP
+\fBMinimizeInactiveHoveredBackground \fIcolor\fP
+.TP
+\fBMinimizeInactiveHoveredForeground \fIcolor\fP
+.TP
+\fBMinimizeInactiveHoveredBorder \fIcolor\fP
+.TP
+\fBSnapping \fIinteger\fP
+.TP
+\fBFocusFollowsPointer \fIbool\fP
+.TP
+\fBPlacement \fIplacement\fP
+.TP
+\fBDecorateTiles \fIbool\fP
+.TP
+\fBMasters \fIinteger\fP
+.TP
+\fBSplit \fIfloat\fP
+
+.SH AUTHOR
+Written by 0x9dhcf.
+.SH SEE ALSO
+.BR stack(1)
