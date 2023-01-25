@@ -12,14 +12,12 @@ experience closest to usual.
 # INSTALL
 
 bash
-```
+
 [PREFIX=PATH] NDEBUG=1 [sudo] make install
-```
 
 tcsh
-```
+
 ( setenv [PREFIX PATH] NDEBUG 1 ; [doas] make install )
-```
 
 # DOCUMENTATION
 
