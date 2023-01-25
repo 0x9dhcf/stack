@@ -1,7 +1,7 @@
 TARGET = stack
 
 MAJOR = 5
-MINOR = 7
+MINOR = 8
 
 # paths
 PREFIX ?= /usr/local
