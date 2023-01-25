@@ -3,7 +3,7 @@
 A simple stacking window manager with dynamic tiling capabilities.
 
  - Not as friendly as a full DE ;
- - Not as compliant with EWMH as lots existing WMs ;
+ - Not as compliant with EWMH as lots of existing WMs ;
  - Not as lean as a pure tiling WMs ;
 
 But mixes floating and tiling modes smoothly with user
